@@ -1,4 +1,4 @@
-import { Component, computed, HostListener, inject, OnInit } from "@angular/core";
+import { Component, computed, HostListener, inject, OnInit, signal } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import type { FactSuggestion, PersonView, ProviderId } from "./models";
 import { isTauri } from "./services/io.service";
@@ -18,7 +18,7 @@ export class AppComponent implements OnInit {
   readonly people = inject(PeopleService);
   readonly providers = inject(ProvidersService);
 
-  query = "";
+  readonly query = signal("");
   panel: Panel = "none";
   fact: FactSurface = "none";
   latchOpen = false;
@@ -38,7 +38,7 @@ export class AppComponent implements OnInit {
   readonly desktop = isTauri();
 
   readonly filtered = computed(() => {
-    const q = this.query.trim().toLowerCase();
+    const q = this.query().trim().toLowerCase();
     const all = this.people.people();
     if (!q) return all;
     return all.filter((person) => `${person.title} ${person.description ?? ""}`.toLowerCase().includes(q));
@@ -292,6 +292,12 @@ export class AppComponent implements OnInit {
       await this.providers.saveGeminiApiKey(this.geminiKey);
       this.geminiKey = "";
     }
+  }
+
+  hasAbout(person: PersonView): boolean {
+    const body = person.body.trim();
+    if (!body) return false;
+    return body !== `# About\n\nNotes and social links for ${person.title} live beside this document.`;
   }
 
   initials(title: string): string {
