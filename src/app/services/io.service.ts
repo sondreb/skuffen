@@ -1,6 +1,9 @@
 import { Injectable } from "@angular/core";
-import type { Settings } from "../models";
+import type { Settings, VaultStatus } from "../models";
 import { purgeDurableBrowserSecrets, webSecretDelete, webSecretGet, webSecretSet } from "./web-secrets";
+
+export const BROWSER_VAULT_MESSAGE =
+  "Browser preview cannot use the OS keychain, so it cannot encrypt the people-graph honestly. The graph stays in this tab's localStorage stand-in (plaintext). Use npm run tauri dev for OS-backed AES-256-GCM. Tokens still never go to localStorage.";
 
 const FILES_KEY = "skuffen.bundle.files";
 const SETTINGS_KEY = "skuffen.settings";
@@ -130,6 +133,46 @@ export class IoService {
     if (isTauri()) {
       await this.invoke("grok_oauth_logout");
     }
+  }
+
+  browserVaultStatus(): VaultStatus {
+    return {
+      available: false,
+      unlocked: true,
+      encrypted: false,
+      keyBackend: "none",
+      message: BROWSER_VAULT_MESSAGE,
+    };
+  }
+
+  async vaultStatus(): Promise<VaultStatus> {
+    if (isTauri()) return this.invoke<VaultStatus>("vault_status");
+    return this.browserVaultStatus();
+  }
+
+  async unlockVault(): Promise<VaultStatus> {
+    if (isTauri()) return this.invoke<VaultStatus>("unlock_vault");
+    return this.browserVaultStatus();
+  }
+
+  async lockVault(): Promise<VaultStatus> {
+    if (isTauri()) return this.invoke<VaultStatus>("lock_vault");
+    return this.browserVaultStatus();
+  }
+
+  async exportPlainOkf(root: string): Promise<string | null> {
+    if (isTauri()) return this.invoke<string | null>("export_plain_okf", { root });
+    const files = this.webFiles();
+    const blob = new Blob([JSON.stringify({ okf_version: "0.2", files }, null, 2)], {
+      type: "application/json",
+    });
+    const href = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = href;
+    a.download = "skuffen-okf-plaintext-export.json";
+    a.click();
+    URL.revokeObjectURL(href);
+    return "download:skuffen-okf-plaintext-export.json";
   }
 
   private webFiles(): Record<string, string> {

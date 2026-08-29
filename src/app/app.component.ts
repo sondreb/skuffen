@@ -138,6 +138,19 @@ export class AppComponent implements OnInit {
     this.providers.reject(suggestion.id);
   }
 
+  async unlock(): Promise<void> {
+    await this.people.unlock();
+  }
+
+  async lock(): Promise<void> {
+    await this.people.lock();
+    this.panel = "none";
+  }
+
+  async exportPlain(): Promise<void> {
+    await this.people.exportPlain();
+  }
+
   async chooseProvider(provider: ProviderId): Promise<void> {
     await this.providers.setPreferred(provider);
   }

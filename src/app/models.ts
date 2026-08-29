@@ -5,6 +5,14 @@ export interface Settings {
   preferredProvider?: ProviderId | null;
 }
 
+export interface VaultStatus {
+  available: boolean;
+  unlocked: boolean;
+  encrypted: boolean;
+  keyBackend?: "os-keychain" | "file-fallback" | "none" | string;
+  message?: string;
+}
+
 export interface PersonView {
   id: string;
   slug: string;

@@ -1,9 +1,12 @@
+mod crypto;
 mod oauth;
 mod secrets;
 mod store;
+mod vault;
 
 use serde::{Deserialize, Serialize};
-use tauri::Manager;
+use tauri::{Manager, State};
+use vault::VaultState;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
@@ -45,8 +48,12 @@ fn pick_image_file() -> Option<String> {
 }
 
 #[tauri::command]
-fn ensure_bundle(app: tauri::AppHandle, root: Option<String>) -> Result<String, String> {
-    store::ensure_bundle(&app, root)
+fn ensure_bundle(
+    app: tauri::AppHandle,
+    vault: State<VaultState>,
+    root: Option<String>,
+) -> Result<String, String> {
+    vault::ensure_bundle(&app, &vault, root)
 }
 
 #[tauri::command]
@@ -55,18 +62,63 @@ fn list_files(root: String, prefix: Option<String>) -> Result<Vec<String>, Strin
 }
 
 #[tauri::command]
-fn read_text(root: String, path: String) -> Result<Option<String>, String> {
-    store::read_text(&root, &path)
+fn read_text(
+    vault: State<VaultState>,
+    root: String,
+    path: String,
+) -> Result<Option<String>, String> {
+    vault::read_text(&vault, &root, &path)
 }
 
 #[tauri::command]
-fn write_text(root: String, path: String, contents: String) -> Result<(), String> {
-    store::write_text(&root, &path, &contents)
+fn write_text(
+    vault: State<VaultState>,
+    root: String,
+    path: String,
+    contents: String,
+) -> Result<(), String> {
+    vault::write_text(&vault, &root, &path, &contents)
 }
 
 #[tauri::command]
-fn copy_file_into_bundle(root: String, source: String, dest: String) -> Result<(), String> {
-    store::copy_file(&root, &source, &dest)
+fn copy_file_into_bundle(
+    vault: State<VaultState>,
+    root: String,
+    source: String,
+    dest: String,
+) -> Result<(), String> {
+    vault::import_file(&vault, &root, &source, &dest)
+}
+
+#[tauri::command]
+fn unlock_vault(app: tauri::AppHandle, vault: State<VaultState>) -> Result<vault::VaultStatus, String> {
+    vault::unlock(&app, &vault)
+}
+
+#[tauri::command]
+fn lock_vault(app: tauri::AppHandle, vault: State<VaultState>) -> Result<vault::VaultStatus, String> {
+    vault::lock(&app, &vault)
+}
+
+#[tauri::command]
+fn vault_status(app: tauri::AppHandle, vault: State<VaultState>) -> Result<vault::VaultStatus, String> {
+    vault::status(&app, &vault)
+}
+
+#[tauri::command]
+fn export_plain_okf(
+    vault: State<VaultState>,
+    root: String,
+) -> Result<Option<String>, String> {
+    let dest = rfd::FileDialog::new()
+        .set_title("Export plaintext OKF (this folder will be readable)")
+        .pick_folder()
+        .map(|p| p.to_string_lossy().to_string());
+    let Some(dest) = dest else {
+        return Ok(None);
+    };
+    vault::export_plain(&vault, &root, &dest)?;
+    Ok(Some(dest))
 }
 
 #[tauri::command]
@@ -104,6 +156,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .manage(VaultState::new())
         .invoke_handler(tauri::generate_handler![
             get_settings,
             save_settings,
@@ -115,6 +168,10 @@ pub fn run() {
             read_text,
             write_text,
             copy_file_into_bundle,
+            unlock_vault,
+            lock_vault,
+            vault_status,
+            export_plain_okf,
             secret_get,
             secret_set,
             secret_delete,

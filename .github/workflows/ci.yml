@@ -27,6 +27,9 @@ jobs:
       - name: OKF tests
         run: npm run test:okf
 
+      - name: Vault encryption tests
+        run: npm run test:vault
+
       - name: MCP tests
         run: npm run test:mcp
 

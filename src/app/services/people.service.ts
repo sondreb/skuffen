@@ -24,19 +24,61 @@ export class PeopleService {
   readonly selected = signal<PersonView | null>(null);
   readonly bundleRoot = signal<string>("");
   readonly ready = signal(false);
+  readonly locked = signal(false);
+  readonly encryptionAvailable = signal(false);
+  readonly vaultMessage = signal<string | null>(null);
   readonly error = signal<string | null>(null);
 
   constructor(private readonly io: IoService) {}
 
   async bootstrap(): Promise<void> {
+    const vault = await this.io.unlockVault();
+    this.encryptionAvailable.set(vault.available);
+    this.vaultMessage.set(vault.message ?? null);
+    if (!vault.unlocked && vault.available) {
+      this.locked.set(true);
+      this.people.set([]);
+      this.selected.set(null);
+      this.ready.set(true);
+      this.error.set(vault.message ?? "Unlock the people-graph with your OS credentials.");
+      return;
+    }
+    this.locked.set(false);
     const settings = await this.io.getSettings();
     const root = await this.io.ensureBundle(settings.bundleRoot);
     if (settings.bundleRoot !== root) {
       await this.io.saveSettings({ ...settings, bundleRoot: root });
     }
     this.bundleRoot.set(root);
+    const after = await this.io.vaultStatus();
+    this.vaultMessage.set(after.message ?? vault.message ?? null);
+    this.encryptionAvailable.set(after.available);
     await this.reload();
     this.ready.set(true);
+  }
+
+  async lock(): Promise<void> {
+    const status = await this.io.lockVault();
+    this.locked.set(true);
+    this.people.set([]);
+    this.selected.set(null);
+    this.vaultMessage.set(status.message ?? "People-graph locked.");
+  }
+
+  async unlock(): Promise<void> {
+    this.error.set(null);
+    await this.bootstrap();
+  }
+
+  async exportPlain(): Promise<void> {
+    const dest = await this.io.exportPlainOkf(this.bundleRoot() || "localStorage://skuffen-people-graph");
+    if (dest) {
+      this.vaultMessage.set(
+        dest.startsWith("download:")
+          ? "Downloaded a plaintext JSON export of the browser preview. Desktop export writes a real OKF folder."
+          : `Exported plaintext OKF to ${dest}. That folder is readable — keep it off cloud drives.`,
+      );
+    }
   }
 
   async chooseFolder(): Promise<void> {
