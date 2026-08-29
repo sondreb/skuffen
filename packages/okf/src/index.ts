@@ -5,8 +5,17 @@ export const PERSON_TYPE = "Person";
 export const NOTE_TYPE = "Note";
 export const PHOTO_TYPE = "Photo";
 export const SOCIAL_TYPE = "SocialProfile";
+export const PLACE_TYPE = "Place";
 
-export type OkfType = typeof PERSON_TYPE | typeof NOTE_TYPE | typeof PHOTO_TYPE | typeof SOCIAL_TYPE | string;
+export type OkfType =
+  | typeof PERSON_TYPE
+  | typeof NOTE_TYPE
+  | typeof PHOTO_TYPE
+  | typeof SOCIAL_TYPE
+  | typeof PLACE_TYPE
+  | string;
+
+export type PlaceSource = "search" | "pin";
 
 export interface OkfActorStamp {
   by: string;
@@ -36,6 +45,10 @@ export interface OkfFrontmatter {
   phone?: string;
   network?: string;
   handle?: string;
+  latitude?: number;
+  longitude?: number;
+  address?: string;
+  source?: string;
 }
 
 export interface OkfDocument {
@@ -57,6 +70,22 @@ export interface PersonFields {
 export interface SocialFields {
   network?: string;
   handle?: string;
+}
+
+export interface PlaceFields {
+  latitude: number;
+  longitude: number;
+  address?: string;
+  source?: string;
+}
+
+export interface PlaceLocation {
+  path: string;
+  title: string;
+  address?: string;
+  latitude: number;
+  longitude: number;
+  source?: string;
 }
 
 export function nowUtc(): string {
@@ -220,6 +249,48 @@ export function photoFilePath(slug: string, fileName: string): string {
   return `${personDir(slug)}/photos/${fileName}`;
 }
 
+export function placePath(slug: string): string {
+  return `${personDir(slug)}/place.md`;
+}
+
+export function isValidLatitude(value: number): boolean {
+  return Number.isFinite(value) && value >= -90 && value <= 90;
+}
+
+export function isValidLongitude(value: number): boolean {
+  return Number.isFinite(value) && value >= -180 && value <= 180;
+}
+
+export function parseCoordinate(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return undefined;
+}
+
+export function locationFromDocument(doc: OkfDocument): PlaceLocation | null {
+  if (doc.frontmatter.type !== PLACE_TYPE) return null;
+  const latitude = parseCoordinate(doc.frontmatter.latitude);
+  const longitude = parseCoordinate(doc.frontmatter.longitude);
+  if (latitude === undefined || longitude === undefined) return null;
+  if (!isValidLatitude(latitude) || !isValidLongitude(longitude)) return null;
+  const address = optionalFrontmatterString(doc.frontmatter.address);
+  return {
+    path: doc.path,
+    title: optionalFrontmatterString(doc.frontmatter.title) ?? address ?? doc.id,
+    address,
+    latitude,
+    longitude,
+    source: optionalFrontmatterString(doc.frontmatter.source),
+  };
+}
+
+function optionalFrontmatterString(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
 export function verifiedList(value: OkfFrontmatter["verified"]): OkfActorStamp[] {
   if (!value) return [];
   return Array.isArray(value) ? value : [value];
@@ -357,5 +428,39 @@ export function createPhotoDocument(input: {
       verified: { by: input.verifiedBy ?? actorHuman(), at },
     },
     body: `Photo file stored beside this concept at \`${resource}\`. Not inlined as a markdown blob.\n\nSubject: [${input.slug}](/${personPath(input.slug)}).\n`,
+  };
+}
+
+export function createPlaceDocument(input: {
+  slug: string;
+  title?: string;
+  address?: string;
+  latitude: number;
+  longitude: number;
+  source?: PlaceSource | string;
+  generatedBy?: string;
+  verifiedBy?: string;
+}): OkfDocument {
+  if (!isValidLatitude(input.latitude) || !isValidLongitude(input.longitude)) {
+    throw new Error("Place requires a finite latitude [-90, 90] and longitude [-180, 180]");
+  }
+  const at = nowUtc();
+  const address = input.address?.trim() || undefined;
+  const title = input.title?.trim() || address || `${input.latitude.toFixed(5)}, ${input.longitude.toFixed(5)}`;
+  const frontmatter: OkfFrontmatter & PlaceFields = {
+    type: PLACE_TYPE,
+    title,
+    address,
+    latitude: input.latitude,
+    longitude: input.longitude,
+    source: input.source,
+    generated: { by: input.generatedBy ?? actorHuman(), at },
+    verified: { by: input.verifiedBy ?? actorHuman(), at },
+  };
+  return {
+    id: conceptId(placePath(input.slug)),
+    path: placePath(input.slug),
+    frontmatter,
+    body: `Location for [${input.slug}](/${personPath(input.slug)}).\n\nCoordinates stay in this OKF bundle. Map tiles and address search may use the public internet.\n`,
   };
 }

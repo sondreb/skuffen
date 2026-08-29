@@ -1,22 +1,25 @@
 import { Component, computed, HostListener, inject, OnInit, signal } from "@angular/core";
 import { FormsModule } from "@angular/forms";
+import { PeopleMapComponent, type MapPin } from "./map/people-map.component";
 import type { FactSuggestion, PersonView, ProviderId } from "./models";
+import { GeocodeService, type GeocodeHit } from "./services/geocode.service";
 import { isTauri } from "./services/io.service";
 import { PeopleService } from "./services/people.service";
 import { ProvidersService } from "./services/providers.service";
 
-type Panel = "none" | "create" | "edit" | "providers";
+type Panel = "none" | "create" | "edit" | "providers" | "map";
 type FactSurface = "none" | "drop" | "pin" | "note" | "suggest";
 
 @Component({
   selector: "app-root",
-  imports: [FormsModule],
+  imports: [FormsModule, PeopleMapComponent],
   templateUrl: "./app.component.html",
   styleUrl: "./app.component.css",
 })
 export class AppComponent implements OnInit {
   readonly people = inject(PeopleService);
   readonly providers = inject(ProvidersService);
+  readonly geocode = inject(GeocodeService);
 
   readonly query = signal("");
   panel: Panel = "none";
@@ -27,6 +30,13 @@ export class AppComponent implements OnInit {
   dragging = false;
   pinDropped = false;
   notice: string | null = null;
+  addressQuery = "";
+  geocodeHits: GeocodeHit[] = [];
+  geocodeBusy = false;
+  geocodeError = "";
+  pendingPin: { latitude: number; longitude: number; address?: string; source: "search" | "pin" } | null = null;
+  mapFocus: { latitude: number; longitude: number; zoom?: number } | null = null;
+  mapAssignSlug = "";
   draft = blankDraft();
   noteTitle = "";
   noteBody = "";
@@ -51,6 +61,13 @@ export class AppComponent implements OnInit {
   readonly activeProvider = computed(() => this.providers.activeProvider());
   readonly bothProviders = computed(() => this.providers.availableProviders().length === 2);
   readonly inDrawer = computed(() => this.people.people().length);
+  readonly mapPins = computed<MapPin[]>(() =>
+    this.people
+      .people()
+      .filter((person): person is PersonView & { location: NonNullable<PersonView["location"]> } => !!person.location)
+      .map((person) => ({ slug: person.slug, title: person.title, location: person.location })),
+  );
+  readonly mapAssignPeople = computed(() => this.people.people());
 
   async ngOnInit(): Promise<void> {
     await this.people.bootstrap();
@@ -63,7 +80,7 @@ export class AppComponent implements OnInit {
       this.latchOpen = false;
       return;
     }
-    if (this.panel === "providers" || this.panel === "create" || this.panel === "edit") {
+    if (this.panel === "providers" || this.panel === "create" || this.panel === "edit" || this.panel === "map") {
       this.panel = "none";
     }
   }
@@ -76,7 +93,21 @@ export class AppComponent implements OnInit {
     this.pinDropped = false;
     this.addingSocial = false;
     this.providers.clearSuggestions();
+    this.resetLocationDraft(person);
     await this.people.select(person.slug);
+  }
+
+  async openBySlug(slug: string): Promise<void> {
+    const person = this.people.people().find((item) => item.slug === slug);
+    if (person) await this.open(person);
+  }
+
+  openMap(): void {
+    this.latchOpen = false;
+    this.panel = "map";
+    this.fact = "none";
+    this.mapAssignSlug = this.people.selected()?.slug ?? "";
+    this.resetLocationDraft(this.people.selected());
   }
 
   async closeFile(): Promise<void> {
@@ -86,6 +117,7 @@ export class AppComponent implements OnInit {
     this.pinDropped = false;
     this.addingSocial = false;
     this.providers.clearSuggestions();
+    this.resetLocationDraft(null);
     await this.people.select(null);
   }
 
@@ -96,6 +128,7 @@ export class AppComponent implements OnInit {
     this.latchOpen = false;
     this.fact = "none";
     this.people.selected.set(null);
+    this.resetLocationDraft(null);
   }
 
   startEdit(): void {
@@ -128,6 +161,9 @@ export class AppComponent implements OnInit {
   setFact(next: FactSurface): void {
     this.fact = this.fact === next ? "none" : next;
     this.notice = null;
+    if (this.fact === "pin") {
+      this.resetLocationDraft(this.people.selected());
+    }
   }
 
   async addNote(): Promise<void> {
@@ -210,9 +246,87 @@ export class AppComponent implements OnInit {
       : "Drop needs a file path. Use Pick a photo — nothing was written.";
   }
 
-  dropPin(): void {
+  async searchAddress(): Promise<void> {
+    const q = this.addressQuery.trim();
+    if (!q) return;
+    this.geocodeBusy = true;
+    this.geocodeError = "";
+    this.notice = null;
+    try {
+      this.geocodeHits = await this.geocode.search(q);
+      if (this.geocodeHits.length === 0) {
+        this.geocodeError = "No addresses matched. Try a more specific query.";
+      }
+    } catch (error) {
+      this.geocodeHits = [];
+      this.geocodeError = error instanceof Error ? error.message : String(error);
+    } finally {
+      this.geocodeBusy = false;
+    }
+  }
+
+  pickGeocodeHit(hit: GeocodeHit): void {
+    this.pendingPin = {
+      latitude: hit.latitude,
+      longitude: hit.longitude,
+      address: hit.label,
+      source: "search",
+    };
     this.pinDropped = true;
-    this.notice = "Pin stays on this machine later. Nothing was written.";
+    this.mapFocus = { latitude: hit.latitude, longitude: hit.longitude, zoom: 14 };
+    this.addressQuery = hit.label;
+    this.geocodeHits = [];
+  }
+
+  async onMapDrop(coords: { latitude: number; longitude: number }): Promise<void> {
+    this.pendingPin = { ...coords, source: "pin" };
+    this.pinDropped = true;
+    this.mapFocus = { ...coords, zoom: 14 };
+    this.geocodeError = "";
+    this.notice = null;
+    try {
+      const hit = await this.geocode.reverse(coords.latitude, coords.longitude);
+      if (hit && this.pendingPin?.source === "pin") {
+        this.pendingPin = { ...this.pendingPin, address: hit.label };
+      }
+    } catch {
+      /* reverse geocode is optional; the pin still stays local */
+    }
+  }
+
+  async savePendingLocation(slug?: string): Promise<void> {
+    const target = slug || this.mapAssignSlug || this.people.selected()?.slug;
+    if (!target || !this.pendingPin) return;
+    await this.people.setLocation(target, {
+      title: this.pendingPin.address,
+      address: this.pendingPin.address,
+      latitude: this.pendingPin.latitude,
+      longitude: this.pendingPin.longitude,
+      source: this.pendingPin.source,
+    });
+    this.pendingPin = null;
+    this.geocodeHits = [];
+    this.pinDropped = true;
+    this.notice = null;
+  }
+
+  async clearPersonLocation(): Promise<void> {
+    const person = this.people.selected();
+    if (!person?.location) return;
+    await this.people.clearLocation(person.slug);
+    this.resetLocationDraft(null);
+    this.pinDropped = false;
+  }
+
+  private resetLocationDraft(person: PersonView | null): void {
+    this.addressQuery = person?.location?.address ?? "";
+    this.geocodeHits = [];
+    this.geocodeError = "";
+    this.pendingPin = null;
+    this.pinDropped = Boolean(person?.location);
+    this.mapFocus = person?.location
+      ? { latitude: person.location.latitude, longitude: person.location.longitude, zoom: 13 }
+      : null;
   }
 
   async ask(): Promise<void> {

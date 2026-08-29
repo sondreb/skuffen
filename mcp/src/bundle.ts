@@ -5,18 +5,23 @@ import {
   appendLog,
   createNoteDocument,
   createPersonDocument,
+  createPlaceDocument,
   createSocialDocument,
   emptyLog,
+  locationFromDocument,
   parseDocument,
   personPath,
+  placePath,
   serializeBundleIndex,
   serializeDocument,
   serializePeopleIndex,
   slugify,
   type OkfDocument,
+  type PlaceLocation,
+  type PlaceSource,
 } from "../../packages/okf/src/index.ts";
 import { vaultKeyFromEnv } from "../../packages/okf/src/vault.ts";
-import { readBundleFile, writeBundleFile } from "../../packages/okf/src/vault-fs.ts";
+import { deleteBundleFile, readBundleFile, writeBundleFile } from "../../packages/okf/src/vault-fs.ts";
 
 export interface PersonView {
   id: string;
@@ -32,6 +37,7 @@ export interface PersonView {
   notes: Array<{ id: string; path: string; title: string; body: string }>;
   social: Array<{ id: string; path: string; title: string; network?: string; handle?: string; url?: string }>;
   photos: Array<{ id: string; path: string; title: string; resource?: string }>;
+  location?: PlaceLocation;
 }
 
 export function defaultBundleRoot(): string {
@@ -108,6 +114,8 @@ export class OkfBundle {
       title: String(item.frontmatter.title ?? item.id),
       resource: optionalString(item.frontmatter.resource),
     }));
+    const placeRaw = this.read(placePath(slug));
+    const location = placeRaw ? locationFromDocument(parseDocument(placePath(slug), placeRaw)) ?? undefined : undefined;
     return {
       id: doc.id,
       slug,
@@ -122,7 +130,27 @@ export class OkfBundle {
       notes,
       social,
       photos,
+      location,
     };
+  }
+
+  setLocation(
+    slug: string,
+    input: { title?: string; address?: string; latitude: number; longitude: number; source?: PlaceSource },
+  ): PersonView {
+    if (!this.getPerson(slug)) throw new Error(`Unknown person ${slug}`);
+    const doc = createPlaceDocument({ slug, ...input });
+    this.writeDoc(doc);
+    this.log("Update", `Set location [${doc.frontmatter.title}](/${doc.path}).`);
+    return this.getPerson(slug)!;
+  }
+
+  clearLocation(slug: string): PersonView {
+    if (!this.getPerson(slug)) throw new Error(`Unknown person ${slug}`);
+    const path = placePath(slug);
+    deleteBundleFile(this.root, path);
+    this.log("Update", `Cleared location [/${path}].`);
+    return this.getPerson(slug)!;
   }
 
   createPerson(input: { title: string; description?: string; givenName?: string; familyName?: string }): PersonView {

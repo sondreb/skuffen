@@ -81,6 +81,11 @@ fn write_text(
 }
 
 #[tauri::command]
+fn delete_file(root: String, path: String) -> Result<(), String> {
+    vault::delete_file(&root, &path)
+}
+
+#[tauri::command]
 fn copy_file_into_bundle(
     vault: State<VaultState>,
     root: String,
@@ -167,6 +172,7 @@ pub fn run() {
             list_files,
             read_text,
             write_text,
+            delete_file,
             copy_file_into_bundle,
             unlock_vault,
             lock_vault,

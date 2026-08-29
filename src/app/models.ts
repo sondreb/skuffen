@@ -34,6 +34,16 @@ export interface PersonView {
     url?: string;
   }>;
   photos: Array<{ id: string; path: string; title: string; resource?: string }>;
+  location?: PersonLocation;
+}
+
+export interface PersonLocation {
+  path: string;
+  title: string;
+  address?: string;
+  latitude: number;
+  longitude: number;
+  source?: string;
 }
 
 export interface FactSuggestion {

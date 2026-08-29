@@ -94,6 +94,30 @@ const tools = [
     },
   },
   {
+    name: "set_person_location",
+    description: "Set or replace a person's local Place pin (lat/lng/address) in the OKF bundle. Does not upload the graph.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        slug: { type: "string" },
+        address: { type: "string" },
+        latitude: { type: "number" },
+        longitude: { type: "number" },
+        source: { type: "string" },
+      },
+      required: ["slug", "latitude", "longitude"],
+    },
+  },
+  {
+    name: "clear_person_location",
+    description: "Remove a person's local Place pin from the OKF bundle.",
+    inputSchema: {
+      type: "object",
+      properties: { slug: { type: "string" } },
+      required: ["slug"],
+    },
+  },
+  {
     name: "recent_log",
     description: "Return recent OKF log.md entries for the bundle.",
     inputSchema: {
@@ -148,6 +172,17 @@ async function callTool(name: string, args: Record<string, unknown>): Promise<un
           optional(args.handle),
         ) as unknown as Record<string, unknown>,
       );
+    case "set_person_location":
+      return publicPersonView(
+        bundle.setLocation(String(args.slug ?? ""), {
+          address: optional(args.address),
+          latitude: Number(args.latitude),
+          longitude: Number(args.longitude),
+          source: args.source === "pin" || args.source === "search" ? args.source : undefined,
+        }) as unknown as Record<string, unknown>,
+      );
+    case "clear_person_location":
+      return publicPersonView(bundle.clearLocation(String(args.slug ?? "")) as unknown as Record<string, unknown>);
     case "recent_log":
       return bundle.recentLog(typeof args.limit === "number" ? args.limit : 20);
     default:

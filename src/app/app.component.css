@@ -521,3 +521,47 @@ label {
     margin-left: 0;
   }
 }
+
+.grow {
+  flex: 1;
+  min-width: 12rem;
+}
+
+.map-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: flex-end;
+}
+
+.map-controls label,
+.pin-scrap .row label {
+  margin: 0;
+}
+
+.map-frame {
+  height: 260px;
+  margin: 0.65rem 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  background: #0d1c1a;
+}
+
+.map-frame.tall {
+  height: min(56vh, 560px);
+  min-height: 320px;
+}
+
+.geocode-hits {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.geocode-hits button {
+  width: 100%;
+  text-align: left;
+}

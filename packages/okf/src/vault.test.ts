@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { createPersonDocument, createPhotoDocument, serializeDocument } from "./index.ts";
+import { createPersonDocument, createPhotoDocument, createPlaceDocument, parseDocument, serializeDocument } from "./index.ts";
 import {
   EncryptedBundleError,
   decodeKey,
@@ -129,6 +129,30 @@ test("sealBundle encrypts a directory in place; export restores plaintext OKF", 
   assert.equal(readFileSync(join(dest, person.path), "utf8"), plain);
   assert.match(readFileSync(join(dest, "index.md"), "utf8"), /okf_version: "0.2"/);
   assert.deepEqual(readFileSync(join(dest, "people/ada-lovelace/photos/portrait.jpg")), photo);
+});
+
+test("Place coordinates and address are sealed with the vault key", () => {
+  const root = mkdtempSync(join(tmpdir(), "skuffen-place-vault-"));
+  const key = generateKey();
+  const place = createPlaceDocument({
+    slug: "ada-lovelace",
+    address: "12 St James's Square, London",
+    latitude: 51.50848,
+    longitude: -0.12574,
+    source: "search",
+  });
+  writeBundleFile(root, place.path, Buffer.from(serializeDocument(place), "utf8"), key);
+  const onDisk = readFileSync(join(root, place.path));
+  assert.ok(isEncrypted(onDisk));
+  assert.doesNotMatch(onDisk.toString("latin1"), /St James's Square/);
+  assert.doesNotMatch(onDisk.toString("latin1"), /51\.50848/);
+  assert.doesNotMatch(onDisk.toString("latin1"), /-0\.12574/);
+  assert.doesNotMatch(onDisk.toString("latin1"), /type: Place/);
+  const plain = readBundleFile(root, place.path, key);
+  assert.ok(plain);
+  const reloaded = parseDocument(place.path, plain.toString("utf8"));
+  assert.equal(reloaded.frontmatter.address, "12 St James's Square, London");
+  assert.equal(reloaded.frontmatter.latitude, 51.50848);
 });
 
 test("writeBundleFile with a key never leaves plaintext; without a key it stays honest portable OKF", () => {
