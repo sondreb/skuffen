@@ -1,12 +1,14 @@
-import { Component, computed, HostListener, inject, OnInit, signal } from "@angular/core";
+import { Component, computed, HostListener, inject, OnDestroy, OnInit, signal } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { PeopleMapComponent, type MapPin } from "./map/people-map.component";
-import type { FactSuggestion, PersonView, ProviderId } from "./models";
+import type { FactSuggestion, FollowInterval, PersonView, ProviderId } from "./models";
 import { GeocodeService, type GeocodeHit } from "./services/geocode.service";
 import { LAND_PLOT_KIND } from "../../packages/okf/src/index";
+import { FollowService } from "./services/follow.service";
 import { isTauri } from "./services/io.service";
 import { PeopleService } from "./services/people.service";
 import { ProvidersService } from "./services/providers.service";
+import { normalizeInterval, writesForAcceptedSuggestion } from "./services/research";
 
 type Panel = "none" | "create" | "edit" | "providers" | "map";
 type FactSurface = "none" | "drop" | "pin" | "note" | "suggest";
@@ -17,10 +19,11 @@ type FactSurface = "none" | "drop" | "pin" | "note" | "suggest";
   templateUrl: "./app.component.html",
   styleUrl: "./app.component.css",
 })
-export class AppComponent implements OnInit {
+export class AppComponent implements OnInit, OnDestroy {
   readonly people = inject(PeopleService);
   readonly providers = inject(ProvidersService);
   readonly geocode = inject(GeocodeService);
+  readonly follow = inject(FollowService);
 
   readonly query = signal("");
   panel: Panel = "none";
@@ -74,10 +77,35 @@ export class AppComponent implements OnInit {
       .map((person) => ({ slug: person.slug, title: person.title, location: person.location })),
   );
   readonly mapAssignPeople = computed(() => this.people.people());
+  readonly visibleSuggestions = computed(() => {
+    const slug = this.people.selected()?.slug;
+    const live = this.providers.suggestions();
+    const stored = slug ? this.follow.suggestionsFor(slug) : [];
+    const seen = new Set<string>();
+    const out: FactSuggestion[] = [];
+    for (const item of [...live, ...stored]) {
+      if (seen.has(item.id)) continue;
+      seen.add(item.id);
+      out.push(item);
+    }
+    return out;
+  });
+  readonly selectedFollow = computed(() => {
+    const slug = this.people.selected()?.slug;
+    return slug ? this.follow.followFor(slug) : null;
+  });
 
   async ngOnInit(): Promise<void> {
     await this.people.bootstrap();
     await this.providers.refresh();
+    await this.follow.load();
+    if (!this.people.locked()) {
+      await this.follow.start();
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.follow.stop();
   }
 
   @HostListener("document:keydown.escape")
@@ -101,6 +129,9 @@ export class AppComponent implements OnInit {
     this.providers.clearSuggestions();
     this.resetLocationDraft(person);
     await this.people.select(person.slug);
+    if (this.follow.suggestionsFor(person.slug).length) {
+      this.fact = "suggest";
+    }
   }
 
   async openBySlug(slug: string): Promise<void> {
@@ -435,33 +466,51 @@ export class AppComponent implements OnInit {
     if (person) await this.providers.suggest(person);
   }
 
+  async research(): Promise<void> {
+    const person = this.people.selected();
+    this.fact = "suggest";
+    this.notice = null;
+    if (!this.activeProvider()) {
+      this.notice = "Connect Grok or Gemini in the latch first.";
+      return;
+    }
+    if (!person) return;
+    await this.providers.research(person);
+    await this.follow.storeResearch(person.slug, this.providers.suggestions());
+  }
+
+  async toggleFollow(enabled: boolean): Promise<void> {
+    const person = this.people.selected();
+    if (!person) return;
+    const interval = this.selectedFollow()?.interval ?? "weekly";
+    await this.follow.setFollow(person.slug, enabled, interval);
+  }
+
+  async setFollowInterval(interval: FollowInterval): Promise<void> {
+    const person = this.people.selected();
+    if (!person) return;
+    await this.follow.setFollow(person.slug, true, normalizeInterval(interval));
+  }
+
   async accept(suggestion: FactSuggestion): Promise<void> {
     const person = this.people.selected();
     if (!person) return;
     const generatedBy = this.providers.actorForActive();
-    if (suggestion.kind === "social" && suggestion.url) {
-      await this.people.addSocial(
-        person.slug,
-        suggestion.network || "web",
-        suggestion.url,
-        suggestion.handle,
-        generatedBy,
-      );
-    } else if (suggestion.kind === "field" && suggestion.field && suggestion.value) {
-      await this.people.updatePerson(person.slug, { [suggestion.field]: suggestion.value });
+    const write = writesForAcceptedSuggestion(person.slug, suggestion);
+    if (write.type === "social") {
+      await this.people.addSocial(write.slug, write.network, write.url, write.handle, generatedBy);
+    } else if (write.type === "field") {
+      await this.people.updatePerson(write.slug, { [write.field]: write.value });
     } else {
-      await this.people.addNote(
-        person.slug,
-        suggestion.title,
-        suggestion.body || suggestion.value || suggestion.title,
-        generatedBy,
-      );
+      await this.people.addNote(write.slug, write.title, write.body, generatedBy);
     }
     this.providers.reject(suggestion.id);
+    await this.follow.acceptLocalOnly(suggestion.id);
   }
 
   reject(suggestion: FactSuggestion): void {
     this.providers.reject(suggestion.id);
+    void this.follow.rejectSuggestion(suggestion.id);
   }
 
   openProviders(): void {
@@ -472,9 +521,13 @@ export class AppComponent implements OnInit {
 
   async unlock(): Promise<void> {
     await this.people.unlock();
+    if (!this.people.locked()) {
+      await this.follow.start();
+    }
   }
 
   async lock(): Promise<void> {
+    this.follow.stop();
     await this.people.lock();
     this.panel = "none";
     this.latchOpen = false;

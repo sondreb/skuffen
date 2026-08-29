@@ -435,8 +435,11 @@
             } @else if (fact === "suggest") {
               <div class="surface suggest">
                 <div class="row">
-                  <button class="brass" type="button" (click)="ask()" [disabled]="providers.busy()">
+                  <button type="button" (click)="ask()" [disabled]="providers.busy()">
                     {{ providers.busy() ? "Listening…" : "Suggest facts" }}
+                  </button>
+                  <button class="brass" type="button" (click)="research()" [disabled]="providers.busy()">
+                    {{ providers.busy() ? "Searching…" : "Research with " + providerLabel() }}
                   </button>
                   @if (bothProviders()) {
                     <div class="provider-switch">
@@ -451,16 +454,45 @@
                     <span class="whisper">via {{ providerLabel() }}</span>
                   }
                 </div>
+                <p class="whisper">
+                  Research searches public web info. Follow re-runs that search on a local schedule.
+                  Propose only — never auto-write, never auto-send, never upload the graph.
+                </p>
+                <label class="follow-line">
+                  <input
+                    type="checkbox"
+                    [ngModel]="!!selectedFollow()"
+                    (ngModelChange)="toggleFollow($event)"
+                  />
+                  Follow this person
+                </label>
+                @if (selectedFollow(); as watched) {
+                  <label>
+                    Interval
+                    <select [ngModel]="watched.interval" (ngModelChange)="setFollowInterval($event)">
+                      <option value="daily">Daily</option>
+                      <option value="weekly">Weekly</option>
+                      <option value="monthly">Monthly</option>
+                    </select>
+                  </label>
+                  <p class="whisper">
+                    Last check: {{ watched.lastRunAt || "not yet" }}
+                    · Next: {{ watched.nextRunAt || "pending" }}
+                    @if (watched.lastError) {
+                      · {{ watched.lastError }}
+                    }
+                  </p>
+                }
                 @if (providers.error()) {
                   <p class="error">{{ providers.error() }}</p>
                 }
-                @if (providers.suggestions().length) {
+                @if (visibleSuggestions().length) {
                   <p class="whisper">Nothing is written until you accept.</p>
                   <div class="offers">
-                    @for (item of providers.suggestions(); track item.id) {
+                    @for (item of visibleSuggestions(); track item.id) {
                       <article>
                         <strong>{{ item.title }}</strong>
-                        <small>{{ item.kind }}</small>
+                        <small>{{ item.source || "ask" }} · {{ item.kind }}</small>
                         <p>{{ item.body || item.value || item.url }}</p>
                         <div class="row">
                           <button class="brass" type="button" (click)="accept(item)">Accept</button>
@@ -572,7 +604,15 @@
             >
               <span class="node">{{ initials(person.title) }}</span>
               <b>{{ person.title }}</b>
-              <small>{{ person.description || "A card in the drawer" }}</small>
+              <small>
+                {{ person.description || "A card in the drawer" }}
+                @if (follow.followFor(person.slug)) {
+                  · Followed
+                }
+                @if (follow.suggestionsFor(person.slug).length) {
+                  · {{ follow.suggestionsFor(person.slug).length }} proposed
+                }
+              </small>
             </button>
           }
           <button type="button" class="person-card ghost-card" (click)="startCreate()">

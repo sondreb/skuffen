@@ -1,8 +1,16 @@
 import { Injectable, signal } from "@angular/core";
 import { GoogleGenAI } from "@google/genai";
 import { actorAgent } from "../../../packages/okf/src/index";
-import type { FactSuggestion, PersonView, ProviderId, ProviderStatus } from "../models";
+import type { FactSuggestion, PersonView, ProviderId, ProviderStatus, SuggestionSource } from "../models";
 import { IoService } from "./io.service";
+import {
+  RESEARCH_SYSTEM,
+  buildResearchPrompt,
+  extractModelText,
+  geminiResearchConfig,
+  grokResearchRequest,
+  parseSuggestions,
+} from "./research";
 
 const GROK_API_KEY = "grok_api_key";
 const GROK_OAUTH = "grok_oauth";
@@ -98,6 +106,27 @@ export class ProvidersService {
   }
 
   async suggest(person: PersonView): Promise<void> {
+    await this.runPrompt(person, "ask", false);
+  }
+
+  async research(person: PersonView): Promise<void> {
+    await this.runPrompt(person, "research", true);
+  }
+
+  async researchPerson(person: PersonView, source: SuggestionSource = "follow"): Promise<FactSuggestion[]> {
+    const provider = this.activeProvider();
+    if (!provider) {
+      throw new Error("Connect Grok or Gemini first.");
+    }
+    const prompt = buildResearchPrompt(person);
+    const text =
+      provider === "grok"
+        ? await this.askGrok(prompt, true)
+        : await this.askGemini(prompt, true);
+    return parseSuggestions(text, source);
+  }
+
+  private async runPrompt(person: PersonView, source: SuggestionSource, webSearch: boolean): Promise<void> {
     const provider = this.activeProvider();
     if (!provider) {
       this.error.set("Connect Grok or Gemini first.");
@@ -107,9 +136,12 @@ export class ProvidersService {
     this.error.set(null);
     this.suggestions.set([]);
     try {
-      const prompt = this.promptFor(person);
-      const text = provider === "grok" ? await this.askGrok(prompt) : await this.askGemini(prompt);
-      this.suggestions.set(parseSuggestions(text));
+      const prompt = webSearch ? buildResearchPrompt(person) : this.promptFor(person);
+      const text =
+        provider === "grok"
+          ? await this.askGrok(prompt, webSearch)
+          : await this.askGemini(prompt, webSearch);
+      this.suggestions.set(parseSuggestions(text, source));
     } catch (error) {
       this.error.set(error instanceof Error ? error.message : String(error));
     } finally {
@@ -158,8 +190,22 @@ export class ProvidersService {
     return token;
   }
 
-  private async askGrok(prompt: string): Promise<string> {
+  private async askGrok(prompt: string, webSearch = false): Promise<string> {
     const token = await this.grokToken();
+    if (webSearch) {
+      const response = await fetch("https://api.x.ai/v1/responses", {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${token}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(grokResearchRequest(GROK_MODEL, prompt)),
+      });
+      if (!response.ok) {
+        throw new Error(`Grok API ${response.status}: ${await response.text()}`);
+      }
+      return extractModelText(await response.json());
+    }
     const response = await fetch("https://api.x.ai/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -170,7 +216,7 @@ export class ProvidersService {
         model: GROK_MODEL,
         temperature: 0.3,
         messages: [
-          { role: "system", content: "You return compact JSON only. Never request the full people-graph." },
+          { role: "system", content: RESEARCH_SYSTEM },
           { role: "user", content: prompt },
         ],
       }),
@@ -178,40 +224,18 @@ export class ProvidersService {
     if (!response.ok) {
       throw new Error(`Grok API ${response.status}: ${await response.text()}`);
     }
-    const json = (await response.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
-    };
-    return json.choices?.[0]?.message?.content ?? "";
+    return extractModelText(await response.json());
   }
 
-  private async askGemini(prompt: string): Promise<string> {
+  private async askGemini(prompt: string, webSearch = false): Promise<string> {
     const apiKey = await this.io.secretGet(GEMINI_API_KEY);
     if (!apiKey) throw new Error("Gemini API key missing");
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
       model: GEMINI_MODEL,
       contents: prompt,
+      config: webSearch ? geminiResearchConfig() : undefined,
     });
     return response.text ?? "";
   }
-}
-
-function parseSuggestions(text: string): FactSuggestion[] {
-  const start = text.indexOf("{");
-  const end = text.lastIndexOf("}");
-  if (start < 0 || end < start) return [];
-  const parsed = JSON.parse(text.slice(start, end + 1)) as {
-    suggestions?: Array<Partial<FactSuggestion>>;
-  };
-  return (parsed.suggestions ?? []).map((item, index) => ({
-    id: `${Date.now()}-${index}`,
-    kind: item.kind === "social" || item.kind === "field" ? item.kind : "note",
-    title: String(item.title ?? "Suggestion"),
-    body: item.body,
-    network: item.network,
-    url: item.url,
-    handle: item.handle,
-    field: item.field === "body" ? "body" : item.field === "description" ? "description" : undefined,
-    value: item.value,
-  }));
 }

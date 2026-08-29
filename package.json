@@ -21,6 +21,7 @@
     "test:vault": "tsx --test packages/okf/src/vault.test.ts",
     "test:mcp": "tsx --test mcp/src/redact.test.ts mcp/src/bundle.test.ts",
     "test:secrets": "tsx --test src/app/services/web-secrets.test.ts",
+    "test:research": "tsx --test src/app/services/research.test.ts",
     "test:version": "tsx --test scripts/bump-version.test.ts",
     "version:lockstep": "node scripts/bump-version.mjs"
   },
