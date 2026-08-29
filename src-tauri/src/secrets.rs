@@ -59,6 +59,22 @@ pub fn set(app: &tauri::AppHandle, key: &str, value: &str) -> Result<(), String>
     Ok(())
 }
 
+pub fn backend(app: &tauri::AppHandle, key: &str) -> &'static str {
+    if entry(key)
+        .and_then(|e| e.get_password().map_err(|err| err.to_string()))
+        .is_ok()
+    {
+        return "os-keychain";
+    }
+    if fallback_path(app, key)
+        .map(|path| path.exists())
+        .unwrap_or(false)
+    {
+        return "file-fallback";
+    }
+    "none"
+}
+
 pub fn delete(app: &tauri::AppHandle, key: &str) -> Result<(), String> {
     let _ = entry(key).and_then(|e| e.delete_credential().map_err(|err| err.to_string()));
     let path = fallback_path(app, key)?;

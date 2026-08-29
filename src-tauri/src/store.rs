@@ -39,37 +39,39 @@ pub fn save_settings(app: &tauri::AppHandle, settings: &Settings) -> Result<(), 
     fs::write(settings_path(app)?, raw).map_err(|e| e.to_string())
 }
 
-pub fn ensure_bundle(app: &tauri::AppHandle, root: Option<String>) -> Result<String, String> {
+pub fn ensure_bundle_dirs(app: &tauri::AppHandle, root: Option<String>) -> Result<String, String> {
     let path = match root.filter(|s| !s.trim().is_empty()) {
         Some(p) => p,
         None => default_bundle_path(app)?,
     };
-    let bundle = PathBuf::from(&path);
-    fs::create_dir_all(bundle.join("people")).map_err(|e| e.to_string())?;
-    let index = bundle.join("index.md");
+    fs::create_dir_all(PathBuf::from(&path).join("people")).map_err(|e| e.to_string())?;
+    Ok(path)
+}
+
+pub fn missing_seeds(root: &str) -> Result<Vec<(String, String)>, String> {
+    let mut seeds = Vec::new();
+    let index = safe_join(root, "index.md")?;
     if !index.exists() {
-        fs::write(
-            &index,
-            "---\nokf_version: \"0.2\"\n---\n\n# Skuffen\n\nLocal personal intelligence. The people-graph lives on this machine as an Open Knowledge Format v0.2 bundle.\n\n# People\n\n*Empty — add a person in Skuffen. Data stays on disk.*\n",
-        )
-        .map_err(|e| e.to_string())?;
+        seeds.push((
+            "index.md".into(),
+            "---\nokf_version: \"0.2\"\n---\n\n# Skuffen\n\nLocal personal intelligence. The people-graph lives on this machine as an Open Knowledge Format v0.2 bundle.\n\n# People\n\n*Empty — add a person in Skuffen. Data stays on disk.*\n".into(),
+        ));
     }
-    let log = bundle.join("log.md");
+    let log = safe_join(root, "log.md")?;
     if !log.exists() {
         let today = chrono::Utc::now().format("%Y-%m-%d");
-        fs::write(
-            log,
+        seeds.push((
+            "log.md".into(),
             format!(
                 "# Directory Update Log\n\n## {today}\n* **Initialization**: Created Skuffen OKF v0.2 people-graph bundle.\n"
             ),
-        )
-        .map_err(|e| e.to_string())?;
+        ));
     }
-    let people_index = bundle.join("people/index.md");
+    let people_index = safe_join(root, "people/index.md")?;
     if !people_index.exists() {
-        fs::write(people_index, "# People\n\n*No people yet.*\n").map_err(|e| e.to_string())?;
+        seeds.push(("people/index.md".into(), "# People\n\n*No people yet.*\n".into()));
     }
-    Ok(path)
+    Ok(seeds)
 }
 
 fn safe_join(root: &str, rel: &str) -> Result<PathBuf, String> {
@@ -99,6 +101,9 @@ pub fn list_files(root: &str, prefix: Option<&str>) -> Result<Vec<String>, Strin
             .map_err(|e| e.to_string())?
             .to_string_lossy()
             .replace('\\', "/");
+        if rel == ".skuffen-vault.json" || rel.ends_with(".skuffen-tmp") {
+            continue;
+        }
         if let Some(prefix) = prefix {
             if !rel.starts_with(prefix) {
                 continue;
@@ -110,20 +115,39 @@ pub fn list_files(root: &str, prefix: Option<&str>) -> Result<Vec<String>, Strin
     Ok(out)
 }
 
-pub fn read_text(root: &str, path: &str) -> Result<Option<String>, String> {
+pub fn read_bytes(root: &str, path: &str) -> Result<Option<Vec<u8>>, String> {
     let abs = safe_join(root, path)?;
     if !abs.exists() {
         return Ok(None);
     }
-    fs::read_to_string(abs).map(Some).map_err(|e| e.to_string())
+    fs::read(abs).map(Some).map_err(|e| e.to_string())
 }
 
-pub fn write_text(root: &str, path: &str, contents: &str) -> Result<(), String> {
+pub fn write_bytes(root: &str, path: &str, contents: &[u8]) -> Result<(), String> {
     let abs = safe_join(root, path)?;
     if let Some(parent) = abs.parent() {
         fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
-    fs::write(abs, contents).map_err(|e| e.to_string())
+    let tmp = abs.with_file_name(format!(
+        "{}.skuffen-tmp",
+        abs.file_name().unwrap_or_default().to_string_lossy()
+    ));
+    fs::write(&tmp, contents).map_err(|e| e.to_string())?;
+    fs::rename(&tmp, &abs).map_err(|e| {
+        let _ = fs::remove_file(&tmp);
+        e.to_string()
+    })
+}
+
+pub fn read_text(root: &str, path: &str) -> Result<Option<String>, String> {
+    let Some(bytes) = read_bytes(root, path)? else {
+        return Ok(None);
+    };
+    String::from_utf8(bytes).map(Some).map_err(|e| e.to_string())
+}
+
+pub fn write_text(root: &str, path: &str, contents: &str) -> Result<(), String> {
+    write_bytes(root, path, contents.as_bytes())
 }
 
 pub fn copy_file(root: &str, source: &str, dest: &str) -> Result<(), String> {

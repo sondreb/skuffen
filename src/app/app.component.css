@@ -87,6 +87,11 @@ button.ghost {
   border-color: #3a2f24;
 }
 
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .avatar {
   width: 2rem;
   height: 2rem;
@@ -120,6 +125,15 @@ button.ghost {
 .stage {
   padding: 2rem 2.25rem 3rem;
   overflow: auto;
+}
+
+.banner {
+  margin: 0 0 1.25rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid #c6a15b;
+  border-radius: 12px;
+  background: rgba(198, 161, 91, 0.12);
+  color: #f3efe6;
 }
 
 .card,

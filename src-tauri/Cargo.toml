@@ -31,3 +31,4 @@ chrono = { version = "0.4", default-features = false, features = ["clock"] }
 walkdir = "2"
 tiny_http = "0.12"
 rfd = "0.15"
+aes-gcm = "0.10"

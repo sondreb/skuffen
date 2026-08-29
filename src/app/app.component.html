@@ -8,11 +8,13 @@
       </div>
     </header>
 
-    <div class="search">
-      <input [(ngModel)]="query" placeholder="Search people" />
-    </div>
+    @if (!people.locked()) {
+      <div class="search">
+        <input [(ngModel)]="query" placeholder="Search people" />
+      </div>
 
-    <button class="primary" type="button" (click)="startCreate()">New person</button>
+      <button class="primary" type="button" (click)="startCreate()">New person</button>
+    }
 
     <nav class="people">
       @for (person of filtered(); track person.slug) {
@@ -33,13 +35,48 @@
 
     <footer class="rail-footer">
       <button type="button" (click)="panel = 'providers'">Providers</button>
-      <button type="button" (click)="people.chooseFolder()">Bundle folder</button>
+      <button type="button" (click)="people.chooseFolder()" [disabled]="people.locked()">Bundle folder</button>
+      <button type="button" (click)="exportPlain()" [disabled]="people.locked()">Export plaintext OKF</button>
+      @if (desktop && !people.locked()) {
+        <button type="button" class="ghost" (click)="lock()">Lock drawer</button>
+      }
       <small>{{ people.bundleRoot() }}</small>
+      @if (people.vaultMessage()) {
+        <small class="hint">{{ people.vaultMessage() }}</small>
+      }
+      <small>
+        @if (desktop && people.encryptionAvailable()) {
+          Disk: AES-256-GCM. Key: OS credential store.
+        } @else {
+          Preview: encryption needs <code>npm run tauri dev</code>.
+        }
+      </small>
     </footer>
   </aside>
 
   <main class="stage">
-    @if (panel === "providers") {
+    @if (!desktop) {
+      <p class="banner">
+        Browser preview cannot encrypt the people-graph at rest — there is no OS keychain here.
+        Use <code>npm run tauri dev</code> for OS-backed encryption. Provider tokens still stay
+        in memory for this tab only and never go to localStorage.
+      </p>
+    }
+
+    @if (people.locked()) {
+      <section class="empty">
+        <img src="assets/skuffen-icon.png" alt="" />
+        <h1>Unlock the drawer</h1>
+        <p>
+          The people-graph is encrypted on this machine (AES-256-GCM). Unlock with your OS
+          credentials. There is no Skuffen account and no cloud KMS.
+        </p>
+        @if (people.error()) {
+          <p class="error">{{ people.error() }}</p>
+        }
+        <button class="primary" type="button" (click)="unlock()">Unlock with OS credentials</button>
+      </section>
+    } @else if (panel === "providers") {
       <section class="card">
         <h2>Grok and Gemini</h2>
         <p class="lede">

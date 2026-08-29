@@ -1,6 +1,6 @@
-import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, statSync } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import {
   appendLog,
   createNoteDocument,
@@ -15,6 +15,8 @@ import {
   slugify,
   type OkfDocument,
 } from "../../packages/okf/src/index.ts";
+import { vaultKeyFromEnv } from "../../packages/okf/src/vault.ts";
+import { readBundleFile, writeBundleFile } from "../../packages/okf/src/vault-fs.ts";
 
 export interface PersonView {
   id: string;
@@ -44,18 +46,25 @@ export function defaultBundleRoot(): string {
 }
 
 export class OkfBundle {
-  constructor(public readonly root: string) {}
+  private readonly vaultKey: Uint8Array | null;
+
+  constructor(
+    public readonly root: string,
+    vaultKey: Uint8Array | null = vaultKeyFromEnv(),
+  ) {
+    this.vaultKey = vaultKey;
+  }
 
   ensure(): void {
     mkdirSync(join(this.root, "people"), { recursive: true });
-    if (!exists(join(this.root, "index.md"))) {
-      writeFileSync(join(this.root, "index.md"), serializeBundleIndex([]), "utf8");
+    if (!this.read("index.md")) {
+      this.writeRaw("index.md", serializeBundleIndex([]));
     }
-    if (!exists(join(this.root, "log.md"))) {
-      writeFileSync(join(this.root, "log.md"), emptyLog(), "utf8");
+    if (!this.read("log.md")) {
+      this.writeRaw("log.md", emptyLog());
     }
-    if (!exists(join(this.root, "people", "index.md"))) {
-      writeFileSync(join(this.root, "people", "index.md"), serializePeopleIndex([]), "utf8");
+    if (!this.read("people/index.md")) {
+      this.writeRaw("people/index.md", serializePeopleIndex([]));
     }
   }
 
@@ -190,19 +199,21 @@ export class OkfBundle {
   }
 
   private read(rel: string): string | null {
-    const abs = join(this.root, rel);
-    return exists(abs) ? readFileSync(abs, "utf8") : null;
+    const buf = readBundleFile(this.root, rel, this.vaultKey);
+    return buf ? buf.toString("utf8") : null;
+  }
+
+  private writeRaw(rel: string, contents: string): void {
+    writeBundleFile(this.root, rel, Buffer.from(contents, "utf8"), this.vaultKey);
   }
 
   private writeDoc(doc: OkfDocument): void {
-    const abs = join(this.root, doc.path);
-    mkdirSync(dirname(abs), { recursive: true });
-    writeFileSync(abs, serializeDocument(doc), "utf8");
+    this.writeRaw(doc.path, serializeDocument(doc));
   }
 
   private log(kind: string, detail: string): void {
     const current = this.read("log.md") ?? emptyLog();
-    writeFileSync(join(this.root, "log.md"), appendLog(current, kind, detail), "utf8");
+    this.writeRaw("log.md", appendLog(current, kind, detail));
   }
 
   private rebuildIndexes(): void {
@@ -211,8 +222,8 @@ export class OkfBundle {
       path: person.path,
       description: person.description,
     }));
-    writeFileSync(join(this.root, "index.md"), serializeBundleIndex(people), "utf8");
-    writeFileSync(join(this.root, "people", "index.md"), serializePeopleIndex(people), "utf8");
+    this.writeRaw("index.md", serializeBundleIndex(people));
+    this.writeRaw("people/index.md", serializePeopleIndex(people));
   }
 }
 
