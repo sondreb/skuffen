@@ -41,7 +41,19 @@ OKF / MCP / browser-secret checks:
 npm run test:okf
 npm run test:mcp
 npm run test:secrets
+npm run test:version
 ```
+
+Pull-request CI (`.github/workflows/ci.yml`) runs those checks plus `npm run build` on Node 22.22.3. It does **not** build the Tauri desktop app.
+
+## Draft desktop release
+
+Unsigned Windows, Linux, and macOS installers are built by **Draft desktop release** (`.github/workflows/release.yml`), not by PR CI. The GitHub Release is always `draft: true`. Sondre tests an installer, then publishes. There is no iOS/Android job, no notarization, and no SmartScreen/Play/App Store signing.
+
+- Actions → Draft desktop release → Run workflow. Version input default is **patch**. Or pass `0.1.1` / `minor` / `major`.
+- Or push a tag `v0.1.1`.
+
+The workflow keeps versions in lockstep: `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`. App identifier stays `me.grok.skuffen`. Installers only — never people-graph data, tokens, or OKF fixtures.
 
 ## Storage (OKF v0.2)
 

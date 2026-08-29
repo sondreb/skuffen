@@ -1,0 +1,143 @@
+# Draft Tauri 2 desktop installers for Windows, Linux, and macOS.
+# Separate from PR CI (.github/workflows/ci.yml): pull requests never run this matrix.
+# No iOS. No Android. Unsigned is expected. Sondre publishes the draft after he tests.
+# Never upload people-graph data, tokens, or OKF fixtures.
+
+name: Draft desktop release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Semver (0.1.1) or bump keyword (patch, minor, major). Default bump patch.
+        required: false
+        default: patch
+  push:
+    tags:
+      - "v*"
+
+concurrency:
+  group: draft-desktop-release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  version:
+    # Skip the re-entry when tauri-action creates the v* tag after a dispatch build.
+    if: github.event_name == 'workflow_dispatch' || github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+      sha: ${{ steps.commit.outputs.sha || github.sha }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.22.3"
+
+      - name: Resolve lockstep version
+        id: resolve
+        env:
+          INPUT_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
+        run: |
+          set -euo pipefail
+          SPEC="${INPUT_VERSION:-patch}"
+          if [ "${{ github.event_name }}" = "push" ]; then
+            SPEC="${GITHUB_REF_NAME#v}"
+          fi
+          VERSION="$(node scripts/bump-version.mjs --dry-run "$SPEC")"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Resolved $VERSION from spec $SPEC"
+
+      - name: Commit lockstep versions
+        id: commit
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          VERSION: ${{ steps.resolve.outputs.version }}
+        run: |
+          set -euo pipefail
+          node scripts/bump-version.mjs "$VERSION"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json src-tauri/tauri.conf.json src-tauri/Cargo.toml src-tauri/Cargo.lock
+          if git diff --cached --quiet; then
+            echo "sha=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+            echo "Already at $VERSION"
+            exit 0
+          fi
+          git commit -m "chore: bump version to ${VERSION}"
+          git push origin "HEAD:${{ github.ref_name }}"
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: version
+    if: github.event_name == 'workflow_dispatch' || github.actor != 'github-actions[bot]'
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-latest
+          - platform: ubuntu-latest
+          - platform: macos-latest
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.version.outputs.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.22.3"
+          cache: npm
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.98.0"
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+
+      - name: Install Linux desktop dependencies
+        if: startsWith(matrix.platform, 'ubuntu')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libappindicator3-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Ensure lockstep version on this runner
+        run: node scripts/bump-version.mjs "${{ needs.version.outputs.version }}"
+
+      - name: Build desktop installers and attach to draft release
+        uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: v__VERSION__
+          releaseName: Skuffen v__VERSION__
+          releaseBody: |
+            Draft desktop installers for Windows, Linux, and macOS (Tauri 2). Unsigned. No iOS or Android.
+
+            Sondre: test an installer, then publish this draft. Do not auto-publish.
+
+            This release does not include people-graph data, tokens, or OKF fixtures.
+          releaseDraft: true
+          prerelease: false
+          uploadUpdaterJson: false
+          uploadWorkflowArtifacts: false
+          # mobile stays unset: desktop installers only. Do not set android or ios.

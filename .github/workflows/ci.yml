@@ -33,8 +33,12 @@ jobs:
       - name: Browser-secret tests
         run: npm run test:secrets
 
+      - name: Version lockstep tests
+        run: npm run test:version
+
       - name: Angular production build
         run: npm run build
 
-      # Tauri desktop build is skipped: not cheap or headless on this runner.
-      # Do not upload people-graph fixtures or any secret material.
+      # Tauri desktop build is skipped here: not cheap or headless on this runner.
+      # Draft Windows/Linux/macOS installers live in .github/workflows/release.yml
+      # (workflow_dispatch / tag v* only). Do not upload people-graph fixtures or secrets.
