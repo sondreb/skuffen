@@ -48,6 +48,21 @@ fn pick_image_file() -> Option<String> {
 }
 
 #[tauri::command]
+fn pick_document_file() -> Option<String> {
+    rfd::FileDialog::new()
+        .set_title("Add document")
+        .add_filter(
+            "Documents",
+            &[
+                "pdf", "png", "jpg", "jpeg", "webp", "gif", "txt", "md", "doc", "docx", "odt",
+            ],
+        )
+        .add_filter("All files", &["*"])
+        .pick_file()
+        .map(|p| p.to_string_lossy().to_string())
+}
+
+#[tauri::command]
 fn ensure_bundle(
     app: tauri::AppHandle,
     vault: State<VaultState>,
@@ -93,6 +108,25 @@ fn copy_file_into_bundle(
     dest: String,
 ) -> Result<(), String> {
     vault::import_file(&vault, &root, &source, &dest)
+}
+
+#[tauri::command]
+fn write_bytes(
+    vault: State<VaultState>,
+    root: String,
+    path: String,
+    contents: Vec<u8>,
+) -> Result<(), String> {
+    vault::write_bytes(&vault, &root, &path, &contents)
+}
+
+#[tauri::command]
+fn read_bytes(
+    vault: State<VaultState>,
+    root: String,
+    path: String,
+) -> Result<Option<Vec<u8>>, String> {
+    vault::read_bytes(&vault, &root, &path)
 }
 
 #[tauri::command]
@@ -168,11 +202,14 @@ pub fn run() {
             default_bundle_root,
             pick_folder,
             pick_image_file,
+            pick_document_file,
             ensure_bundle,
             list_files,
             read_text,
             write_text,
             delete_file,
+            write_bytes,
+            read_bytes,
             copy_file_into_bundle,
             unlock_vault,
             lock_vault,

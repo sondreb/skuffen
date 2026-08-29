@@ -2,7 +2,7 @@
 
 Agentic AI Driven Personal Intelligence
 
-Skuffen is **local-only** personal intelligence software. You keep a private people-graph on your own machine: contacts, notes, social links, and photos. There is no Skuffen account, no analytics, and no cloud backend for people data.
+Skuffen is **local-only** personal intelligence software. You keep a private people-graph on your own machine: contacts, notes, social links, photos, and documents. There is no Skuffen account, no analytics, and no cloud backend for people data.
 
 The people-graph is stored as an [Open Knowledge Format v0.2](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md) bundle. File path is identity. On desktop, tokens for Grok and Gemini live in the OS credential store. They never enter the OKF bundle.
 
@@ -71,9 +71,14 @@ people/
   <slug>/photos/<file>   # photo bytes
   <slug>/photos/<file>.md # type: Photo, resource points at the file
   <slug>/place.md        # type: Place (lat/lng/address pin)
+documents/
+  <slug>/<file>          # document bytes (PDF, images, other docs)
+  <slug>/document.md     # type: Document; required title + resource; optional kind / note
 ```
 
-Photos are files, not markdown blobs. A person's map pin is a linked `Place` concept (`people/<slug>/place.md`). Suggested facts from Grok or Gemini are written only after you accept them. File path is still identity. On desktop, the *bytes* of those files (markdown, YAML, photos, places) are AES-256-GCM ciphertext.
+Photos and documents are files, not markdown blobs. A Document has required `type`, `title`, and `resource` pointing at the file. File path is identity. Land plots are documents (`kind: land-plot`) with a title, file, optional note, and `subjects` linking one or more people. Drop a file onto a person or use Add document — nothing is uploaded.
+
+A person's map pin is a linked `Place` concept (`people/<slug>/place.md`). Suggested facts from Grok or Gemini are written only after you accept them. On desktop, the *bytes* of those files (markdown, YAML, photos, documents, places) are AES-256-GCM ciphertext.
 
 ## People map
 

@@ -4,11 +4,18 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import {
+  DOCUMENT_TYPE,
+  LAND_PLOT_KIND,
   OKF_VERSION,
+  addDocumentSubject,
   appendLog,
+  createDocumentDocument,
   createNoteDocument,
   createPersonDocument,
   createSocialDocument,
+  documentConceptPath,
+  documentFilePath,
+  documentLinkedToPerson,
   parseDocument,
   parseIndex,
   personPath,
@@ -104,4 +111,84 @@ test("appendLog groups by ISO date newest-first", () => {
   const next = appendLog("# Directory Update Log\n", "Creation", "Added [Ada](/people/ada-lovelace/person.md).");
   assert.match(next, /\*\*Creation\*\*/);
   assert.match(next, /## \d{4}-\d{2}-\d{2}/);
+});
+
+test("Document concept: file path is identity and resource points at the file", () => {
+  const doc = createDocumentDocument({
+    docSlug: "plot-12-hvaler",
+    fileName: "plot-12.pdf",
+    title: "Plot 12, Hvaler",
+    kind: LAND_PLOT_KIND,
+    note: "Survey scan. Not uploaded.",
+    subjectSlugs: ["ada-lovelace"],
+  });
+  assert.equal(doc.path, "documents/plot-12-hvaler/document.md");
+  assert.equal(doc.id, "documents/plot-12-hvaler/document");
+  assert.equal(documentConceptPath("plot-12-hvaler"), doc.path);
+  assert.equal(documentFilePath("plot-12-hvaler", "plot-12.pdf"), "documents/plot-12-hvaler/plot-12.pdf");
+  assert.equal(doc.frontmatter.type, DOCUMENT_TYPE);
+  assert.equal(doc.frontmatter.title, "Plot 12, Hvaler");
+  assert.equal(doc.frontmatter.resource, "/documents/plot-12-hvaler/plot-12.pdf");
+  assert.equal(doc.frontmatter.kind, LAND_PLOT_KIND);
+  assert.deepEqual(doc.frontmatter.subjects, ["people/ada-lovelace/person.md"]);
+  assert.match(doc.body, /Survey scan/);
+  assert.ok(documentLinkedToPerson(doc.frontmatter, "ada-lovelace"));
+});
+
+test("Document requires type, title, and resource; file bytes stay beside the concept", () => {
+  const root = mkdtempSync(join(tmpdir(), "skuffen-okf-doc-"));
+  const person = createPersonDocument({ slug: "ada-lovelace", title: "Ada Lovelace" });
+  const concept = createDocumentDocument({
+    docSlug: "plot-12-hvaler",
+    fileName: "nested/plot-12.pdf",
+    title: "Plot 12, Hvaler",
+    kind: LAND_PLOT_KIND,
+    note: "Optional land-plot note.",
+    subjectSlugs: ["ada-lovelace"],
+  });
+  const other = createPersonDocument({ slug: "other-contact", title: "Other Contact" });
+  addDocumentSubject(concept, "other-contact");
+
+  for (const doc of [person, other, concept]) {
+    const abs = join(root, doc.path);
+    mkdirSync(join(abs, ".."), { recursive: true });
+    writeFileSync(abs, serializeDocument(doc), "utf8");
+  }
+  const pdf = Buffer.from("%PDF-1.4 land-plot-bytes", "utf8");
+  const fileRel = documentFilePath("plot-12-hvaler", "plot-12.pdf");
+  writeFileSync(join(root, fileRel), pdf);
+
+  const reloaded = parseDocument(concept.path, readFileSync(join(root, concept.path), "utf8"));
+  assert.equal(reloaded.frontmatter.type, "Document");
+  assert.equal(reloaded.frontmatter.title, "Plot 12, Hvaler");
+  assert.equal(reloaded.frontmatter.resource, "/documents/plot-12-hvaler/plot-12.pdf");
+  assert.deepEqual(reloaded.frontmatter.subjects, [
+    "people/ada-lovelace/person.md",
+    "people/other-contact/person.md",
+  ]);
+  assert.deepEqual(readFileSync(join(root, fileRel)), pdf);
+  assert.doesNotMatch(readFileSync(join(root, concept.path), "utf8"), /%PDF-1.4/);
+
+  assert.throws(
+    () => parseDocument("documents/bad/document.md", "---\ntype: Document\n---\n"),
+    /title/,
+  );
+  assert.throws(
+    () =>
+      parseDocument(
+        "documents/bad/document.md",
+        "---\ntype: Document\ntitle: Missing file\n---\n",
+      ),
+    /resource/,
+  );
+  assert.throws(
+    () =>
+      createDocumentDocument({
+        docSlug: "x",
+        fileName: "a.pdf",
+        title: "   ",
+        subjectSlugs: ["ada-lovelace"],
+      }),
+    /title/,
+  );
 });

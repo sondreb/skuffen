@@ -1,11 +1,17 @@
 import { Injectable, signal } from "@angular/core";
 import {
+  DOCUMENT_TYPE,
+  addDocumentSubject,
   appendLog,
+  createDocumentDocument,
   createNoteDocument,
   createPersonDocument,
   createPhotoDocument,
   createPlaceDocument,
   createSocialDocument,
+  documentConceptPath,
+  documentFilePath,
+  documentLinkedToPerson,
   emptyLog,
   locationFromDocument,
   parseDocument,
@@ -16,6 +22,7 @@ import {
   serializeDocument,
   serializePeopleIndex,
   slugify,
+  subjectPaths,
   type OkfDocument,
   type PlaceSource,
 } from "../../../packages/okf/src/index";
@@ -231,6 +238,10 @@ export class PeopleService {
     await this.select(slug);
   }
 
+  async pickDocument(): Promise<string | null> {
+    return this.io.pickDocumentFile();
+  }
+
   async addPhoto(slug: string, sourcePath: string): Promise<void> {
     const fileName = sourcePath.split(/[\\/]/).pop() || `photo-${Date.now()}.jpg`;
     const dest = photoFilePath(slug, fileName);
@@ -238,6 +249,51 @@ export class PeopleService {
     const doc = createPhotoDocument({ slug, fileName });
     await this.writeDoc(doc);
     await this.log("Creation", `Added photo [${fileName}](/${doc.path}).`);
+    await this.reload();
+    await this.select(slug);
+  }
+
+  async addDocument(
+    slug: string,
+    input: {
+      fileName: string;
+      title: string;
+      kind?: string;
+      note?: string;
+      bytes?: Uint8Array;
+      sourcePath?: string;
+    },
+  ): Promise<void> {
+    const docSlug = await this.uniqueDocSlug(slugify(input.title || input.fileName));
+    const dest = documentFilePath(docSlug, input.fileName);
+    if (input.bytes) {
+      await this.io.writeBytes(this.bundleRoot(), dest, input.bytes);
+    } else if (input.sourcePath) {
+      await this.io.copyFileIntoBundle(this.bundleRoot(), input.sourcePath, dest);
+    } else {
+      throw new Error("Document needs file bytes or a local path");
+    }
+    const doc = createDocumentDocument({
+      docSlug,
+      fileName: input.fileName,
+      title: input.title,
+      kind: input.kind || "document",
+      note: input.note,
+      subjectSlugs: [slug],
+    });
+    await this.writeDoc(doc);
+    await this.log("Creation", `Added document [${doc.frontmatter.title}](/${doc.path}).`);
+    await this.reload();
+    await this.select(slug);
+  }
+
+  async linkDocument(docSlug: string, slug: string): Promise<void> {
+    const path = documentConceptPath(docSlug);
+    const raw = await this.io.readText(this.bundleRoot(), path);
+    if (!raw) throw new Error("Document not found");
+    const doc = addDocumentSubject(parseDocument(path, raw), slug);
+    await this.writeDoc(doc);
+    await this.log("Update", `Linked [${doc.frontmatter.title}](/${doc.path}) to [${slug}](/${personPath(slug)}).`);
     await this.reload();
     await this.select(slug);
   }
@@ -299,7 +355,48 @@ export class PeopleService {
       social,
       photos,
       location,
+      documents: await this.loadDocumentsForPerson(slug),
     };
+  }
+
+  private async loadDocumentsForPerson(slug: string): Promise<PersonView["documents"]> {
+    const files = await this.io.listFiles(this.bundleRoot(), "documents/");
+    const documents: PersonView["documents"] = [];
+    for (const file of files) {
+      if (!file.endsWith("/document.md")) continue;
+      const text = await this.io.readText(this.bundleRoot(), file);
+      if (!text) continue;
+      const item = parseDocument(file, text);
+      if (item.frontmatter.type !== DOCUMENT_TYPE) continue;
+      if (!documentLinkedToPerson(item.frontmatter, slug)) continue;
+      const docSlug = file.slice("documents/".length, -"/document.md".length);
+      documents.push({
+        id: item.id,
+        slug: docSlug,
+        path: item.path,
+        title: String(item.frontmatter.title ?? item.id),
+        resource: optionalString(item.frontmatter.resource),
+        kind: optionalString(item.frontmatter.kind),
+        note: documentNote(item.body),
+        subjects: subjectPaths(item.frontmatter.subjects),
+      });
+    }
+    return documents;
+  }
+
+  private async uniqueDocSlug(base: string): Promise<string> {
+    const files = await this.io.listFiles(this.bundleRoot(), "documents/");
+    const taken = new Set(
+      files
+        .filter((path) => path.endsWith("/document.md"))
+        .map((path) => path.slice("documents/".length, -"/document.md".length)),
+    );
+    if (!taken.has(base)) return base;
+    for (let i = 2; i < 1000; i++) {
+      const candidate = `${base}-${i}`;
+      if (!taken.has(candidate)) return candidate;
+    }
+    return `${base}-${Date.now()}`;
   }
 
   private async uniqueSlug(base: string): Promise<string> {
@@ -338,4 +435,12 @@ export class PeopleService {
 
 function optionalString(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+function documentNote(body: string): string | undefined {
+  const first = body.split(/\n\n/)[0]?.trim() ?? "";
+  if (!first || /stored beside this concept/.test(first) || first.startsWith("Subjects:")) {
+    return undefined;
+  }
+  return first;
 }

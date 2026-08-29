@@ -35,6 +35,16 @@ export interface PersonView {
   }>;
   photos: Array<{ id: string; path: string; title: string; resource?: string }>;
   location?: PersonLocation;
+  documents: Array<{
+    id: string;
+    slug: string;
+    path: string;
+    title: string;
+    resource?: string;
+    kind?: string;
+    note?: string;
+    subjects: string[];
+  }>;
 }
 
 export interface PersonLocation {

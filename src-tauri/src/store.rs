@@ -45,6 +45,7 @@ pub fn ensure_bundle_dirs(app: &tauri::AppHandle, root: Option<String>) -> Resul
         None => default_bundle_path(app)?,
     };
     fs::create_dir_all(PathBuf::from(&path).join("people")).map_err(|e| e.to_string())?;
+    fs::create_dir_all(PathBuf::from(&path).join("documents")).map_err(|e| e.to_string())?;
     Ok(path)
 }
 

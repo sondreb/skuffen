@@ -3,6 +3,7 @@ import { FormsModule } from "@angular/forms";
 import { PeopleMapComponent, type MapPin } from "./map/people-map.component";
 import type { FactSuggestion, PersonView, ProviderId } from "./models";
 import { GeocodeService, type GeocodeHit } from "./services/geocode.service";
+import { LAND_PLOT_KIND } from "../../packages/okf/src/index";
 import { isTauri } from "./services/io.service";
 import { PeopleService } from "./services/people.service";
 import { ProvidersService } from "./services/providers.service";
@@ -43,9 +44,14 @@ export class AppComponent implements OnInit {
   socialNetwork = "";
   socialHandle = "";
   socialUrl = "";
+  docTitle = "";
+  docNote = "";
+  docKind: "document" | typeof LAND_PLOT_KIND = "document";
+  linkSlug = "";
   grokKey = "";
   geminiKey = "";
   readonly desktop = isTauri();
+  readonly landPlotKind = LAND_PLOT_KIND;
 
   readonly filtered = computed(() => {
     const q = this.query().trim().toLowerCase();
@@ -200,10 +206,11 @@ export class AppComponent implements OnInit {
   }
 
   onDragOver(event: DragEvent): void {
-    if (!this.people.selected()) return;
+    if (!event.dataTransfer?.types.includes("Files")) return;
+    if (!this.people.selected() && !this.browsing()) return;
     event.preventDefault();
     this.dragging = true;
-    this.fact = "drop";
+    if (this.people.selected()) this.fact = "drop";
   }
 
   onDragLeave(event: DragEvent): void {
@@ -217,33 +224,55 @@ export class AppComponent implements OnInit {
     this.dragging = false;
     const files = event.dataTransfer?.files;
     if (!files?.length) return;
-    await this.ingestFiles(Array.from(files));
-  }
-
-  async ingestFiles(files: File[]): Promise<void> {
     const person = this.people.selected();
     if (!person) return;
+    await this.ingestFiles(Array.from(files), person.slug);
+  }
+
+  onCardDragOver(event: DragEvent): void {
+    if (!event.dataTransfer?.types.includes("Files")) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.dragging = true;
+  }
+
+  async onDropOnPerson(event: DragEvent, person: PersonView): Promise<void> {
+    event.preventDefault();
+    event.stopPropagation();
+    this.dragging = false;
+    const files = event.dataTransfer?.files;
+    if (!files?.length) return;
+    await this.people.select(person.slug);
+    await this.ingestFiles(Array.from(files), person.slug);
+  }
+
+  async ingestFiles(files: File[], slug: string): Promise<void> {
     this.fact = "drop";
     const images = files.filter((file) => file.type.startsWith("image/") || /\.(png|jpe?g|gif|webp|heic)$/i.test(file.name));
-    const other = files.filter((file) => !images.includes(file));
-    if (other.length) {
-      this.notice = "Documents drop here later. Nothing was written.";
+    const docs = files.filter((file) => !images.includes(file));
+
+    if (docs.length) {
+      await this.attachFiles(slug, docs, this.docKind);
     }
-    if (!images.length) return;
-    if (!this.desktop) {
-      this.notice = "Photos need the desktop shell. Nothing was written.";
-      return;
+
+    if (images.length) {
+      if (!this.desktop) {
+        await this.attachFiles(slug, images, this.docKind);
+      } else {
+        let wrote = 0;
+        for (const file of images) {
+          const path = (file as File & { path?: string }).path;
+          if (!path) continue;
+          await this.people.addPhoto(slug, path);
+          wrote += 1;
+        }
+        if (!wrote) {
+          await this.attachFiles(slug, images, this.docKind);
+        }
+      }
     }
-    let wrote = 0;
-    for (const file of images) {
-      const path = (file as File & { path?: string }).path;
-      if (!path) continue;
-      await this.people.addPhoto(person.slug, path);
-      wrote += 1;
-    }
-    this.notice = wrote
-      ? null
-      : "Drop needs a file path. Use Pick a photo — nothing was written.";
+
+    this.notice = null;
   }
 
   async searchAddress(): Promise<void> {
@@ -327,6 +356,72 @@ export class AppComponent implements OnInit {
     this.mapFocus = person?.location
       ? { latitude: person.location.latitude, longitude: person.location.longitude, zoom: 13 }
       : null;
+  }
+
+  async pickAndAddDocument(kind?: string): Promise<void> {
+    const person = this.people.selected();
+    if (!person) return;
+    if (kind) this.docKind = kind === LAND_PLOT_KIND ? LAND_PLOT_KIND : "document";
+    const chosenKind = this.docKind;
+    if (this.desktop) {
+      const source = await this.people.pickDocument();
+      if (!source) return;
+      const fileName = source.split(/[\\/]/).pop() || `document-${Date.now()}`;
+      await this.people.addDocument(person.slug, {
+        fileName,
+        sourcePath: source,
+        title: this.docTitle.trim() || stem(fileName),
+        kind: chosenKind,
+        note: this.docNote.trim() || undefined,
+      });
+      this.clearDocDraft();
+      return;
+    }
+    document.getElementById("skuffen-document-file")?.click();
+  }
+
+  async onDocumentFileChosen(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const files = input.files;
+    const person = this.people.selected();
+    if (person && files?.length) {
+      await this.attachFiles(person.slug, files, this.docKind);
+    }
+    input.value = "";
+  }
+
+  async attachFiles(slug: string, files: FileList | File[], kind: string): Promise<void> {
+    for (const file of Array.from(files)) {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      await this.people.addDocument(slug, {
+        fileName: file.name,
+        bytes,
+        title: this.docTitle.trim() || stem(file.name),
+        kind,
+        note: this.docNote.trim() || undefined,
+      });
+    }
+    this.clearDocDraft();
+  }
+
+  async linkSelectedDocument(docSlug: string): Promise<void> {
+    if (!this.linkSlug) return;
+    await this.people.linkDocument(docSlug, this.linkSlug);
+    this.linkSlug = "";
+  }
+
+  unlinkedPeople(doc: PersonView["documents"][number]): PersonView[] {
+    return this.people.people().filter((item) => !doc.subjects.includes(`people/${item.slug}/person.md`));
+  }
+
+  kindLabel(kind?: string): string {
+    return kind === LAND_PLOT_KIND ? "Land plot" : "Document";
+  }
+
+  private clearDocDraft(): void {
+    this.docTitle = "";
+    this.docNote = "";
+    this.docKind = "document";
   }
 
   async ask(): Promise<void> {
@@ -438,4 +533,8 @@ function blankDraft() {
     phone: "",
     body: "",
   };
+}
+
+function stem(fileName: string): string {
+  return fileName.replace(/\.[^.]+$/, "") || fileName;
 }

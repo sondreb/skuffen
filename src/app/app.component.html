@@ -327,11 +327,33 @@
 
             @if (fact === "drop") {
               <div class="surface drop" [class.hot]="dragging">
-                <p>Drop a photo on this card, or pick one.</p>
+                <p>Drop a photo or a document on this card. Files stay in the local OKF bundle.</p>
                 <button class="brass" type="button" (click)="addPhoto()" [disabled]="!desktop">Pick a photo</button>
                 @if (!desktop) {
-                  <p class="whisper">Photos need the desktop shell.</p>
+                  <p class="whisper">Photos need the desktop shell. Documents can drop here in this preview.</p>
                 }
+                <label>Title <input [(ngModel)]="docTitle" name="doc-title" placeholder="Plot title or file title" /></label>
+                <label>
+                  Kind
+                  <select [(ngModel)]="docKind" name="doc-kind">
+                    <option value="document">Document</option>
+                    <option [value]="landPlotKind">Land plot</option>
+                  </select>
+                </label>
+                <label>Note (optional) <textarea [(ngModel)]="docNote" name="doc-note" rows="2"></textarea></label>
+                <div class="row">
+                  <button type="button" (click)="pickAndAddDocument()">Add document</button>
+                  <button class="brass" type="button" (click)="pickAndAddDocument(landPlotKind)">
+                    Add land-plot document
+                  </button>
+                </div>
+                <input
+                  id="skuffen-document-file"
+                  type="file"
+                  hidden
+                  multiple
+                  (change)="onDocumentFileChosen($event)"
+                />
               </div>
             } @else if (fact === "pin") {
               <div class="surface pin-scrap">
@@ -500,6 +522,39 @@
                 }
               </section>
             }
+
+            @if (person.documents.length) {
+              <section class="prints">
+                <h2>Documents</h2>
+                @for (doc of person.documents; track doc.id) {
+                  <article>
+                    <h3>{{ doc.title }}</h3>
+                    <small>{{ kindLabel(doc.kind) }}</small>
+                    @if (doc.note) {
+                      <p>{{ doc.note }}</p>
+                    }
+                    <code>{{ doc.resource }}</code>
+                    <p class="whisper">Linked: {{ doc.subjects.join(", ") }}</p>
+                    @if (unlinkedPeople(doc).length) {
+                      <div class="row">
+                        <label>
+                          Also link to
+                          <select [(ngModel)]="linkSlug" name="link-{{ doc.slug }}">
+                            <option value="">Choose a person already in the drawer</option>
+                            @for (other of unlinkedPeople(doc); track other.slug) {
+                              <option [value]="other.slug">{{ other.title }}</option>
+                            }
+                          </select>
+                        </label>
+                        <button type="button" (click)="linkSelectedDocument(doc.slug)" [disabled]="!linkSlug">
+                          Link
+                        </button>
+                      </div>
+                    }
+                  </article>
+                }
+              </section>
+            }
           </article>
         </section>
       } @else if (browsing()) {
@@ -508,7 +563,13 @@
             <p class="invite-line">No one by that name.</p>
           }
           @for (person of filtered(); track person.slug) {
-            <button type="button" class="person-card" (click)="open(person)">
+            <button
+              type="button"
+              class="person-card"
+              (click)="open(person)"
+              (dragover)="onCardDragOver($event)"
+              (drop)="onDropOnPerson($event, person)"
+            >
               <span class="node">{{ initials(person.title) }}</span>
               <b>{{ person.title }}</b>
               <small>{{ person.description || "A card in the drawer" }}</small>

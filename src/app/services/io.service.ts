@@ -6,6 +6,7 @@ export const BROWSER_VAULT_MESSAGE =
   "Browser preview cannot use the OS keychain, so it cannot encrypt the people-graph honestly. The graph stays in this tab's localStorage stand-in (plaintext). Use npm run tauri dev for OS-backed AES-256-GCM. Tokens still never go to localStorage.";
 
 const FILES_KEY = "skuffen.bundle.files";
+const BLOBS_KEY = "skuffen.bundle.blobs";
 const SETTINGS_KEY = "skuffen.settings";
 
 export function isTauri(): boolean {
@@ -52,6 +53,11 @@ export class IoService {
     return null;
   }
 
+  async pickDocumentFile(): Promise<string | null> {
+    if (isTauri()) return this.invoke<string | null>("pick_document_file");
+    return null;
+  }
+
   async ensureBundle(root?: string | null): Promise<string> {
     if (isTauri()) return this.invoke<string>("ensure_bundle", { root: root ?? null });
     const files = this.webFiles();
@@ -70,9 +76,8 @@ export class IoService {
 
   async listFiles(root: string, prefix?: string): Promise<string[]> {
     if (isTauri()) return this.invoke<string[]>("list_files", { root, prefix: prefix ?? null });
-    return Object.keys(this.webFiles())
-      .filter((path) => !prefix || path.startsWith(prefix))
-      .sort();
+    const paths = new Set([...Object.keys(this.webFiles()), ...Object.keys(this.webBlobs())]);
+    return [...paths].filter((path) => !prefix || path.startsWith(prefix)).sort();
   }
 
   async readText(root: string, path: string): Promise<string | null> {
@@ -88,6 +93,11 @@ export class IoService {
     const files = this.webFiles();
     files[path] = contents;
     this.setWebFiles(files);
+    const blobs = this.webBlobs();
+    if (path in blobs) {
+      delete blobs[path];
+      this.setWebBlobs(blobs);
+    }
   }
 
   async deleteFile(root: string, path: string): Promise<void> {
@@ -105,7 +115,33 @@ export class IoService {
       await this.invoke("copy_file_into_bundle", { root, source, dest });
       return;
     }
-    throw new Error("Photo files require the Skuffen desktop shell");
+    throw new Error("Copying a disk path needs the Skuffen desktop shell. Drop the file instead.");
+  }
+
+  async writeBytes(root: string, path: string, contents: Uint8Array): Promise<void> {
+    if (isTauri()) {
+      await this.invoke("write_bytes", { root, path, contents: Array.from(contents) });
+      return;
+    }
+    const blobs = this.webBlobs();
+    blobs[path] = bytesToBase64(contents);
+    this.setWebBlobs(blobs);
+    const files = this.webFiles();
+    if (path in files) {
+      delete files[path];
+      this.setWebFiles(files);
+    }
+  }
+
+  async readBytes(root: string, path: string): Promise<Uint8Array | null> {
+    if (isTauri()) {
+      const raw = await this.invoke<number[] | null>("read_bytes", { root, path });
+      return raw ? Uint8Array.from(raw) : null;
+    }
+    const blob = this.webBlobs()[path];
+    if (blob) return base64ToBytes(blob);
+    const text = this.webFiles()[path];
+    return text === undefined ? null : new TextEncoder().encode(text);
   }
 
   async secretGet(key: string): Promise<string | null> {
@@ -173,7 +209,8 @@ export class IoService {
   async exportPlainOkf(root: string): Promise<string | null> {
     if (isTauri()) return this.invoke<string | null>("export_plain_okf", { root });
     const files = this.webFiles();
-    const blob = new Blob([JSON.stringify({ okf_version: "0.2", files }, null, 2)], {
+    const blobs = this.webBlobs();
+    const blob = new Blob([JSON.stringify({ okf_version: "0.2", files, blobs }, null, 2)], {
       type: "application/json",
     });
     const href = URL.createObjectURL(blob);
@@ -193,4 +230,26 @@ export class IoService {
   private setWebFiles(files: Record<string, string>): void {
     localStorage.setItem(FILES_KEY, JSON.stringify(files));
   }
+
+  private webBlobs(): Record<string, string> {
+    const raw = localStorage.getItem(BLOBS_KEY);
+    return raw ? (JSON.parse(raw) as Record<string, string>) : {};
+  }
+
+  private setWebBlobs(blobs: Record<string, string>): void {
+    localStorage.setItem(BLOBS_KEY, JSON.stringify(blobs));
+  }
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+function base64ToBytes(value: string): Uint8Array {
+  const binary = atob(value);
+  const out = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i);
+  return out;
 }

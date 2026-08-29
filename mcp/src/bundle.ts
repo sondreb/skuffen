@@ -1,12 +1,19 @@
-import { mkdirSync, readdirSync, statSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import {
+  DOCUMENT_TYPE,
+  addDocumentSubject,
   appendLog,
+  createDocumentDocument,
   createNoteDocument,
   createPersonDocument,
   createPlaceDocument,
   createSocialDocument,
+  documentConceptPath,
+  documentDir,
+  documentFilePath,
+  documentLinkedToPerson,
   emptyLog,
   locationFromDocument,
   parseDocument,
@@ -16,6 +23,7 @@ import {
   serializeDocument,
   serializePeopleIndex,
   slugify,
+  subjectPaths,
   type OkfDocument,
   type PlaceLocation,
   type PlaceSource,
@@ -38,6 +46,16 @@ export interface PersonView {
   social: Array<{ id: string; path: string; title: string; network?: string; handle?: string; url?: string }>;
   photos: Array<{ id: string; path: string; title: string; resource?: string }>;
   location?: PlaceLocation;
+  documents: Array<{
+    id: string;
+    slug: string;
+    path: string;
+    title: string;
+    resource?: string;
+    kind?: string;
+    note?: string;
+    subjects: string[];
+  }>;
 }
 
 export function defaultBundleRoot(): string {
@@ -63,6 +81,7 @@ export class OkfBundle {
 
   ensure(): void {
     mkdirSync(join(this.root, "people"), { recursive: true });
+    mkdirSync(join(this.root, "documents"), { recursive: true });
     if (!this.read("index.md")) {
       this.writeRaw("index.md", serializeBundleIndex([]));
     }
@@ -131,6 +150,7 @@ export class OkfBundle {
       social,
       photos,
       location,
+      documents: this.documentsFor(slug),
     };
   }
 
@@ -189,6 +209,45 @@ export class OkfBundle {
     return this.getPerson(slug)!;
   }
 
+  addDocument(input: {
+    slug: string;
+    title: string;
+    filePath: string;
+    fileName?: string;
+    kind?: string;
+    note?: string;
+  }): PersonView {
+    if (!this.getPerson(input.slug)) throw new Error(`Unknown person ${input.slug}`);
+    const fileName = input.fileName || basename(input.filePath);
+    const docSlug = uniqueSlug(slugify(input.title || fileName), (candidate) =>
+      exists(join(this.root, documentDir(candidate))),
+    );
+    const dest = documentFilePath(docSlug, fileName);
+    writeBundleFile(this.root, dest, readFileSync(input.filePath), this.vaultKey);
+    const doc = createDocumentDocument({
+      docSlug,
+      fileName,
+      title: input.title,
+      kind: input.kind,
+      note: input.note,
+      subjectSlugs: [input.slug],
+    });
+    this.writeDoc(doc);
+    this.log("Creation", `Added document [${doc.frontmatter.title}](/${doc.path}).`);
+    return this.getPerson(input.slug)!;
+  }
+
+  linkDocument(docSlug: string, slug: string): PersonView {
+    if (!this.getPerson(slug)) throw new Error(`Unknown person ${slug}`);
+    const path = documentConceptPath(docSlug);
+    const raw = this.read(path);
+    if (!raw) throw new Error(`Unknown document ${docSlug}`);
+    const doc = addDocumentSubject(parseDocument(path, raw), slug);
+    this.writeDoc(doc);
+    this.log("Update", `Linked [${doc.frontmatter.title}](/${doc.path}) to [${slug}](/${personPath(slug)}).`);
+    return this.getPerson(slug)!;
+  }
+
   addSocial(slug: string, network: string, url: string, handle?: string): PersonView {
     if (!this.getPerson(slug)) throw new Error(`Unknown person ${slug}`);
     const social = createSocialDocument({ slug, network, url, handle });
@@ -204,6 +263,32 @@ export class OkfBundle {
       .map((line) => line.trim())
       .filter((line) => line.startsWith("* "))
       .slice(0, limit);
+  }
+
+  private documentsFor(slug: string): PersonView["documents"] {
+    const dir = join(this.root, "documents");
+    if (!exists(dir) || !statSync(dir).isDirectory()) return [];
+    return readdirSync(dir)
+      .filter((name) => exists(join(this.root, documentConceptPath(name))))
+      .map((name) => {
+        const rel = documentConceptPath(name);
+        const raw = this.read(rel);
+        return raw ? { name, doc: parseDocument(rel, raw) } : null;
+      })
+      .filter((item): item is { name: string; doc: OkfDocument } => {
+        if (!item) return false;
+        return item.doc.frontmatter.type === DOCUMENT_TYPE && documentLinkedToPerson(item.doc.frontmatter, slug);
+      })
+      .map(({ name, doc }) => ({
+        id: doc.id,
+        slug: name,
+        path: doc.path,
+        title: String(doc.frontmatter.title ?? doc.id),
+        resource: optionalString(doc.frontmatter.resource),
+        kind: optionalString(doc.frontmatter.kind),
+        note: documentNote(doc.body),
+        subjects: subjectPaths(doc.frontmatter.subjects),
+      }));
   }
 
   private listSlugs(): string[] {
@@ -266,6 +351,14 @@ function exists(path: string): boolean {
 
 function optionalString(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+function documentNote(body: string): string | undefined {
+  const first = body.split(/\n\n/)[0]?.trim() ?? "";
+  if (!first || /stored beside this concept/.test(first) || first.startsWith("Subjects:")) {
+    return undefined;
+  }
+  return first;
 }
 
 function uniqueSlug(base: string, taken: (slug: string) => boolean): string {

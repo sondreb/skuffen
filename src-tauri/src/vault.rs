@@ -108,7 +108,7 @@ fn status_message(unlocked: bool, encrypted: bool, backend: &str) -> String {
         );
     }
     if encrypted {
-        format!("People-graph markdown, YAML, and photos are encrypted on disk (AES-256-GCM). {key_where}")
+        format!("People-graph markdown, YAML, photos, and documents are encrypted on disk (AES-256-GCM). {key_where}")
     } else {
         format!("Vault is unlocked. Existing plaintext files will be sealed on the next write. {key_where}")
     }
