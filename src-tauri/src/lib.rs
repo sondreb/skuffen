@@ -10,9 +10,28 @@ use vault::VaultState;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
+pub struct FollowRecord {
+    pub slug: String,
+    pub interval: String,
+    pub enabled: bool,
+    #[serde(default)]
+    pub last_run_at: Option<String>,
+    #[serde(default)]
+    pub next_run_at: Option<String>,
+    #[serde(default)]
+    pub last_error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
 pub struct Settings {
     pub bundle_root: Option<String>,
     pub preferred_provider: Option<String>,
+    /// Local follow schedule + pending proposals. Not OKF. Never stores tokens.
+    #[serde(default)]
+    pub follows: Option<Vec<FollowRecord>>,
+    #[serde(default)]
+    pub proposals: Option<Vec<serde_json::Value>>,
 }
 
 #[tauri::command]

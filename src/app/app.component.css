@@ -565,3 +565,14 @@ label {
   width: 100%;
   text-align: left;
 }
+
+.follow-line {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.follow-line input {
+  width: auto;
+  margin: 0;
+}

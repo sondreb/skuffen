@@ -35,13 +35,14 @@ npm start
 
 The browser preview **cannot encrypt the people-graph honestly** — there is no OS keychain in `npm start`. The graph stays in a localStorage stand-in (plaintext). Use `npm run tauri dev` for OS-backed encryption. Grok/Gemini API keys and OAuth tokens still stay in memory for the current tab only. They are never written to `localStorage`, `sessionStorage`, or any other durable browser storage, and they vanish on reload.
 
-OKF / vault / MCP / browser-secret checks:
+OKF / vault / MCP / browser-secret / research-follow checks:
 
 ```bash
 npm run test:okf
 npm run test:vault
 npm run test:mcp
 npm run test:secrets
+npm run test:research
 npm run test:version
 ```
 
@@ -115,6 +116,18 @@ Unlock uses your OS login session (the keychain). There is no Skuffen password, 
 - **Gemini**: API key + `@google/genai`.
 - If both are connected, pick one in the UI. Default is Grok.
 - Prompts include only the person you asked about — never the full graph.
+
+## Research and Follow
+
+From a person, **Research with Grok** (or Gemini if you chose it) searches public web info. Results are suggestions. Nothing is written to the OKF bundle until you **Accept** — same gate as v1 Ask.
+
+**Follow** is a local scheduler in the desktop app. Pick a per-person interval (daily, weekly, monthly). While Skuffen is open it re-runs that person’s public search and proposes new facts. It never auto-writes, never auto-sends messages, and never uploads the people-graph. The prompt includes only that person.
+
+Follow schedules and pending proposals live in local app settings, not in the OKF bundle. Tokens stay in the OS credential store — never `localStorage`, never OKF.
+
+```bash
+npm run test:research
+```
 
 ## Local MCP
 

@@ -1,0 +1,199 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import type { FactSuggestion, FollowRecord, PersonView } from "../models.ts";
+import {
+  assertNoAutoSend,
+  assertNoAutoWrite,
+  buildResearchPrompt,
+  dueFollows,
+  extractModelText,
+  geminiResearchConfig,
+  grokResearchRequest,
+  mergeFollow,
+  nextRunAt,
+  parseSuggestions,
+  proposalsForSlug,
+  proposeOnly,
+  recordFollowRun,
+  removeSuggestion,
+  settingsWithoutSecrets,
+  unfollow,
+  upsertProposal,
+  writesForAcceptedSuggestion,
+} from "./research.ts";
+
+function person(overrides: Partial<PersonView> = {}): PersonView {
+  return {
+    id: "people/ada-lovelace/person",
+    slug: "ada-lovelace",
+    path: "people/ada-lovelace/person.md",
+    title: "Ada Lovelace",
+    description: "Mathematician",
+    givenName: "Ada",
+    familyName: "Lovelace",
+    body: "Notes stay on this machine.",
+    notes: [{ id: "n1", path: "people/ada-lovelace/notes/engine.md", title: "Engine", body: "Analytical Engine." }],
+    social: [
+      {
+        id: "s1",
+        path: "people/ada-lovelace/social/wikipedia.md",
+        title: "Wikipedia",
+        network: "wikipedia",
+        handle: "Ada_Lovelace",
+        url: "https://en.wikipedia.org/wiki/Ada_Lovelace",
+      },
+    ],
+    photos: [],
+    ...overrides,
+  };
+}
+
+const suggestion: FactSuggestion = {
+  id: "research-1",
+  source: "research",
+  kind: "note",
+  title: "First algorithm",
+  body: "Wrote notes on the Analytical Engine.",
+};
+
+test("research prompt includes only that person and never the full graph", () => {
+  const prompt = buildResearchPrompt(person());
+  assert.match(prompt, /Ada Lovelace/);
+  assert.match(prompt, /this one person/);
+  assert.match(prompt, /Do not invent people/);
+  assert.match(prompt, /Do not send messages/);
+  assert.doesNotMatch(prompt, /full people-graph/);
+  assert.doesNotMatch(prompt, /Bob Example|reconnect shuffle|meeting brief/i);
+  assert.doesNotMatch(prompt, /people\/(?!ada-lovelace)/);
+});
+
+test("research and follow propose only — no OKF write without Accept", () => {
+  const okfWrites: unknown[] = [];
+  const parsed = parseSuggestions(
+    JSON.stringify({
+      suggestions: [
+        { kind: "note", title: "Public talk", body: "Spoke in 1843." },
+        { kind: "social", title: "Wiki", network: "wikipedia", url: "https://en.wikipedia.org/wiki/Ada_Lovelace" },
+      ],
+    }),
+    "research",
+  );
+  assert.equal(parsed.length, 2);
+  const writes = proposeOnly(parsed);
+  assert.deepEqual(writes, []);
+  assertNoAutoWrite(okfWrites);
+});
+
+test("explicit Accept is the only path that yields an OKF write intent", () => {
+  const intent = writesForAcceptedSuggestion("ada-lovelace", suggestion);
+  assert.deepEqual(intent, {
+    type: "note",
+    slug: "ada-lovelace",
+    title: "First algorithm",
+    body: "Wrote notes on the Analytical Engine.",
+  });
+});
+
+test("follow due list skips unknown slugs so it never invents people", () => {
+  const now = new Date("2026-08-29T21:00:00Z");
+  const follows: FollowRecord[] = [
+    { slug: "ada-lovelace", interval: "weekly", enabled: true, nextRunAt: "2026-08-01T00:00:00Z" },
+    { slug: "invented-stranger", interval: "weekly", enabled: true, nextRunAt: "2026-08-01T00:00:00Z" },
+    { slug: "not-yet", interval: "weekly", enabled: true, nextRunAt: "2026-09-10T00:00:00Z" },
+  ];
+  const due = dueFollows(follows, now, new Set(["ada-lovelace"]));
+  assert.deepEqual(
+    due.map((item) => item.slug),
+    ["ada-lovelace"],
+  );
+});
+
+test("follow tick records proposals and never writes OKF or sends messages", () => {
+  const okfWrites: unknown[] = [];
+  const sends: unknown[] = [];
+  const uploads: unknown[] = [];
+  const now = new Date("2026-08-29T21:00:00Z");
+  const follow: FollowRecord = {
+    slug: "ada-lovelace",
+    interval: "weekly",
+    enabled: true,
+    nextRunAt: "2026-08-01T00:00:00Z",
+  };
+  const proposal = {
+    id: "follow-ada-1",
+    slug: "ada-lovelace",
+    source: "follow" as const,
+    createdAt: now.toISOString(),
+    suggestions: [suggestion],
+  };
+  const nextFollow = recordFollowRun(follow, now, true);
+  const proposals = upsertProposal([], proposal);
+
+  assertNoAutoWrite(okfWrites);
+  assertNoAutoSend(sends);
+  assert.equal(uploads.length, 0);
+  assert.equal(proposals[0]?.source, "follow");
+  assert.equal(proposeOnly(proposals[0]!.suggestions).length, 0);
+  assert.equal(nextFollow.lastRunAt, now.toISOString());
+  assert.equal(nextFollow.nextRunAt, nextRunAt("weekly", now));
+});
+
+test("Grok research request uses web_search and never dumps the graph or tokens", () => {
+  const prompt = buildResearchPrompt(person());
+  const body = grokResearchRequest("grok-4-latest", prompt);
+  assert.deepEqual(body.tools, [{ type: "web_search" }]);
+  assert.equal("search_parameters" in body, false);
+  const json = JSON.stringify(body);
+  assert.match(json, /Never request the full people-graph/);
+  assert.doesNotMatch(json, /grok_api_key|access_token|localStorage/);
+  assert.doesNotMatch(json, /Bob Example|reconnect shuffle|meeting brief/i);
+});
+
+test("Gemini research uses Google Search grounding, not Grok routing", () => {
+  assert.deepEqual(geminiResearchConfig(), { tools: [{ googleSearch: {} }] });
+});
+
+test("follow settings persist schedule only — never provider tokens", () => {
+  const now = new Date("2026-08-29T21:00:00Z");
+  const follows = mergeFollow([], "ada-lovelace", "weekly", now);
+  const persisted = settingsWithoutSecrets({
+    bundleRoot: "/tmp/people-graph",
+    preferredProvider: "grok",
+    follows,
+    grok_api_key: "xai-leaked",
+    access_token: "oauth-leaked",
+  });
+  const json = JSON.stringify(persisted);
+  assert.match(json, /ada-lovelace/);
+  assert.doesNotMatch(json, /xai-leaked|oauth-leaked|grok_api_key|access_token/);
+  assert.deepEqual(unfollow(follows, "ada-lovelace"), []);
+});
+
+test("rejecting a follow proposal drops it without an OKF write", () => {
+  const writes: unknown[] = [];
+  const stored = upsertProposal([], {
+    id: "p1",
+    slug: "ada-lovelace",
+    source: "follow",
+    createdAt: "2026-08-29T21:00:00Z",
+    suggestions: [suggestion],
+  });
+  const after = removeSuggestion(stored, suggestion.id);
+  assert.equal(after.length, 0);
+  assert.equal(proposalsForSlug(after, "ada-lovelace").length, 0);
+  assertNoAutoWrite(writes);
+});
+
+test("extractModelText reads Responses API and chat completions", () => {
+  assert.equal(extractModelText({ output_text: '{"suggestions":[]}' }), '{"suggestions":[]}');
+  assert.equal(
+    extractModelText({ choices: [{ message: { content: '{"suggestions":[{"title":"A"}]}' } }] }),
+    '{"suggestions":[{"title":"A"}]}',
+  );
+  assert.equal(
+    extractModelText({
+      output: [{ type: "message", content: [{ type: "output_text", text: '{"suggestions":[]}' }] }],
+    }),
+    '{"suggestions":[]}',
+  );
+});

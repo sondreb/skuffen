@@ -1,8 +1,29 @@
 export type ProviderId = "grok" | "gemini";
+export type FollowInterval = "daily" | "weekly" | "monthly";
+export type SuggestionSource = "ask" | "research" | "follow";
+
+export interface FollowRecord {
+  slug: string;
+  interval: FollowInterval;
+  enabled: boolean;
+  lastRunAt?: string | null;
+  nextRunAt?: string | null;
+  lastError?: string | null;
+}
+
+export interface StoredProposal {
+  id: string;
+  slug: string;
+  source: "research" | "follow";
+  createdAt: string;
+  suggestions: FactSuggestion[];
+}
 
 export interface Settings {
   bundleRoot?: string | null;
   preferredProvider?: ProviderId | null;
+  follows?: FollowRecord[];
+  proposals?: StoredProposal[];
 }
 
 export interface VaultStatus {
@@ -58,6 +79,7 @@ export interface PersonLocation {
 
 export interface FactSuggestion {
   id: string;
+  source?: SuggestionSource;
   kind: "note" | "social" | "field";
   title: string;
   body?: string;

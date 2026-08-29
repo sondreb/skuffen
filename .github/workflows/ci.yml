@@ -36,6 +36,9 @@ jobs:
       - name: Browser-secret tests
         run: npm run test:secrets
 
+      - name: Research and follow (propose-only) tests
+        run: npm run test:research
+
       - name: Version lockstep tests
         run: npm run test:version
 
