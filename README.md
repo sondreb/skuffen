@@ -4,7 +4,7 @@ Agentic AI Driven Personal Intelligence
 
 Skuffen is **local-only** personal intelligence software. You keep a private people-graph on your own machine: contacts, notes, social links, and photos. There is no Skuffen account, no analytics, and no cloud backend for people data.
 
-The people-graph is stored as an [Open Knowledge Format v0.2](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md) bundle. File path is identity. Tokens for Grok and Gemini live in the OS credential store, never in the OKF bundle.
+The people-graph is stored as an [Open Knowledge Format v0.2](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md) bundle. File path is identity. On desktop, tokens for Grok and Gemini live in the OS credential store. They never enter the OKF bundle.
 
 Homepage (later): [https://skuffen.grok.me](https://skuffen.grok.me)
 
@@ -27,17 +27,20 @@ npm run tauri dev
 
 Node.js 22.22.3+ is required for Angular 22. On Linux, install Tauri's GTK/WebKit packages (`libwebkit2gtk-4.1-dev`, `libgtk-3-dev`, `librsvg2-dev`). Rust 1.98+ is pinned in `rust-toolchain.toml`.
 
-Frontend only (browser preview, localStorage stand-in for the bundle):
+Frontend only (browser preview, localStorage stand-in for the people-graph bundle):
 
 ```bash
 npm start
 ```
 
-OKF / MCP checks:
+In the browser preview, Grok/Gemini API keys and OAuth tokens stay in memory for the current tab only. They are never written to `localStorage`, `sessionStorage`, or any other durable browser storage, and they vanish on reload. Use `npm run tauri dev` when you want tokens in the OS credential store.
+
+OKF / MCP / browser-secret checks:
 
 ```bash
 npm run test:okf
 npm run test:mcp
+npm run test:secrets
 ```
 
 ## Storage (OKF v0.2)
