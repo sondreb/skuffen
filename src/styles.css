@@ -1,1 +1,59 @@
-/* You can add global styles to this file, and also import other style files */
+:root {
+  color: #f3efe6;
+  background: #141210;
+  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, "Times New Roman", serif;
+  font-size: 16px;
+  line-height: 1.5;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background:
+    radial-gradient(circle at 80% 10%, rgba(46, 196, 182, 0.12), transparent 28%),
+    linear-gradient(180deg, #1b1713 0%, #141210 40%, #10100f 100%);
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+}
+
+input,
+textarea,
+select,
+button {
+  font: inherit;
+}
+
+input,
+textarea,
+select {
+  background: #0f0d0b;
+  color: #f3efe6;
+  border: 1px solid #3a2f24;
+  border-radius: 8px;
+  padding: 0.55rem 0.7rem;
+}
+
+a {
+  color: #7ef0df;
+}
+
+h1,
+h2,
+h3 {
+  font-weight: 600;
+  color: #fff8ea;
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85em;
+  color: #c6a15b;
+}

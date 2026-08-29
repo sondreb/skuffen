@@ -1,14 +1,133 @@
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
+mod oauth;
+mod secrets;
+mod store;
+
+use serde::{Deserialize, Serialize};
+use tauri::Manager;
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct Settings {
+    pub bundle_root: Option<String>,
+    pub preferred_provider: Option<String>,
+}
+
 #[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
+fn get_settings(app: tauri::AppHandle) -> Result<Settings, String> {
+    store::load_settings(&app)
+}
+
+#[tauri::command]
+fn save_settings(app: tauri::AppHandle, settings: Settings) -> Result<(), String> {
+    store::save_settings(&app, &settings)
+}
+
+#[tauri::command]
+fn default_bundle_root(app: tauri::AppHandle) -> Result<String, String> {
+    store::default_bundle_path(&app)
+}
+
+#[tauri::command]
+fn pick_folder() -> Option<String> {
+    rfd::FileDialog::new()
+        .set_title("Skuffen people-graph folder")
+        .pick_folder()
+        .map(|p| p.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+fn pick_image_file() -> Option<String> {
+    rfd::FileDialog::new()
+        .set_title("Add photo")
+        .add_filter("Images", &["png", "jpg", "jpeg", "webp", "gif"])
+        .pick_file()
+        .map(|p| p.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+fn ensure_bundle(app: tauri::AppHandle, root: Option<String>) -> Result<String, String> {
+    store::ensure_bundle(&app, root)
+}
+
+#[tauri::command]
+fn list_files(root: String, prefix: Option<String>) -> Result<Vec<String>, String> {
+    store::list_files(&root, prefix.as_deref())
+}
+
+#[tauri::command]
+fn read_text(root: String, path: String) -> Result<Option<String>, String> {
+    store::read_text(&root, &path)
+}
+
+#[tauri::command]
+fn write_text(root: String, path: String, contents: String) -> Result<(), String> {
+    store::write_text(&root, &path, &contents)
+}
+
+#[tauri::command]
+fn copy_file_into_bundle(root: String, source: String, dest: String) -> Result<(), String> {
+    store::copy_file(&root, &source, &dest)
+}
+
+#[tauri::command]
+fn secret_get(app: tauri::AppHandle, key: String) -> Result<Option<String>, String> {
+    secrets::get(&app, &key)
+}
+
+#[tauri::command]
+fn secret_set(app: tauri::AppHandle, key: String, value: String) -> Result<(), String> {
+    secrets::set(&app, &key, &value)
+}
+
+#[tauri::command]
+fn secret_delete(app: tauri::AppHandle, key: String) -> Result<(), String> {
+    secrets::delete(&app, &key)
+}
+
+#[tauri::command]
+fn grok_oauth_login(app: tauri::AppHandle) -> Result<oauth::OAuthStatus, String> {
+    oauth::login(&app)
+}
+
+#[tauri::command]
+fn grok_oauth_status(app: tauri::AppHandle) -> Result<oauth::OAuthStatus, String> {
+    oauth::status(&app)
+}
+
+#[tauri::command]
+fn grok_oauth_logout(app: tauri::AppHandle) -> Result<(), String> {
+    oauth::logout(&app)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet])
+        .plugin(tauri_plugin_dialog::init())
+        .invoke_handler(tauri::generate_handler![
+            get_settings,
+            save_settings,
+            default_bundle_root,
+            pick_folder,
+            pick_image_file,
+            ensure_bundle,
+            list_files,
+            read_text,
+            write_text,
+            copy_file_into_bundle,
+            secret_get,
+            secret_set,
+            secret_delete,
+            grok_oauth_login,
+            grok_oauth_status,
+            grok_oauth_logout
+        ])
+        .setup(|app| {
+            let _ = app.path().app_data_dir().map(|dir| {
+                let _ = std::fs::create_dir_all(dir);
+            });
+            Ok(())
+        })
         .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .expect("error while running Skuffen");
 }
