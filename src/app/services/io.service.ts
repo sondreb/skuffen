@@ -1,9 +1,9 @@
 import { Injectable } from "@angular/core";
 import type { Settings } from "../models";
+import { purgeDurableBrowserSecrets, webSecretDelete, webSecretGet, webSecretSet } from "./web-secrets";
 
 const FILES_KEY = "skuffen.bundle.files";
 const SETTINGS_KEY = "skuffen.settings";
-const SECRETS_KEY = "skuffen.secrets";
 
 export function isTauri(): boolean {
   return typeof window !== "undefined" && Boolean((window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__);
@@ -11,6 +11,10 @@ export function isTauri(): boolean {
 
 @Injectable({ providedIn: "root" })
 export class IoService {
+  constructor() {
+    if (!isTauri()) purgeDurableBrowserSecrets();
+  }
+
   async invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
     const { invoke } = await import("@tauri-apps/api/core");
     return invoke<T>(cmd, args);
@@ -93,8 +97,7 @@ export class IoService {
 
   async secretGet(key: string): Promise<string | null> {
     if (isTauri()) return this.invoke<string | null>("secret_get", { key });
-    const secrets = this.webSecrets();
-    return secrets[key] ?? null;
+    return webSecretGet(key);
   }
 
   async secretSet(key: string, value: string): Promise<void> {
@@ -102,9 +105,7 @@ export class IoService {
       await this.invoke("secret_set", { key, value });
       return;
     }
-    const secrets = this.webSecrets();
-    secrets[key] = value;
-    localStorage.setItem(SECRETS_KEY, JSON.stringify(secrets));
+    webSecretSet(key, value);
   }
 
   async secretDelete(key: string): Promise<void> {
@@ -112,9 +113,7 @@ export class IoService {
       await this.invoke("secret_delete", { key });
       return;
     }
-    const secrets = this.webSecrets();
-    delete secrets[key];
-    localStorage.setItem(SECRETS_KEY, JSON.stringify(secrets));
+    webSecretDelete(key);
   }
 
   async grokOauthLogin(): Promise<{ connected: boolean }> {
@@ -140,10 +139,5 @@ export class IoService {
 
   private setWebFiles(files: Record<string, string>): void {
     localStorage.setItem(FILES_KEY, JSON.stringify(files));
-  }
-
-  private webSecrets(): Record<string, string> {
-    const raw = localStorage.getItem(SECRETS_KEY);
-    return raw ? (JSON.parse(raw) as Record<string, string>) : {};
   }
 }

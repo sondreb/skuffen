@@ -43,7 +43,14 @@
       <section class="card">
         <h2>Grok and Gemini</h2>
         <p class="lede">
-          Tokens stay in the OS credential store, never in the OKF bundle. Grok talks to
+          @if (desktop) {
+            Tokens stay in the OS credential store, never in the OKF bundle.
+          } @else {
+            Browser preview keeps provider keys in memory for this tab only. They are not written to
+            localStorage, sessionStorage, or the OKF bundle, and they vanish on reload. Use
+            <code>npm run tauri dev</code> to persist them in the OS credential store.
+          }
+          Grok talks to
           <code>https://api.x.ai/v1</code>. Gemini uses <code>@google/genai</code>. Grok is never routed through js-genai.
         </p>
 
@@ -63,7 +70,7 @@
             @if (desktop) {
               <button class="primary" type="button" (click)="providers.signInGrok()">Sign in with Grok</button>
             } @else {
-              <p class="hint">OAuth loopback needs the desktop shell. API key works here.</p>
+              <p class="hint">OAuth loopback needs the desktop shell. An API key works here for this tab only.</p>
             }
             <label>
               API key fallback
