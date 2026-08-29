@@ -1,9 +1,12 @@
-import { Component, computed, inject, OnInit, signal } from "@angular/core";
+import { Component, computed, HostListener, inject, OnInit } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import type { FactSuggestion, PersonView, ProviderId } from "./models";
 import { isTauri } from "./services/io.service";
 import { PeopleService } from "./services/people.service";
 import { ProvidersService } from "./services/providers.service";
+
+type Panel = "none" | "create" | "edit" | "providers";
+type FactSurface = "none" | "drop" | "pin" | "note" | "suggest";
 
 @Component({
   selector: "app-root",
@@ -16,7 +19,14 @@ export class AppComponent implements OnInit {
   readonly providers = inject(ProvidersService);
 
   query = "";
-  panel: "none" | "create" | "edit" | "providers" = "none";
+  panel: Panel = "none";
+  fact: FactSurface = "none";
+  latchOpen = false;
+  showMore = false;
+  addingSocial = false;
+  dragging = false;
+  pinDropped = false;
+  notice: string | null = null;
   draft = blankDraft();
   noteTitle = "";
   noteBody = "";
@@ -34,23 +44,57 @@ export class AppComponent implements OnInit {
     return all.filter((person) => `${person.title} ${person.description ?? ""}`.toLowerCase().includes(q));
   });
 
-  readonly empty = computed(() => this.people.ready() && this.people.people().length === 0);
+  readonly empty = computed(() => this.people.ready() && !this.people.locked() && this.people.people().length === 0);
+  readonly browsing = computed(
+    () => this.people.ready() && !this.people.locked() && this.panel === "none" && !this.people.selected() && this.people.people().length > 0,
+  );
   readonly activeProvider = computed(() => this.providers.activeProvider());
   readonly bothProviders = computed(() => this.providers.availableProviders().length === 2);
+  readonly inDrawer = computed(() => this.people.people().length);
 
   async ngOnInit(): Promise<void> {
     await this.people.bootstrap();
     await this.providers.refresh();
   }
 
+  @HostListener("document:keydown.escape")
+  onEscape(): void {
+    if (this.latchOpen) {
+      this.latchOpen = false;
+      return;
+    }
+    if (this.panel === "providers" || this.panel === "create" || this.panel === "edit") {
+      this.panel = "none";
+    }
+  }
+
   async open(person: PersonView): Promise<void> {
     this.panel = "none";
+    this.latchOpen = false;
+    this.fact = "none";
+    this.notice = null;
+    this.pinDropped = false;
+    this.addingSocial = false;
+    this.providers.clearSuggestions();
     await this.people.select(person.slug);
+  }
+
+  async closeFile(): Promise<void> {
+    this.panel = "none";
+    this.fact = "none";
+    this.notice = null;
+    this.pinDropped = false;
+    this.addingSocial = false;
+    this.providers.clearSuggestions();
+    await this.people.select(null);
   }
 
   startCreate(): void {
     this.draft = blankDraft();
+    this.showMore = false;
     this.panel = "create";
+    this.latchOpen = false;
+    this.fact = "none";
     this.people.selected.set(null);
   }
 
@@ -66,6 +110,7 @@ export class AppComponent implements OnInit {
       phone: person.phone ?? "",
       body: person.body,
     };
+    this.showMore = true;
     this.panel = "edit";
   }
 
@@ -77,12 +122,20 @@ export class AppComponent implements OnInit {
       await this.people.updatePerson(this.people.selected()!.slug, { ...this.draft });
     }
     this.panel = "none";
+    this.fact = "none";
+  }
+
+  setFact(next: FactSurface): void {
+    this.fact = this.fact === next ? "none" : next;
+    this.notice = null;
   }
 
   async addNote(): Promise<void> {
     const person = this.people.selected();
-    if (!person || !this.noteTitle.trim() || !this.noteBody.trim()) return;
-    await this.people.addNote(person.slug, this.noteTitle.trim(), this.noteBody.trim());
+    const body = this.noteBody.trim();
+    if (!person || !body) return;
+    const title = this.noteTitle.trim() || body.split(/\n/)[0].slice(0, 48);
+    await this.people.addNote(person.slug, title, body);
     this.noteTitle = "";
     this.noteBody = "";
   }
@@ -94,18 +147,82 @@ export class AppComponent implements OnInit {
     this.socialNetwork = "";
     this.socialHandle = "";
     this.socialUrl = "";
+    this.addingSocial = false;
   }
 
   async addPhoto(): Promise<void> {
     const person = this.people.selected();
     if (!person) return;
+    if (!this.desktop) {
+      this.notice = "Photos need the desktop shell.";
+      return;
+    }
     const source = await this.people.pickPhoto();
     if (!source) return;
     await this.people.addPhoto(person.slug, source);
+    this.notice = null;
+  }
+
+  onDragOver(event: DragEvent): void {
+    if (!this.people.selected()) return;
+    event.preventDefault();
+    this.dragging = true;
+    this.fact = "drop";
+  }
+
+  onDragLeave(event: DragEvent): void {
+    const next = event.relatedTarget as Node | null;
+    if (next && (event.currentTarget as Node).contains(next)) return;
+    this.dragging = false;
+  }
+
+  async onDrop(event: DragEvent): Promise<void> {
+    event.preventDefault();
+    this.dragging = false;
+    const files = event.dataTransfer?.files;
+    if (!files?.length) return;
+    await this.ingestFiles(Array.from(files));
+  }
+
+  async ingestFiles(files: File[]): Promise<void> {
+    const person = this.people.selected();
+    if (!person) return;
+    this.fact = "drop";
+    const images = files.filter((file) => file.type.startsWith("image/") || /\.(png|jpe?g|gif|webp|heic)$/i.test(file.name));
+    const other = files.filter((file) => !images.includes(file));
+    if (other.length) {
+      this.notice = "Documents drop here later. Nothing was written.";
+    }
+    if (!images.length) return;
+    if (!this.desktop) {
+      this.notice = "Photos need the desktop shell. Nothing was written.";
+      return;
+    }
+    let wrote = 0;
+    for (const file of images) {
+      const path = (file as File & { path?: string }).path;
+      if (!path) continue;
+      await this.people.addPhoto(person.slug, path);
+      wrote += 1;
+    }
+    this.notice = wrote
+      ? null
+      : "Drop needs a file path. Use Pick a photo — nothing was written.";
+  }
+
+  dropPin(): void {
+    this.pinDropped = true;
+    this.notice = "Pin stays on this machine later. Nothing was written.";
   }
 
   async ask(): Promise<void> {
     const person = this.people.selected();
+    this.fact = "suggest";
+    this.notice = null;
+    if (!this.activeProvider()) {
+      this.notice = "Connect Grok or Gemini in the latch first.";
+      return;
+    }
     if (person) await this.providers.suggest(person);
   }
 
@@ -138,6 +255,12 @@ export class AppComponent implements OnInit {
     this.providers.reject(suggestion.id);
   }
 
+  openProviders(): void {
+    this.latchOpen = false;
+    this.panel = "providers";
+    this.people.selected.set(null);
+  }
+
   async unlock(): Promise<void> {
     await this.people.unlock();
   }
@@ -145,6 +268,8 @@ export class AppComponent implements OnInit {
   async lock(): Promise<void> {
     await this.people.lock();
     this.panel = "none";
+    this.latchOpen = false;
+    this.fact = "none";
   }
 
   async exportPlain(): Promise<void> {
@@ -176,6 +301,10 @@ export class AppComponent implements OnInit {
       .map((part) => part[0] ?? "")
       .join("")
       .toUpperCase();
+  }
+
+  providerLabel(): string {
+    return this.activeProvider() === "gemini" ? "Gemini" : "Grok";
   }
 }
 
