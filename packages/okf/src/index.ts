@@ -6,6 +6,8 @@ export const NOTE_TYPE = "Note";
 export const PHOTO_TYPE = "Photo";
 export const SOCIAL_TYPE = "SocialProfile";
 export const PLACE_TYPE = "Place";
+export const DOCUMENT_TYPE = "Document";
+export const LAND_PLOT_KIND = "land-plot";
 
 export type OkfType =
   | typeof PERSON_TYPE
@@ -13,6 +15,7 @@ export type OkfType =
   | typeof PHOTO_TYPE
   | typeof SOCIAL_TYPE
   | typeof PLACE_TYPE
+  | typeof DOCUMENT_TYPE
   | string;
 
 export type PlaceSource = "search" | "pin";
@@ -49,6 +52,8 @@ export interface OkfFrontmatter {
   longitude?: number;
   address?: string;
   source?: string;
+  kind?: string;
+  subjects?: string[];
 }
 
 export interface OkfDocument {
@@ -132,6 +137,14 @@ export function parseDocument(path: string, raw: string): OkfDocument {
   const frontmatter = parsed as OkfFrontmatter;
   if (typeof frontmatter.type !== "string" || !frontmatter.type.trim()) {
     throw new Error(`OKF document ${path} is missing required frontmatter key: type`);
+  }
+  if (frontmatter.type === DOCUMENT_TYPE) {
+    if (typeof frontmatter.title !== "string" || !frontmatter.title.trim()) {
+      throw new Error(`OKF document ${path} is missing required frontmatter key: title`);
+    }
+    if (typeof frontmatter.resource !== "string" || !frontmatter.resource.trim()) {
+      throw new Error(`OKF document ${path} is missing required frontmatter key: resource`);
+    }
   }
   return {
     id: conceptId(path),
@@ -289,6 +302,33 @@ export function locationFromDocument(doc: OkfDocument): PlaceLocation | null {
 
 function optionalFrontmatterString(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+export function documentDir(docSlug: string): string {
+  return `documents/${docSlug}`;
+}
+
+export function documentConceptPath(docSlug: string): string {
+  return `${documentDir(docSlug)}/document.md`;
+}
+
+export function documentFilePath(docSlug: string, fileName: string): string {
+  return `${documentDir(docSlug)}/${sanitizeFileName(fileName)}`;
+}
+
+export function sanitizeFileName(fileName: string): string {
+  const base = fileName.split(/[\\/]/).pop()?.trim() || "file";
+  const cleaned = base.replace(/[^\w.\-()+ ]+/g, "_").replace(/^\.+/, "");
+  return cleaned || "file";
+}
+
+export function subjectPaths(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.filter((item): item is string => typeof item === "string" && item.trim().length > 0))];
+}
+
+export function documentLinkedToPerson(frontmatter: OkfFrontmatter, slug: string): boolean {
+  return subjectPaths(frontmatter.subjects).includes(personPath(slug));
 }
 
 export function verifiedList(value: OkfFrontmatter["verified"]): OkfActorStamp[] {
@@ -463,4 +503,67 @@ export function createPlaceDocument(input: {
     frontmatter,
     body: `Location for [${input.slug}](/${personPath(input.slug)}).\n\nCoordinates stay in this OKF bundle. Map tiles and address search may use the public internet.\n`,
   };
+}
+
+export function createDocumentDocument(input: {
+  docSlug: string;
+  fileName: string;
+  title: string;
+  kind?: string;
+  note?: string;
+  subjectSlugs: string[];
+  generatedBy?: string;
+  verifiedBy?: string;
+}): OkfDocument {
+  const title = input.title.trim();
+  if (!title) {
+    throw new Error("Document requires title");
+  }
+  const fileName = sanitizeFileName(input.fileName);
+  if (!fileName) {
+    throw new Error("Document requires a file");
+  }
+  const subjects = [...new Set(input.subjectSlugs.map((slug) => personPath(slug)))];
+  if (subjects.length === 0) {
+    throw new Error("Document must link to at least one person");
+  }
+  const at = nowUtc();
+  const resource = `/${documentFilePath(input.docSlug, fileName)}`;
+  const kind = (input.kind?.trim() || "document") || "document";
+  const note = input.note?.trim();
+  const links = subjects
+    .map((path) => {
+      const slug = path.replace(/^people\//, "").replace(/\/person\.md$/, "");
+      return `- [${slug}](/${path})`;
+    })
+    .join("\n");
+  const label = kind === LAND_PLOT_KIND ? "Land-plot document" : "Document";
+  const parts = [
+    note,
+    `${label} file stored beside this concept at \`${resource}\`. Not inlined as a markdown blob.`,
+    `Subjects:\n${links}`,
+  ].filter((part): part is string => Boolean(part));
+  return {
+    id: conceptId(documentConceptPath(input.docSlug)),
+    path: documentConceptPath(input.docSlug),
+    frontmatter: {
+      type: DOCUMENT_TYPE,
+      title,
+      resource,
+      kind,
+      subjects,
+      generated: { by: input.generatedBy ?? actorHuman(), at },
+      verified: { by: input.verifiedBy ?? actorHuman(), at },
+    },
+    body: `${parts.join("\n\n")}\n`,
+  };
+}
+
+export function addDocumentSubject(doc: OkfDocument, slug: string): OkfDocument {
+  const path = personPath(slug);
+  const current = subjectPaths(doc.frontmatter.subjects);
+  if (!current.includes(path)) {
+    doc.frontmatter.subjects = [...current, path];
+  }
+  return doc;
 }

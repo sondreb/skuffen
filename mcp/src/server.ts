@@ -26,7 +26,7 @@ const tools = [
   },
   {
     name: "get_person",
-    description: "Get one person and related notes/social/photos. Emails and phones are redacted unless include_sensitive is true.",
+    description: "Get one person and related notes/social/photos/documents. Emails and phones are redacted unless include_sensitive is true.",
     inputSchema: {
       type: "object",
       properties: {
@@ -91,6 +91,34 @@ const tools = [
         handle: { type: "string" },
       },
       required: ["slug", "network", "url"],
+    },
+  },
+  {
+    name: "add_document",
+    description:
+      "Attach a local file as a Document concept (file bytes + markdown). Land plots use kind land-plot. Never uploads the file.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        slug: { type: "string" },
+        title: { type: "string" },
+        filePath: { type: "string" },
+        kind: { type: "string", description: "document or land-plot" },
+        note: { type: "string" },
+      },
+      required: ["slug", "title", "filePath"],
+    },
+  },
+  {
+    name: "link_document",
+    description: "Link an existing Document to another person already in the local bundle.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        docSlug: { type: "string" },
+        slug: { type: "string" },
+      },
+      required: ["docSlug", "slug"],
     },
   },
   {
@@ -162,6 +190,20 @@ async function callTool(name: string, args: Record<string, unknown>): Promise<un
     case "add_note":
       return publicPersonView(
         bundle.addNote(String(args.slug ?? ""), String(args.title ?? ""), String(args.body ?? "")) as unknown as Record<string, unknown>,
+      );
+    case "add_document":
+      return publicPersonView(
+        bundle.addDocument({
+          slug: String(args.slug ?? ""),
+          title: String(args.title ?? ""),
+          filePath: String(args.filePath ?? ""),
+          kind: optional(args.kind),
+          note: optional(args.note),
+        }) as unknown as Record<string, unknown>,
+      );
+    case "link_document":
+      return publicPersonView(
+        bundle.linkDocument(String(args.docSlug ?? ""), String(args.slug ?? "")) as unknown as Record<string, unknown>,
       );
     case "add_social_profile":
       return publicPersonView(

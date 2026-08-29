@@ -21,11 +21,13 @@ Default bundle locations (override with `SKUFFEN_BUNDLE`):
 | --- | --- |
 | `list_people` | List people. Emails and phones are redacted. |
 | `search_people` | Search name / description / note titles. Redacted. |
-| `get_person` | One person plus notes, social, photos. Pass `include_sensitive: true` only when you must see raw contact fields. |
+| `get_person` | One person plus notes, social, photos, documents, and location. Pass `include_sensitive: true` only when you must see raw contact fields. |
 | `create_person` | Create a `Person` concept. |
 | `update_person` | Update a `Person` concept. |
 | `add_note` | Add a `Note`. |
 | `add_social_profile` | Add a `SocialProfile`. |
+| `add_document` | Attach a local file as a `Document` (bytes + concept markdown). Use `kind: land-plot` for land plots. |
+| `link_document` | Link an existing `Document` to another person in the bundle. |
 | `set_person_location` | Set a local `Place` pin (lat/lng/address). The graph is not uploaded. |
 | `clear_person_location` | Remove that person's `Place` pin. |
 | `recent_log` | Recent `log.md` lines. |

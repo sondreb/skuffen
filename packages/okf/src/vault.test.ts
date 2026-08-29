@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { createPersonDocument, createPhotoDocument, createPlaceDocument, parseDocument, serializeDocument } from "./index.ts";
+import { createDocumentDocument, createPersonDocument, createPhotoDocument, createPlaceDocument, parseDocument, serializeDocument } from "./index.ts";
 import {
   EncryptedBundleError,
   decodeKey,
@@ -56,6 +56,30 @@ test("ciphertext is not plaintext markdown, YAML, or the email", () => {
   assert.doesNotMatch(hay, /given_name/);
   assert.doesNotMatch(hay, /Analytical Engine/);
   assert.doesNotMatch(hay, /okf_version/);
+});
+
+test("document files (binary) encrypt at rest like photos; concept path stays identity", () => {
+  const key = generateKey();
+  const filePath = "documents/plot-12-hvaler/plot-12.pdf";
+  const pdf = Buffer.from("%PDF-1.4 secret-land-plot", "utf8");
+  const sealed = encryptBytes(key, filePath, pdf);
+  assert.ok(isEncrypted(sealed));
+  assert.doesNotMatch(Buffer.from(sealed).toString("latin1"), /secret-land-plot/);
+  assert.doesNotMatch(Buffer.from(sealed).toString("latin1"), /%PDF-1.4/);
+  assert.deepEqual(Buffer.from(decryptBytes(key, filePath, sealed)), pdf);
+
+  const concept = createDocumentDocument({
+    docSlug: "plot-12-hvaler",
+    fileName: "plot-12.pdf",
+    title: "Plot 12, Hvaler",
+    kind: "land-plot",
+    subjectSlugs: ["ada-lovelace"],
+  });
+  assert.equal(concept.path, "documents/plot-12-hvaler/document.md");
+  const conceptSealed = encryptBytes(key, concept.path, Buffer.from(serializeDocument(concept), "utf8"));
+  assert.ok(isEncrypted(conceptSealed));
+  assert.doesNotMatch(Buffer.from(conceptSealed).toString("latin1"), /Plot 12/);
+  assert.doesNotMatch(Buffer.from(conceptSealed).toString("latin1"), /ada-lovelace/);
 });
 
 test("photos (binary) round-trip and stay non-plaintext", () => {
