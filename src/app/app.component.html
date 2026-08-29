@@ -1,274 +1,390 @@
-<div class="shell">
-  <aside class="rail">
-    <header class="brand">
-      <img src="assets/skuffen-icon.png" alt="Skuffen drawer" />
-      <div>
-        <strong>Skuffen</strong>
-        <span>Local personal intelligence</span>
+<div
+  class="room"
+  [class.dragging]="dragging"
+  (dragover)="onDragOver($event)"
+  (dragleave)="onDragLeave($event)"
+  (drop)="onDrop($event)"
+>
+  <div class="drawer" [class.shut]="people.locked()" [class.filled]="inDrawer() > 0">
+    <header class="lip">
+      <div class="bail" aria-hidden="true">
+        <span class="knob"></span>
+        <span class="arc"></span>
+        <span class="knob"></span>
       </div>
+
+      <div class="lip-row">
+        <div class="brand">
+          <img src="assets/skuffen-icon.png" alt="" />
+          <div>
+            <strong>Skuffen</strong>
+            <span>{{ people.locked() ? "Locked" : inDrawer() ? inDrawer() + " in the drawer" : "Private drawer" }}</span>
+          </div>
+        </div>
+
+        @if (!people.locked() && !empty()) {
+          <label class="find">
+            <span class="sr">Find someone</span>
+            <input [ngModel]="query()" (ngModelChange)="query.set($event)" placeholder="Find someone" />
+          </label>
+          <button class="brass" type="button" (click)="startCreate()">Put someone in</button>
+        }
+
+        <button class="latch-btn" type="button" [class.on]="latchOpen" (click)="latchOpen = !latchOpen">
+          Latch
+        </button>
+      </div>
+
+      @if (latchOpen) {
+        <button class="scrim" type="button" (click)="latchOpen = false" aria-label="Close latch"></button>
+        <aside class="latch-sheet">
+          <button type="button" (click)="openProviders()">Providers</button>
+          <button type="button" (click)="people.chooseFolder(); latchOpen = false" [disabled]="people.locked()">
+            Bundle folder
+          </button>
+          <button type="button" (click)="exportPlain(); latchOpen = false" [disabled]="people.locked()">
+            Export plaintext OKF
+          </button>
+          @if (desktop && !people.locked()) {
+            <button type="button" (click)="lock()">Lock drawer</button>
+          }
+          <p class="whisper">{{ people.bundleRoot() }}</p>
+          @if (people.vaultMessage()) {
+            <p class="whisper">{{ people.vaultMessage() }}</p>
+          }
+          <p class="whisper">
+            @if (desktop && people.encryptionAvailable()) {
+              Disk: AES-256-GCM. Key: OS credential store.
+            } @else {
+              Preview: encryption needs <code>npm run tauri dev</code>.
+            }
+          </p>
+        </aside>
+      }
     </header>
 
-    @if (!people.locked()) {
-      <div class="search">
-        <input [(ngModel)]="query" placeholder="Search people" />
-      </div>
+    <div class="well">
+      <svg class="net" viewBox="0 0 400 220" aria-hidden="true">
+        <g fill="none" stroke="currentColor" stroke-width="1.2">
+          <line x1="200" y1="40" x2="80" y2="100" />
+          <line x1="200" y1="40" x2="320" y2="100" />
+          <line x1="80" y1="100" x2="140" y2="180" />
+          <line x1="80" y1="100" x2="320" y2="100" />
+          <line x1="320" y1="100" x2="260" y2="180" />
+          <line x1="140" y1="180" x2="260" y2="180" />
+          <line x1="200" y1="40" x2="200" y2="180" />
+        </g>
+        <g fill="currentColor">
+          <circle cx="200" cy="40" r="7" />
+          <circle cx="80" cy="100" r="7" />
+          <circle cx="320" cy="100" r="7" />
+          <circle cx="140" cy="180" r="7" />
+          <circle cx="260" cy="180" r="7" />
+          <circle cx="200" cy="180" r="5" />
+        </g>
+      </svg>
 
-      <button class="primary" type="button" (click)="startCreate()">New person</button>
-    }
-
-    <nav class="people">
-      @for (person of filtered(); track person.slug) {
-        <button
-          type="button"
-          class="person-row"
-          [class.active]="people.selected()?.slug === person.slug"
-          (click)="open(person)"
-        >
-          <span class="avatar">{{ initials(person.title) }}</span>
-          <span>
-            <b>{{ person.title }}</b>
-            <small>{{ person.description || "No description yet" }}</small>
-          </span>
-        </button>
-      }
-    </nav>
-
-    <footer class="rail-footer">
-      <button type="button" (click)="panel = 'providers'">Providers</button>
-      <button type="button" (click)="people.chooseFolder()" [disabled]="people.locked()">Bundle folder</button>
-      <button type="button" (click)="exportPlain()" [disabled]="people.locked()">Export plaintext OKF</button>
-      @if (desktop && !people.locked()) {
-        <button type="button" class="ghost" (click)="lock()">Lock drawer</button>
-      }
-      <small>{{ people.bundleRoot() }}</small>
-      @if (people.vaultMessage()) {
-        <small class="hint">{{ people.vaultMessage() }}</small>
-      }
-      <small>
-        @if (desktop && people.encryptionAvailable()) {
-          Disk: AES-256-GCM. Key: OS credential store.
-        } @else {
-          Preview: encryption needs <code>npm run tauri dev</code>.
-        }
-      </small>
-    </footer>
-  </aside>
-
-  <main class="stage">
-    @if (!desktop) {
-      <p class="banner">
-        Browser preview cannot encrypt the people-graph at rest — there is no OS keychain here.
-        Use <code>npm run tauri dev</code> for OS-backed encryption. Provider tokens still stay
-        in memory for this tab only and never go to localStorage.
-      </p>
-    }
-
-    @if (people.locked()) {
-      <section class="empty">
-        <img src="assets/skuffen-icon.png" alt="" />
-        <h1>Unlock the drawer</h1>
-        <p>
-          The people-graph is encrypted on this machine (AES-256-GCM). Unlock with your OS
-          credentials. There is no Skuffen account and no cloud KMS.
+      @if (!desktop && !people.locked()) {
+        <p class="ribbon">
+          Preview cannot encrypt at rest. Tokens stay in this tab — never localStorage.
+          Use <code>npm run tauri dev</code>.
         </p>
-        @if (people.error()) {
-          <p class="error">{{ people.error() }}</p>
-        }
-        <button class="primary" type="button" (click)="unlock()">Unlock with OS credentials</button>
-      </section>
-    } @else if (panel === "providers") {
-      <section class="card">
-        <h2>Grok and Gemini</h2>
-        <p class="lede">
-          @if (desktop) {
-            Tokens stay in the OS credential store, never in the OKF bundle.
-          } @else {
-            Browser preview keeps provider keys in memory for this tab only. They are not written to
-            localStorage, sessionStorage, or the OKF bundle, and they vanish on reload. Use
-            <code>npm run tauri dev</code> to persist them in the OS credential store.
+      }
+
+      @if (people.locked()) {
+        <section class="invite">
+          <img src="assets/skuffen-icon.png" alt="Open wooden drawer" />
+          <h1>Unlock the drawer</h1>
+          @if (people.error()) {
+            <p class="error">{{ people.error() }}</p>
           }
-          Grok talks to
-          <code>https://api.x.ai/v1</code>. Gemini uses <code>@google/genai</code>. Grok is never routed through js-genai.
-        </p>
-
-        <div class="split">
-          <article>
-            <h3>Grok (xAI)</h3>
-            <p>
-              Status:
-              @if (providers.status().grokOauth) {
-                signed in with OAuth
-              } @else if (providers.status().grokApiKey) {
-                API key saved
-              } @else {
-                not connected
-              }
-            </p>
-            @if (desktop) {
-              <button class="primary" type="button" (click)="providers.signInGrok()">Sign in with Grok</button>
-            } @else {
-              <p class="hint">OAuth loopback needs the desktop shell. An API key works here for this tab only.</p>
-            }
-            <label>
-              API key fallback
-              <input [(ngModel)]="grokKey" type="password" placeholder="xai-..." />
-            </label>
-            <div class="row">
-              <button type="button" (click)="saveGrokKey()">Save Grok key</button>
-              <button type="button" class="ghost" (click)="providers.clearGrok()">Forget Grok</button>
-            </div>
-          </article>
-
-          <article>
-            <h3>Gemini</h3>
-            <p>Status: {{ providers.status().geminiApiKey ? "API key saved" : "not connected" }}</p>
-            <label>
-              Google AI Studio key
-              <input [(ngModel)]="geminiKey" type="password" placeholder="AIza..." />
-            </label>
-            <div class="row">
-              <button type="button" (click)="saveGeminiKey()">Save Gemini key</button>
-              <button type="button" class="ghost" (click)="providers.clearGemini()">Forget Gemini</button>
-            </div>
-          </article>
-        </div>
-
-        @if (bothProviders()) {
-          <label>
-            Default provider (Grok unless you pick Gemini)
-            <select [ngModel]="providers.status().preferred" (ngModelChange)="chooseProvider($event)">
-              <option value="grok">Grok</option>
-              <option value="gemini">Gemini</option>
-            </select>
-          </label>
-        }
-
-        @if (providers.error()) {
-          <p class="error">{{ providers.error() }}</p>
-        }
-        <button type="button" class="ghost" (click)="panel = 'none'">Back</button>
-      </section>
-    } @else if (panel === "create" || panel === "edit") {
-      <section class="card">
-        <h2>{{ panel === "create" ? "Create person" : "Edit person" }}</h2>
-        <div class="grid">
-          <label>Name <input [(ngModel)]="draft.title" /></label>
-          <label>Description <input [(ngModel)]="draft.description" /></label>
-          <label>Given name <input [(ngModel)]="draft.givenName" /></label>
-          <label>Family name <input [(ngModel)]="draft.familyName" /></label>
-          <label>Email <input [(ngModel)]="draft.email" /></label>
-          <label>Phone <input [(ngModel)]="draft.phone" /></label>
-        </div>
-        <label>About <textarea [(ngModel)]="draft.body" rows="8"></textarea></label>
-        <div class="row">
-          <button class="primary" type="button" (click)="saveDraft()">Save to OKF</button>
-          <button type="button" class="ghost" (click)="panel = 'none'">Cancel</button>
-        </div>
-      </section>
-    } @else if (empty()) {
-      <section class="empty">
-        <img src="assets/skuffen-icon.png" alt="" />
-        <h1>Your people-graph stays in the drawer</h1>
-        <p>
-          Skuffen is local personal intelligence. Contacts, notes, photos, and social links live on this
-          machine as an Open Knowledge Format v0.2 bundle. There is no Skuffen account and no cloud copy
-          of the graph.
-        </p>
-        <button class="primary" type="button" (click)="startCreate()">Add the first person</button>
-      </section>
-    } @else if (people.selected(); as person) {
-      <section class="detail">
-        <header>
-          <div>
-            <p class="kicker">{{ person.path }}</p>
-            <h1>{{ person.title }}</h1>
-            <p>{{ person.description }}</p>
-          </div>
-          <div class="row">
-            <button type="button" (click)="startEdit()">Edit</button>
-            <button class="primary" type="button" (click)="ask()" [disabled]="providers.busy()">
-              Ask {{ activeProvider() === "gemini" ? "Gemini" : "Grok" }}
-            </button>
-          </div>
-        </header>
-
-        @if (bothProviders()) {
-          <div class="provider-switch">
-            <button type="button" [class.active]="activeProvider() === 'grok'" (click)="chooseProvider('grok')">Grok</button>
-            <button type="button" [class.active]="activeProvider() === 'gemini'" (click)="chooseProvider('gemini')">Gemini</button>
-          </div>
-        }
-
-        @if (providers.error()) {
-          <p class="error">{{ providers.error() }}</p>
-        }
-
-        @if (providers.suggestions().length) {
-          <aside class="suggestions">
-            <h2>Suggested facts</h2>
-            <p>Nothing is written until you accept.</p>
-            @for (item of providers.suggestions(); track item.id) {
-              <article>
-                <strong>{{ item.title }}</strong>
-                <small>{{ item.kind }}</small>
-                <p>{{ item.body || item.value || item.url }}</p>
-                <div class="row">
-                  <button class="primary" type="button" (click)="accept(item)">Accept</button>
-                  <button type="button" class="ghost" (click)="reject(item)">Reject</button>
-                </div>
-              </article>
-            }
-          </aside>
-        }
-
-        <article class="prose" [innerText]="person.body"></article>
-
-        <div class="split">
-          <section>
-            <h2>Notes</h2>
-            @for (note of person.notes; track note.id) {
-              <article class="tile">
-                <h3>{{ note.title }}</h3>
-                <p>{{ note.body }}</p>
-              </article>
-            }
-            <label>Title <input [(ngModel)]="noteTitle" /></label>
-            <label>Note <textarea [(ngModel)]="noteBody" rows="4"></textarea></label>
-            <button type="button" (click)="addNote()">Add note</button>
-          </section>
-          <section>
-            <h2>Social</h2>
-            @for (item of person.social; track item.id) {
-              <article class="tile">
-                <h3>{{ item.title }}</h3>
-                <p>{{ item.network }} {{ item.handle }}</p>
-                <a [href]="item.url" target="_blank" rel="noreferrer">{{ item.url }}</a>
-              </article>
-            }
-            <label>Network <input [(ngModel)]="socialNetwork" placeholder="linkedin" /></label>
-            <label>Handle <input [(ngModel)]="socialHandle" /></label>
-            <label>URL <input [(ngModel)]="socialUrl" /></label>
-            <button type="button" (click)="addSocial()">Add social profile</button>
-          </section>
-        </div>
-
-        <section>
-          <h2>Photos</h2>
-          <p class="hint">Photos are files on disk, not blobs in markdown.</p>
-          @for (photo of person.photos; track photo.id) {
-            <article class="tile">
-              <h3>{{ photo.title }}</h3>
-              <code>{{ photo.resource }}</code>
-            </article>
-          }
-          <button type="button" (click)="addPhoto()" [disabled]="!desktop">Add photo file</button>
+          <button class="brass" type="button" (click)="unlock()">Unlock</button>
         </section>
-      </section>
-    } @else {
-      <section class="empty subtle">
-        <h1>Select someone, or start a new card</h1>
-        <p>Every write is an OKF markdown file. File path is identity.</p>
-      </section>
-    }
-  </main>
+      } @else if (panel === "providers") {
+        <section class="sheet">
+          <header class="sheet-head">
+            <h1>Providers</h1>
+            <button class="ghost" type="button" (click)="panel = 'none'">Back</button>
+          </header>
+          <p class="lede">
+            @if (desktop) {
+              Tokens stay in the OS credential store, never in the OKF bundle.
+            } @else {
+              Keys stay in memory for this tab. They are not written to localStorage,
+              sessionStorage, or the OKF bundle.
+            }
+            Grok talks to <code>https://api.x.ai/v1</code>. Gemini uses
+            <code>@google/genai</code>. Grok is never routed through js-genai.
+          </p>
+
+          <div class="split">
+            <article class="plate">
+              <h2>Grok</h2>
+              <p>
+                @if (providers.status().grokOauth) {
+                  Signed in
+                } @else if (providers.status().grokApiKey) {
+                  API key saved
+                } @else {
+                  Not connected
+                }
+              </p>
+              @if (desktop) {
+                <button class="brass" type="button" (click)="providers.signInGrok()">Sign in with Grok</button>
+              } @else {
+                <p class="whisper">OAuth needs the desktop shell.</p>
+              }
+              <label>API key fallback <input [(ngModel)]="grokKey" type="password" placeholder="xai-..." /></label>
+              <div class="row">
+                <button type="button" (click)="saveGrokKey()">Save Grok key</button>
+                <button type="button" class="ghost" (click)="providers.clearGrok()">Forget</button>
+              </div>
+            </article>
+            <article class="plate">
+              <h2>Gemini</h2>
+              <p>{{ providers.status().geminiApiKey ? "API key saved" : "Not connected" }}</p>
+              <label>Google AI Studio key <input [(ngModel)]="geminiKey" type="password" placeholder="AIza..." /></label>
+              <div class="row">
+                <button type="button" (click)="saveGeminiKey()">Save Gemini key</button>
+                <button type="button" class="ghost" (click)="providers.clearGemini()">Forget</button>
+              </div>
+            </article>
+          </div>
+
+          @if (bothProviders()) {
+            <label>
+              Default
+              <select [ngModel]="providers.status().preferred" (ngModelChange)="chooseProvider($event)">
+                <option value="grok">Grok</option>
+                <option value="gemini">Gemini</option>
+              </select>
+            </label>
+          }
+          @if (providers.error()) {
+            <p class="error">{{ providers.error() }}</p>
+          }
+        </section>
+      } @else if (panel === "create" || panel === "edit") {
+        <section class="sheet card-form">
+          <h1>{{ panel === "create" ? "Who?" : "Edit card" }}</h1>
+          <label>Name <input [(ngModel)]="draft.title" name="person-name" /></label>
+          @if (showMore || panel === "edit") {
+            <div class="grid">
+              <label>How you know them <input [(ngModel)]="draft.description" /></label>
+              <label>Given name <input [(ngModel)]="draft.givenName" /></label>
+              <label>Family name <input [(ngModel)]="draft.familyName" /></label>
+              <label>Email <input [(ngModel)]="draft.email" /></label>
+              <label>Phone <input [(ngModel)]="draft.phone" /></label>
+            </div>
+            <label>About <textarea [(ngModel)]="draft.body" rows="5"></textarea></label>
+          } @else {
+            <button class="ghost" type="button" (click)="showMore = true">More</button>
+          }
+          <div class="row">
+            <button class="brass" type="button" (click)="saveDraft()" [disabled]="!draft.title.trim()">
+              {{ panel === "create" ? "Put in the drawer" : "Save" }}
+            </button>
+            <button class="ghost" type="button" (click)="panel = 'none'">Cancel</button>
+          </div>
+        </section>
+      } @else if (empty()) {
+        <section class="invite">
+          <img src="assets/skuffen-icon.png" alt="Open wooden drawer" />
+          <h1>The drawer is empty</h1>
+          <button class="brass" type="button" (click)="startCreate()">Put someone in</button>
+        </section>
+      } @else if (people.selected(); as person) {
+        <section class="file">
+          <nav class="dots" aria-label="People in the drawer">
+            <button class="ghost back" type="button" (click)="closeFile()">Drawer</button>
+            @for (item of filtered(); track item.slug) {
+              <button
+                type="button"
+                class="dot"
+                [class.on]="item.slug === person.slug"
+                (click)="open(item)"
+                [attr.title]="item.title"
+              >
+                {{ initials(item.title) }}
+              </button>
+            }
+          </nav>
+
+          <article class="card">
+            <header class="nameplate">
+              <div>
+                <p class="kicker">{{ person.path }}</p>
+                <h1>{{ person.title }}</h1>
+                @if (person.description) {
+                  <p class="lede">{{ person.description }}</p>
+                }
+                <p class="chips">
+                  @if (person.email) {
+                    <span>{{ person.email }}</span>
+                  }
+                  @if (person.phone) {
+                    <span>{{ person.phone }}</span>
+                  }
+                </p>
+              </div>
+              <button type="button" (click)="startEdit()">Edit</button>
+            </header>
+
+            @if (hasAbout(person)) {
+              <p class="prose">{{ person.body }}</p>
+            }
+
+            <div class="facts" role="tablist">
+              <button type="button" [class.on]="fact === 'drop'" (click)="setFact('drop')">Drop</button>
+              <button type="button" [class.on]="fact === 'pin'" (click)="setFact('pin')">Pin</button>
+              <button type="button" [class.on]="fact === 'note'" (click)="setFact('note')">Note</button>
+              <button type="button" [class.on]="fact === 'suggest'" (click)="setFact('suggest')">Suggest</button>
+            </div>
+
+            @if (notice) {
+              <p class="notice">{{ notice }}</p>
+            }
+
+            @if (fact === "drop") {
+              <div class="surface drop" [class.hot]="dragging">
+                <p>Drop a photo on this card, or pick one.</p>
+                <button class="brass" type="button" (click)="addPhoto()" [disabled]="!desktop">Pick a photo</button>
+                @if (!desktop) {
+                  <p class="whisper">Photos need the desktop shell.</p>
+                }
+              </div>
+            } @else if (fact === "pin") {
+              <div class="surface pin-scrap">
+                <button class="pin-map" type="button" (click)="dropPin()" [class.dropped]="pinDropped">
+                  <span class="grid" aria-hidden="true"></span>
+                  <span class="needle" aria-hidden="true"></span>
+                  <span>{{ pinDropped ? "Pinned" : "Pin a place" }}</span>
+                </button>
+              </div>
+            } @else if (fact === "note") {
+              <form class="surface quick-note" (submit)="$event.preventDefault(); addNote()">
+                <textarea
+                  [(ngModel)]="noteBody"
+                  name="quick-note"
+                  rows="3"
+                  placeholder="A line about them"
+                ></textarea>
+                <div class="row">
+                  <input [(ngModel)]="noteTitle" name="quick-note-title" placeholder="Title (optional)" />
+                  <button class="brass" type="submit" [disabled]="!noteBody.trim()">Pin note</button>
+                </div>
+              </form>
+            } @else if (fact === "suggest") {
+              <div class="surface suggest">
+                <div class="row">
+                  <button class="brass" type="button" (click)="ask()" [disabled]="providers.busy()">
+                    {{ providers.busy() ? "Listening…" : "Suggest facts" }}
+                  </button>
+                  @if (bothProviders()) {
+                    <div class="provider-switch">
+                      <button type="button" [class.on]="activeProvider() === 'grok'" (click)="chooseProvider('grok')">
+                        Grok
+                      </button>
+                      <button type="button" [class.on]="activeProvider() === 'gemini'" (click)="chooseProvider('gemini')">
+                        Gemini
+                      </button>
+                    </div>
+                  } @else if (activeProvider()) {
+                    <span class="whisper">via {{ providerLabel() }}</span>
+                  }
+                </div>
+                @if (providers.error()) {
+                  <p class="error">{{ providers.error() }}</p>
+                }
+                @if (providers.suggestions().length) {
+                  <p class="whisper">Nothing is written until you accept.</p>
+                  <div class="offers">
+                    @for (item of providers.suggestions(); track item.id) {
+                      <article>
+                        <strong>{{ item.title }}</strong>
+                        <small>{{ item.kind }}</small>
+                        <p>{{ item.body || item.value || item.url }}</p>
+                        <div class="row">
+                          <button class="brass" type="button" (click)="accept(item)">Accept</button>
+                          <button class="ghost" type="button" (click)="reject(item)">Reject</button>
+                        </div>
+                      </article>
+                    }
+                  </div>
+                }
+              </div>
+            }
+
+            @if (person.notes.length) {
+              <section class="slips">
+                <h2>Notes</h2>
+                @for (note of person.notes; track note.id) {
+                  <article>
+                    <h3>{{ note.title }}</h3>
+                    <p>{{ note.body }}</p>
+                  </article>
+                }
+              </section>
+            }
+
+            <section class="threads">
+              <h2>Threads</h2>
+              @for (item of person.social; track item.id) {
+                <article>
+                  <h3>{{ item.title }}</h3>
+                  <p>{{ item.network }} {{ item.handle }}</p>
+                  @if (item.url) {
+                    <a [href]="item.url" target="_blank" rel="noreferrer">{{ item.url }}</a>
+                  }
+                </article>
+              }
+              @if (addingSocial) {
+                <div class="grid">
+                  <label>Network <input [(ngModel)]="socialNetwork" placeholder="linkedin" /></label>
+                  <label>Handle <input [(ngModel)]="socialHandle" /></label>
+                  <label>URL <input [(ngModel)]="socialUrl" /></label>
+                </div>
+                <div class="row">
+                  <button type="button" (click)="addSocial()">Save thread</button>
+                  <button class="ghost" type="button" (click)="addingSocial = false">Cancel</button>
+                </div>
+              } @else {
+                <button class="ghost" type="button" (click)="addingSocial = true">Add a thread</button>
+              }
+            </section>
+
+            @if (person.photos.length) {
+              <section class="prints">
+                <h2>Photos</h2>
+                @for (photo of person.photos; track photo.id) {
+                  <article>
+                    <h3>{{ photo.title }}</h3>
+                    <code>{{ photo.resource }}</code>
+                  </article>
+                }
+              </section>
+            }
+          </article>
+        </section>
+      } @else if (browsing()) {
+        <section class="tray" aria-label="People in the drawer">
+          @if (query().trim() && filtered().length === 0) {
+            <p class="invite-line">No one by that name.</p>
+          }
+          @for (person of filtered(); track person.slug) {
+            <button type="button" class="person-card" (click)="open(person)">
+              <span class="node">{{ initials(person.title) }}</span>
+              <b>{{ person.title }}</b>
+              <small>{{ person.description || "A card in the drawer" }}</small>
+            </button>
+          }
+          <button type="button" class="person-card ghost-card" (click)="startCreate()">
+            <span class="node plus">+</span>
+            <b>Put someone in</b>
+            <small>A new card</small>
+          </button>
+        </section>
+      }
+    </div>
+  </div>
 </div>
