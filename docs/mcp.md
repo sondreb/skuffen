@@ -26,6 +26,8 @@ Default bundle locations (override with `SKUFFEN_BUNDLE`):
 | `update_person` | Update a `Person` concept. |
 | `add_note` | Add a `Note`. |
 | `add_social_profile` | Add a `SocialProfile`. |
+| `set_person_location` | Set a local `Place` pin (lat/lng/address). The graph is not uploaded. |
+| `clear_person_location` | Remove that person's `Place` pin. |
 | `recent_log` | Recent `log.md` lines. |
 
 Default tool output never dumps raw phone numbers or email addresses.

@@ -80,6 +80,16 @@ export function readBundleFile(root: string, rel: string, key: Uint8Array | null
   return raw;
 }
 
+export function deleteBundleFile(root: string, rel: string): void {
+  if (isVaultMetaPath(rel)) {
+    throw new Error("Cannot delete vault metadata as an OKF document");
+  }
+  const abs = safeJoin(root, rel);
+  if (existsSync(abs)) {
+    rmSync(abs);
+  }
+}
+
 export function writeBundleFile(root: string, rel: string, data: Uint8Array, key: Uint8Array | null): void {
   if (isVaultMetaPath(rel)) {
     throw new Error("Cannot overwrite vault metadata as an OKF document");

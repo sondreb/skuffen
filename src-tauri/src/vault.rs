@@ -168,6 +168,13 @@ pub fn write_text(vault: &VaultState, root: &str, path: &str, contents: &str) ->
     write_bytes(vault, root, path, contents.as_bytes())
 }
 
+pub fn delete_file(root: &str, path: &str) -> Result<(), String> {
+    if path == VAULT_META_NAME {
+        return Err("Cannot delete vault metadata as an OKF document".into());
+    }
+    store::delete_file(root, path)
+}
+
 pub fn read_bytes(vault: &VaultState, root: &str, path: &str) -> Result<Option<Vec<u8>>, String> {
     let Some(raw) = store::read_bytes(root, path)? else {
         return Ok(None);

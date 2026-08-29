@@ -150,6 +150,14 @@ pub fn write_text(root: &str, path: &str, contents: &str) -> Result<(), String> 
     write_bytes(root, path, contents.as_bytes())
 }
 
+pub fn delete_file(root: &str, path: &str) -> Result<(), String> {
+    let abs = safe_join(root, path)?;
+    if abs.exists() {
+        fs::remove_file(&abs).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
 pub fn copy_file(root: &str, source: &str, dest: &str) -> Result<(), String> {
     let dest_abs = safe_join(root, dest)?;
     if let Some(parent) = dest_abs.parent() {

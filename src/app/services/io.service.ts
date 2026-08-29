@@ -90,6 +90,16 @@ export class IoService {
     this.setWebFiles(files);
   }
 
+  async deleteFile(root: string, path: string): Promise<void> {
+    if (isTauri()) {
+      await this.invoke("delete_file", { root, path });
+      return;
+    }
+    const files = this.webFiles();
+    delete files[path];
+    this.setWebFiles(files);
+  }
+
   async copyFileIntoBundle(root: string, source: string, dest: string): Promise<void> {
     if (isTauri()) {
       await this.invoke("copy_file_into_bundle", { root, source, dest });

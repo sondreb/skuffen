@@ -4,18 +4,22 @@ import {
   createNoteDocument,
   createPersonDocument,
   createPhotoDocument,
+  createPlaceDocument,
   createSocialDocument,
   emptyLog,
+  locationFromDocument,
   parseDocument,
   personPath,
   photoFilePath,
+  placePath,
   serializeBundleIndex,
   serializeDocument,
   serializePeopleIndex,
   slugify,
   type OkfDocument,
+  type PlaceSource,
 } from "../../../packages/okf/src/index";
-import type { PersonView } from "../models";
+import type { PersonLocation, PersonView } from "../models";
 import { IoService } from "./io.service";
 
 @Injectable({ providedIn: "root" })
@@ -202,6 +206,31 @@ export class PeopleService {
     return this.io.pickImageFile();
   }
 
+  async setLocation(
+    slug: string,
+    input: {
+      title?: string;
+      address?: string;
+      latitude: number;
+      longitude: number;
+      source?: PlaceSource;
+    },
+  ): Promise<void> {
+    const doc = createPlaceDocument({ slug, ...input });
+    await this.writeDoc(doc);
+    await this.log("Update", `Set location [${doc.frontmatter.title}](/${doc.path}).`);
+    await this.reload();
+    await this.select(slug);
+  }
+
+  async clearLocation(slug: string): Promise<void> {
+    const path = placePath(slug);
+    await this.io.deleteFile(this.bundleRoot(), path);
+    await this.log("Update", `Cleared location [/${path}].`);
+    await this.reload();
+    await this.select(slug);
+  }
+
   async addPhoto(slug: string, sourcePath: string): Promise<void> {
     const fileName = sourcePath.split(/[\\/]/).pop() || `photo-${Date.now()}.jpg`;
     const dest = photoFilePath(slug, fileName);
@@ -222,12 +251,15 @@ export class PeopleService {
     const notes = [];
     const social = [];
     const photos = [];
+    let location: PersonLocation | undefined;
     for (const file of files) {
       if (!file.endsWith(".md") || file.endsWith("/person.md")) continue;
       const text = await this.io.readText(this.bundleRoot(), file);
       if (!text) continue;
       const item = parseDocument(file, text);
-      if (item.frontmatter.type === "Note") {
+      if (item.frontmatter.type === "Place") {
+        location = locationFromDocument(item) ?? undefined;
+      } else if (item.frontmatter.type === "Note") {
         notes.push({
           id: item.id,
           path: item.path,
@@ -266,6 +298,7 @@ export class PeopleService {
       notes,
       social,
       photos,
+      location,
     };
   }
 

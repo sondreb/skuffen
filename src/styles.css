@@ -96,3 +96,7 @@ code {
   overflow: hidden;
   clip: rect(0 0 0 0);
 }
+
+.leaflet-container img.leaflet-tile {
+  filter: saturate(0.72) brightness(0.82);
+}

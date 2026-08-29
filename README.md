@@ -70,9 +70,14 @@ people/
   <slug>/social/*.md     # type: SocialProfile
   <slug>/photos/<file>   # photo bytes
   <slug>/photos/<file>.md # type: Photo, resource points at the file
+  <slug>/place.md        # type: Place (lat/lng/address pin)
 ```
 
-Photos are files, not markdown blobs. Suggested facts from Grok or Gemini are written only after you accept them. File path is still identity. On desktop, the *bytes* of those files (markdown, YAML, photos) are AES-256-GCM ciphertext.
+Photos are files, not markdown blobs. A person's map pin is a linked `Place` concept (`people/<slug>/place.md`). Suggested facts from Grok or Gemini are written only after you accept them. File path is still identity. On desktop, the *bytes* of those files (markdown, YAML, photos, places) are AES-256-GCM ciphertext.
+
+## People map
+
+The people-graph can be plotted on a map. Search an address or drop a pin from person detail or the map view. **Pins and people stay on disk** in the OKF bundle. They are never sent to a Skuffen cloud backend (there is none). Map tiles and Nominatim geocoding may use the public internet (OpenStreetMap). No analytics.
 
 ## Encryption at rest
 

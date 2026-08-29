@@ -28,6 +28,7 @@
             <input [ngModel]="query()" (ngModelChange)="query.set($event)" placeholder="Find someone" />
           </label>
           <button class="brass" type="button" (click)="startCreate()">Put someone in</button>
+          <button type="button" [class.on]="panel === 'map'" (click)="openMap()">Map</button>
         }
 
         <button class="latch-btn" type="button" [class.on]="latchOpen" (click)="latchOpen = !latchOpen">
@@ -164,6 +165,85 @@
             <p class="error">{{ providers.error() }}</p>
           }
         </section>
+      } @else if (panel === "map") {
+        <section class="sheet map-sheet">
+          <header class="sheet-head">
+            <div>
+              <p class="kicker">Local people-graph</p>
+              <h1>People map</h1>
+            </div>
+            <button class="ghost" type="button" (click)="panel = 'none'">Back</button>
+          </header>
+          <p class="whisper">
+            Pins stay on this machine as OKF Place files. Address search and map tiles may use the
+            public internet. There is no Skuffen map backend.
+          </p>
+          <div class="map-controls">
+            <label class="grow">
+              Address search
+              <input
+                [(ngModel)]="addressQuery"
+                name="map-address"
+                placeholder="Search an address"
+                (keyup.enter)="searchAddress()"
+              />
+            </label>
+            <button type="button" (click)="searchAddress()" [disabled]="geocodeBusy || !addressQuery.trim()">
+              {{ geocodeBusy ? "Searching…" : "Search" }}
+            </button>
+            <label>
+              Save pin to
+              <select [(ngModel)]="mapAssignSlug" name="map-assign">
+                <option value="">Choose a card</option>
+                @for (item of mapAssignPeople(); track item.slug) {
+                  <option [value]="item.slug">{{ item.title }}</option>
+                }
+              </select>
+            </label>
+            <button
+              class="brass"
+              type="button"
+              (click)="savePendingLocation()"
+              [disabled]="!pendingPin || !mapAssignSlug"
+            >
+              Save pin
+            </button>
+          </div>
+          @if (geocodeError) {
+            <p class="error">{{ geocodeError }}</p>
+          }
+          @if (geocodeHits.length) {
+            <ul class="geocode-hits">
+              @for (hit of geocodeHits; track hit.label) {
+                <li>
+                  <button type="button" (click)="pickGeocodeHit(hit)">{{ hit.label }}</button>
+                </li>
+              }
+            </ul>
+          }
+          @if (pendingPin) {
+            <p class="whisper">
+              Pending {{ pendingPin.source === "pin" ? "dropped pin" : "search result" }}
+              @if (pendingPin.address) {
+                — {{ pendingPin.address }}
+              }
+              ({{ pendingPin.latitude.toFixed(5) }}, {{ pendingPin.longitude.toFixed(5) }})
+            </p>
+          }
+          <div class="map-frame tall">
+            <app-people-map
+              [pins]="mapPins()"
+              [pending]="pendingPin"
+              [selectedSlug]="mapAssignSlug || people.selected()?.slug || null"
+              [focus]="mapFocus"
+              (dropPin)="onMapDrop($event)"
+              (openPerson)="openBySlug($event)"
+            />
+          </div>
+          @if (mapPins().length === 0 && !pendingPin) {
+            <p class="whisper">No pins yet. Search an address or click the map, then save to a card.</p>
+          }
+        </section>
       } @else if (panel === "create" || panel === "edit") {
         <section class="sheet card-form">
           <h1>{{ panel === "create" ? "Who?" : "Edit card" }}</h1>
@@ -255,11 +335,67 @@
               </div>
             } @else if (fact === "pin") {
               <div class="surface pin-scrap">
-                <button class="pin-map" type="button" (click)="dropPin()" [class.dropped]="pinDropped">
-                  <span class="grid" aria-hidden="true"></span>
-                  <span class="needle" aria-hidden="true"></span>
-                  <span>{{ pinDropped ? "Pinned" : "Pin a place" }}</span>
-                </button>
+                <p class="whisper">
+                  Search an address or drop a pin. Written to
+                  <code>people/{{ person.slug }}/place.md</code>
+                  on this machine. Tiles and geocode may use the network.
+                </p>
+                @if (person.location; as location) {
+                  <p class="lede">
+                    {{ location.address || location.title }}
+                    <small>({{ location.latitude.toFixed(5) }}, {{ location.longitude.toFixed(5) }})</small>
+                  </p>
+                } @else if (!pendingPin) {
+                  <p class="whisper">No pin yet.</p>
+                }
+                <div class="row">
+                  <label class="grow">
+                    Address
+                    <input
+                      [(ngModel)]="addressQuery"
+                      name="person-address"
+                      placeholder="Search an address"
+                      (keyup.enter)="searchAddress()"
+                    />
+                  </label>
+                  <button type="button" (click)="searchAddress()" [disabled]="geocodeBusy || !addressQuery.trim()">
+                    {{ geocodeBusy ? "Searching…" : "Search" }}
+                  </button>
+                </div>
+                @if (geocodeError) {
+                  <p class="error">{{ geocodeError }}</p>
+                }
+                @if (geocodeHits.length) {
+                  <ul class="geocode-hits">
+                    @for (hit of geocodeHits; track hit.label) {
+                      <li>
+                        <button type="button" (click)="pickGeocodeHit(hit)">{{ hit.label }}</button>
+                      </li>
+                    }
+                  </ul>
+                }
+                <div class="map-frame">
+                  <app-people-map
+                    [pins]="person.location ? [{ slug: person.slug, title: person.title, location: person.location }] : []"
+                    [pending]="pendingPin"
+                    [selectedSlug]="person.slug"
+                    [focus]="mapFocus"
+                    (dropPin)="onMapDrop($event)"
+                  />
+                </div>
+                <div class="row">
+                  <button
+                    class="brass"
+                    type="button"
+                    (click)="savePendingLocation(person.slug)"
+                    [disabled]="!pendingPin"
+                  >
+                    Save pin
+                  </button>
+                  <button type="button" class="ghost" (click)="clearPersonLocation()" [disabled]="!person.location">
+                    Clear pin
+                  </button>
+                </div>
               </div>
             } @else if (fact === "note") {
               <form class="surface quick-note" (submit)="$event.preventDefault(); addNote()">
