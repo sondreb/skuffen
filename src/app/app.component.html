@@ -1,0 +1,230 @@
+<div class="shell">
+  <aside class="rail">
+    <header class="brand">
+      <img src="assets/skuffen-icon.png" alt="Skuffen drawer" />
+      <div>
+        <strong>Skuffen</strong>
+        <span>Local personal intelligence</span>
+      </div>
+    </header>
+
+    <div class="search">
+      <input [(ngModel)]="query" placeholder="Search people" />
+    </div>
+
+    <button class="primary" type="button" (click)="startCreate()">New person</button>
+
+    <nav class="people">
+      @for (person of filtered(); track person.slug) {
+        <button
+          type="button"
+          class="person-row"
+          [class.active]="people.selected()?.slug === person.slug"
+          (click)="open(person)"
+        >
+          <span class="avatar">{{ initials(person.title) }}</span>
+          <span>
+            <b>{{ person.title }}</b>
+            <small>{{ person.description || "No description yet" }}</small>
+          </span>
+        </button>
+      }
+    </nav>
+
+    <footer class="rail-footer">
+      <button type="button" (click)="panel = 'providers'">Providers</button>
+      <button type="button" (click)="people.chooseFolder()">Bundle folder</button>
+      <small>{{ people.bundleRoot() }}</small>
+    </footer>
+  </aside>
+
+  <main class="stage">
+    @if (panel === "providers") {
+      <section class="card">
+        <h2>Grok and Gemini</h2>
+        <p class="lede">
+          Tokens stay in the OS credential store, never in the OKF bundle. Grok talks to
+          <code>https://api.x.ai/v1</code>. Gemini uses <code>@google/genai</code>. Grok is never routed through js-genai.
+        </p>
+
+        <div class="split">
+          <article>
+            <h3>Grok (xAI)</h3>
+            <p>
+              Status:
+              @if (providers.status().grokOauth) {
+                signed in with OAuth
+              } @else if (providers.status().grokApiKey) {
+                API key saved
+              } @else {
+                not connected
+              }
+            </p>
+            @if (desktop) {
+              <button class="primary" type="button" (click)="providers.signInGrok()">Sign in with Grok</button>
+            } @else {
+              <p class="hint">OAuth loopback needs the desktop shell. API key works here.</p>
+            }
+            <label>
+              API key fallback
+              <input [(ngModel)]="grokKey" type="password" placeholder="xai-..." />
+            </label>
+            <div class="row">
+              <button type="button" (click)="saveGrokKey()">Save Grok key</button>
+              <button type="button" class="ghost" (click)="providers.clearGrok()">Forget Grok</button>
+            </div>
+          </article>
+
+          <article>
+            <h3>Gemini</h3>
+            <p>Status: {{ providers.status().geminiApiKey ? "API key saved" : "not connected" }}</p>
+            <label>
+              Google AI Studio key
+              <input [(ngModel)]="geminiKey" type="password" placeholder="AIza..." />
+            </label>
+            <div class="row">
+              <button type="button" (click)="saveGeminiKey()">Save Gemini key</button>
+              <button type="button" class="ghost" (click)="providers.clearGemini()">Forget Gemini</button>
+            </div>
+          </article>
+        </div>
+
+        @if (bothProviders()) {
+          <label>
+            Default provider (Grok unless you pick Gemini)
+            <select [ngModel]="providers.status().preferred" (ngModelChange)="chooseProvider($event)">
+              <option value="grok">Grok</option>
+              <option value="gemini">Gemini</option>
+            </select>
+          </label>
+        }
+
+        @if (providers.error()) {
+          <p class="error">{{ providers.error() }}</p>
+        }
+        <button type="button" class="ghost" (click)="panel = 'none'">Back</button>
+      </section>
+    } @else if (panel === "create" || panel === "edit") {
+      <section class="card">
+        <h2>{{ panel === "create" ? "Create person" : "Edit person" }}</h2>
+        <div class="grid">
+          <label>Name <input [(ngModel)]="draft.title" /></label>
+          <label>Description <input [(ngModel)]="draft.description" /></label>
+          <label>Given name <input [(ngModel)]="draft.givenName" /></label>
+          <label>Family name <input [(ngModel)]="draft.familyName" /></label>
+          <label>Email <input [(ngModel)]="draft.email" /></label>
+          <label>Phone <input [(ngModel)]="draft.phone" /></label>
+        </div>
+        <label>About <textarea [(ngModel)]="draft.body" rows="8"></textarea></label>
+        <div class="row">
+          <button class="primary" type="button" (click)="saveDraft()">Save to OKF</button>
+          <button type="button" class="ghost" (click)="panel = 'none'">Cancel</button>
+        </div>
+      </section>
+    } @else if (empty()) {
+      <section class="empty">
+        <img src="assets/skuffen-icon.png" alt="" />
+        <h1>Your people-graph stays in the drawer</h1>
+        <p>
+          Skuffen is local personal intelligence. Contacts, notes, photos, and social links live on this
+          machine as an Open Knowledge Format v0.2 bundle. There is no Skuffen account and no cloud copy
+          of the graph.
+        </p>
+        <button class="primary" type="button" (click)="startCreate()">Add the first person</button>
+      </section>
+    } @else if (people.selected(); as person) {
+      <section class="detail">
+        <header>
+          <div>
+            <p class="kicker">{{ person.path }}</p>
+            <h1>{{ person.title }}</h1>
+            <p>{{ person.description }}</p>
+          </div>
+          <div class="row">
+            <button type="button" (click)="startEdit()">Edit</button>
+            <button class="primary" type="button" (click)="ask()" [disabled]="providers.busy()">
+              Ask {{ activeProvider() === "gemini" ? "Gemini" : "Grok" }}
+            </button>
+          </div>
+        </header>
+
+        @if (bothProviders()) {
+          <div class="provider-switch">
+            <button type="button" [class.active]="activeProvider() === 'grok'" (click)="chooseProvider('grok')">Grok</button>
+            <button type="button" [class.active]="activeProvider() === 'gemini'" (click)="chooseProvider('gemini')">Gemini</button>
+          </div>
+        }
+
+        @if (providers.error()) {
+          <p class="error">{{ providers.error() }}</p>
+        }
+
+        @if (providers.suggestions().length) {
+          <aside class="suggestions">
+            <h2>Suggested facts</h2>
+            <p>Nothing is written until you accept.</p>
+            @for (item of providers.suggestions(); track item.id) {
+              <article>
+                <strong>{{ item.title }}</strong>
+                <small>{{ item.kind }}</small>
+                <p>{{ item.body || item.value || item.url }}</p>
+                <div class="row">
+                  <button class="primary" type="button" (click)="accept(item)">Accept</button>
+                  <button type="button" class="ghost" (click)="reject(item)">Reject</button>
+                </div>
+              </article>
+            }
+          </aside>
+        }
+
+        <article class="prose" [innerText]="person.body"></article>
+
+        <div class="split">
+          <section>
+            <h2>Notes</h2>
+            @for (note of person.notes; track note.id) {
+              <article class="tile">
+                <h3>{{ note.title }}</h3>
+                <p>{{ note.body }}</p>
+              </article>
+            }
+            <label>Title <input [(ngModel)]="noteTitle" /></label>
+            <label>Note <textarea [(ngModel)]="noteBody" rows="4"></textarea></label>
+            <button type="button" (click)="addNote()">Add note</button>
+          </section>
+          <section>
+            <h2>Social</h2>
+            @for (item of person.social; track item.id) {
+              <article class="tile">
+                <h3>{{ item.title }}</h3>
+                <p>{{ item.network }} {{ item.handle }}</p>
+                <a [href]="item.url" target="_blank" rel="noreferrer">{{ item.url }}</a>
+              </article>
+            }
+            <label>Network <input [(ngModel)]="socialNetwork" placeholder="linkedin" /></label>
+            <label>Handle <input [(ngModel)]="socialHandle" /></label>
+            <label>URL <input [(ngModel)]="socialUrl" /></label>
+            <button type="button" (click)="addSocial()">Add social profile</button>
+          </section>
+        </div>
+
+        <section>
+          <h2>Photos</h2>
+          <p class="hint">Photos are files on disk, not blobs in markdown.</p>
+          @for (photo of person.photos; track photo.id) {
+            <article class="tile">
+              <h3>{{ photo.title }}</h3>
+              <code>{{ photo.resource }}</code>
+            </article>
+          }
+          <button type="button" (click)="addPhoto()" [disabled]="!desktop">Add photo file</button>
+        </section>
+      </section>
+    } @else {
+      <section class="empty subtle">
+        <h1>Select someone, or start a new card</h1>
+        <p>Every write is an OKF markdown file. File path is identity.</p>
+      </section>
+    }
+  </main>
+</div>

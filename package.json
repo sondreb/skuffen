@@ -1,0 +1,48 @@
+{
+  "name": "skuffen",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local-only personal intelligence. People-graph on your machine as OKF.",
+  "license": "MIT",
+  "author": "Sondre Bjellås",
+  "homepage": "https://skuffen.grok.me",
+  "packageManager": "npm@10.9.7",
+  "engines": {
+    "node": ">=22.22.3"
+  },
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development",
+    "tauri": "tauri",
+    "mcp": "tsx mcp/src/server.ts",
+    "test:okf": "tsx --test packages/okf/src/okf.test.ts",
+    "test:mcp": "tsx --test mcp/src/redact.test.ts mcp/src/bundle.test.ts"
+  },
+  "dependencies": {
+    "@angular/common": "^22.1.4",
+    "@angular/compiler": "^22.1.4",
+    "@angular/core": "^22.1.4",
+    "@angular/forms": "^22.1.4",
+    "@angular/platform-browser": "^22.1.4",
+    "@angular/router": "^22.1.4",
+    "@google/genai": "^1.30.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@tauri-apps/api": "^2.11.1",
+    "@tauri-apps/plugin-dialog": "^2.7.2",
+    "@tauri-apps/plugin-opener": "^2.5.4",
+    "rxjs": "~7.8.2",
+    "tslib": "^2.8.1",
+    "yaml": "^2.8.1",
+    "zone.js": "~0.15.1"
+  },
+  "devDependencies": {
+    "@angular/build": "^22.1.4",
+    "@angular/cli": "^22.1.4",
+    "@angular/compiler-cli": "^22.1.4",
+    "@tauri-apps/cli": "^2.11.4",
+    "tsx": "^4.23.12",
+    "typescript": "~6.0.2"
+  }
+}

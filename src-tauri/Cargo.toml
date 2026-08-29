@@ -1,0 +1,33 @@
+[package]
+name = "skuffen"
+version = "0.1.0"
+description = "Local-only personal intelligence. People-graph on disk as OKF."
+authors = ["Sondre Bjellås"]
+edition = "2021"
+license = "MIT"
+homepage = "https://skuffen.grok.me"
+repository = "https://github.com/sondreb/skuffen"
+
+[lib]
+name = "skuffen_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-opener = "2"
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+keyring = "3"
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
+sha2 = "0.10"
+base64 = "0.22"
+rand = "0.8"
+url = "2"
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+walkdir = "2"
+tiny_http = "0.12"
+rfd = "0.15"
