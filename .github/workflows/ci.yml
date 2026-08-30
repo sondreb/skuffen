@@ -42,6 +42,9 @@ jobs:
       - name: Research and follow (propose-only) tests
         run: npm run test:research
 
+      - name: Grok Imagine diorama (local profile photo) tests
+        run: npm run test:imagine
+
       - name: Local self / app-owner tests
         run: npm run test:self
 
