@@ -242,6 +242,53 @@ fn fetch_public_bytes(url: String) -> Result<Option<Vec<u8>>, String> {
 }
 
 #[tauri::command]
+fn fetch_public_html(url: String) -> Result<Option<String>, String> {
+    let parsed = reqwest::Url::parse(&url).map_err(|e| e.to_string())?;
+    if parsed.scheme() != "https" && parsed.scheme() != "http" {
+        return Ok(None);
+    }
+    let client = reqwest::blocking::Client::builder()
+        .redirect(reqwest::redirect::Policy::limited(4))
+        .timeout(std::time::Duration::from_secs(15))
+        .build()
+        .map_err(|e| e.to_string())?;
+    let response = match client
+        .get(parsed)
+        .header(
+            reqwest::header::ACCEPT,
+            "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
+        )
+        .send()
+    {
+        Ok(value) => value,
+        Err(_) => return Ok(None),
+    };
+    if !response.status().is_success() {
+        return Ok(None);
+    }
+    let content_type = response
+        .headers()
+        .get(reqwest::header::CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or("");
+    if !content_type.is_empty()
+        && !content_type.starts_with("text/html")
+        && !content_type.starts_with("application/xhtml+xml")
+        && !content_type.starts_with("text/plain")
+    {
+        return Ok(None);
+    }
+    let bytes = match response.bytes() {
+        Ok(value) => value,
+        Err(_) => return Ok(None),
+    };
+    if bytes.is_empty() || bytes.len() > 1_500_000 {
+        return Ok(None);
+    }
+    Ok(Some(String::from_utf8_lossy(&bytes).into_owned()))
+}
+
+#[tauri::command]
 fn grok_oauth_begin(app: tauri::AppHandle) -> Result<oauth::DevicePending, String> {
     oauth::begin(&app)
 }
@@ -314,6 +361,7 @@ pub fn run() {
             secret_set,
             secret_delete,
             fetch_public_bytes,
+            fetch_public_html,
             grok_oauth_begin,
             grok_oauth_wait,
             grok_oauth_poll,

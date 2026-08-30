@@ -52,6 +52,12 @@ import {
   parseSuggestions,
 } from "./research";
 import {
+  discoverPhotoFacts,
+  mergePhotoSuggestions,
+  namesForPhotoMatch,
+  researchPagesForPhotos,
+} from "./page-photos";
+import {
   DEMO_DIORAMA_PNG,
   DIORAMA_PROMPT,
   IMAGINE_MODEL,
@@ -237,7 +243,7 @@ export class ProvidersService {
       provider === "grok"
         ? await this.askGrok(prompt, true)
         : await this.askGemini(prompt, true);
-    return parseSuggestions(text, source);
+    return this.enrichWithPagePhotos(parseSuggestions(text, source), person, source);
   }
 
   async researchName(name: string): Promise<FactSuggestion[]> {
@@ -258,7 +264,9 @@ export class ProvidersService {
       this.lastPrompt.set(prompt);
       const text =
         provider === "grok" ? await this.askGrok(prompt, true) : await this.askGemini(prompt, true);
-      const parsed = parseSuggestions(text, "research");
+      const parsed = await this.enrichWithPagePhotos(parseSuggestions(text, "research"), null, "research", [
+        name.trim(),
+      ]);
       this.suggestions.set(parsed);
       return parsed;
     } catch (error) {
@@ -286,7 +294,10 @@ export class ProvidersService {
         provider === "grok"
           ? await this.askGrok(prompt, webSearch)
           : await this.askGemini(prompt, webSearch);
-      this.suggestions.set(parseSuggestions(text, source));
+      const parsed = parseSuggestions(text, source);
+      this.suggestions.set(
+        webSearch ? await this.enrichWithPagePhotos(parsed, person, source) : parsed,
+      );
     } catch (error) {
       this.error.set(error instanceof Error ? error.message : String(error));
     } finally {
@@ -479,7 +490,7 @@ export class ProvidersService {
       person.social.map((s) => `- ${s.network ?? "profile"} ${s.handle ?? ""} ${s.url ?? ""}`).join("\n") || "(none)";
     return [
       "You help a local-only personal CRM called Skuffen.",
-      "Suggest at most 8 structured facts about this one person, including contact details and public photo URLs when known.",
+      "Suggest at most 8 structured facts about this one person, including contact details and public profile photo URLs when a real page image is known.",
       "Do not ask for or assume the rest of the people-graph.",
       "Return ONLY JSON: {\"suggestions\":[{\"kind\":\"note\"|\"social\"|\"field\"|\"photo\",\"title\":\"\",\"body\":\"\",\"network\":\"\",\"url\":\"\",\"handle\":\"\",\"field\":\"title\"|\"description\"|\"body\"|\"email\"|\"phone\",\"value\":\"\"}]}",
       `Name: ${person.title}`,
@@ -488,6 +499,27 @@ export class ProvidersService {
       `Existing notes:\n${notes}`,
       `Existing social:\n${social}`,
     ].join("\n");
+  }
+
+  /**
+   * Read known public pages (homepage, Wikipedia, social URLs from the model)
+   * and add checkable photo facts. Fetch is for preview/discovery only.
+   * Persist happens on Accept.
+   */
+  private async enrichWithPagePhotos(
+    suggestions: FactSuggestion[],
+    person: PersonView | null,
+    source: SuggestionSource,
+    extraNames: string[] = [],
+  ): Promise<FactSuggestion[]> {
+    const pages = researchPagesForPhotos(person, suggestions);
+    const names = [...(person ? namesForPhotoMatch(person) : []), ...extraNames];
+    const discovered = await discoverPhotoFacts(
+      pages,
+      (url) => this.io.fetchPublicHtml(url),
+      { source, names },
+    );
+    return mergePhotoSuggestions(suggestions, discovered);
   }
 
   private async grokToken(): Promise<string> {

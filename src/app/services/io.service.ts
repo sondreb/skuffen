@@ -171,6 +171,18 @@ export class IoService {
     }
   }
 
+  /** Public HTML for research photo discovery. Never persisted. Fail closed. */
+  async fetchPublicHtml(url: string): Promise<string | null> {
+    try {
+      if (isTauri()) {
+        return await this.invoke<string | null>("fetch_public_html", { url });
+      }
+      return await fetchPublicHtmlText(url);
+    } catch {
+      return null;
+    }
+  }
+
   async secretGet(key: string): Promise<string | null> {
     if (isTauri()) return this.invoke<string | null>("secret_get", { key });
     return webSecretGet(key);
@@ -296,6 +308,33 @@ export class IoService {
 
   private setWebBlobs(blobs: Record<string, string>): void {
     localStorage.setItem(BLOBS_KEY, JSON.stringify(blobs));
+  }
+}
+
+async function fetchPublicHtmlText(url: string): Promise<string | null> {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return null;
+    const response = await fetch(url, {
+      redirect: "follow",
+      credentials: "omit",
+      headers: { accept: "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8" },
+    });
+    if (!response.ok) return null;
+    const type = response.headers.get("content-type") ?? "";
+    if (
+      type &&
+      !type.startsWith("text/html") &&
+      !type.startsWith("application/xhtml+xml") &&
+      !type.startsWith("text/plain")
+    ) {
+      return null;
+    }
+    const text = await response.text();
+    if (!text || text.length > 1_500_000) return null;
+    return text;
+  } catch {
+    return null;
   }
 }
 

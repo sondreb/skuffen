@@ -16,6 +16,10 @@ export const RESEARCH_SYSTEM =
 export const WEBSITE_CONTACT_INSTRUCTION =
   "When a personal or main website is known or found (homepage, social URL, or search), read that public page and extract any email and phone published there. Propose those as field facts: kind field, field email or phone. Do not invent contact details that are not on the page.";
 
+/** Same pages as contact. Prefer real page images. Never invent a face. */
+export const WEBSITE_PHOTO_INSTRUCTION =
+  "On that personal site, Wikipedia page, or other public page already in this research path, look for a real profile or headshot (og:image, portrait, about photo). Propose those as kind photo with a public http(s) image URL. Prefer real page images over generated or placeholder art. Do not invent a face. Skip favicons, apple-touch icons, and other tiny icons.";
+
 const INTERVAL_MS: Record<FollowInterval, number> = {
   daily: 24 * 60 * 60 * 1000,
   weekly: 7 * 24 * 60 * 60 * 1000,
@@ -103,7 +107,8 @@ export function buildResearchPrompt(person: PersonPromptInput): string {
     "You help a local-only personal CRM called Skuffen.",
     "Search the public web for current, sourced facts about this one person.",
     WEBSITE_CONTACT_INSTRUCTION,
-    "Suggest at most 8 structured facts: email, phone, social URLs, about/bio, and public profile photo URLs when known.",
+    WEBSITE_PHOTO_INSTRUCTION,
+    "Suggest at most 8 structured facts: email, phone, social URLs, about/bio, and public profile photo URLs when a real page image is known.",
     "Results are suggestions only.",
     "Do not invent people. Do not create a new person. Do not ask for or assume the rest of the people-graph.",
     "Do not draft outreach. Do not send messages. Do not upload or request the full graph.",
@@ -128,8 +133,9 @@ export function buildNameResearchPrompt(name: string): string {
     "The only identifier you have is the name the user typed.",
     "If search finds a personal or main website, read that public page.",
     WEBSITE_CONTACT_INSTRUCTION,
+    WEBSITE_PHOTO_INSTRUCTION,
     "Suggest structured facts: name, email, phone, social URLs, about/bio, public profile photo URLs, other contact facts.",
-    "Use kind photo with a public http(s) image URL. Do not scrape behind logins.",
+    "Use kind photo with a public http(s) image URL of a real page image. Do not scrape behind logins. Do not invent a face.",
     "Do not invent people. Do not invent additional people. Do not ask for or assume the rest of the people-graph.",
     "Do not invent contact details that are not published on a public page.",
     "Do not draft outreach. Do not send messages. Do not upload or request the full graph.",
