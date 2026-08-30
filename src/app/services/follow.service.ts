@@ -13,6 +13,7 @@ import { IoService } from "./io.service";
 import { PeopleService } from "./people.service";
 import { ProvidersService } from "./providers.service";
 import {
+  attachStoredProposalSlug,
   buildResearchPrompt,
   dueFollows,
   mergeFollow,
@@ -139,6 +140,11 @@ export class FollowService {
 
   async acceptLocalOnly(id: string): Promise<void> {
     await this.rejectSuggestion(id);
+  }
+
+  async attachNameProposal(query: string, slug: string): Promise<void> {
+    this.proposals.set(attachStoredProposalSlug(this.proposals(), query, slug));
+    await this.persist();
   }
 
   async forgetSlug(slug: string): Promise<void> {

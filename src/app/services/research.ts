@@ -243,6 +243,51 @@ export function keepFetchedPhoto(
   return { slug: write.slug, url: write.url, title: write.title, bytes };
 }
 
+/** Public http(s) image URL for a checkable proposal preview. Never a javascript: or data: URL. */
+export function photoPreviewUrl(suggestion: Pick<FactSuggestion, "kind" | "url">): string | null {
+  if (suggestion.kind !== "photo" || !suggestion.url) return null;
+  return isPublicHttpUrl(suggestion.url) ? suggestion.url : null;
+}
+
+/** Fetch failures must skip the photo, not abort Accept. */
+export async function readPublicPhotoBytes(
+  url: string,
+  fetchBytes: (url: string) => Promise<Uint8Array | null>,
+): Promise<Uint8Array | null> {
+  if (!isPublicHttpUrl(url)) return null;
+  try {
+    const bytes = await fetchBytes(url);
+    return bytes && bytes.byteLength > 0 ? bytes : null;
+  } catch {
+    return null;
+  }
+}
+
+export function nameAcceptErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message.trim()) return error.message.trim();
+  const text = String(error ?? "").trim();
+  return text || "Could not save the proposed card.";
+}
+
+export function skippedPhotosNotice(count: number): string | null {
+  if (count <= 0) return null;
+  return `${count} photo${count === 1 ? "" : "s"} could not be fetched. The rest of the card was saved.`;
+}
+
+/** Name research stores an empty slug until Accept creates the person. */
+export function attachStoredProposalSlug(
+  proposals: StoredProposal[],
+  query: string,
+  slug: string,
+): StoredProposal[] {
+  const name = query.trim();
+  const next = slug.trim();
+  if (!name || !next) return proposals;
+  return proposals.map((item) =>
+    !item.slug && item.query === name && item.source === "research" ? { ...item, slug: next } : item,
+  );
+}
+
 export function proposeNameResearch(query: string, suggestions: FactSuggestion[]): NameResearchProposal {
   const name = query.trim();
   const facts: ProposedFact[] = [];
