@@ -47,6 +47,9 @@ pub struct Settings {
     /// Appearance: auto | light | dark. Not OKF. Never tokens.
     #[serde(default)]
     pub theme: Option<String>,
+    /// Left people pane photo strip. Not OKF. Never tokens.
+    #[serde(default)]
+    pub people_pane_collapsed: Option<bool>,
 }
 
 #[tauri::command]

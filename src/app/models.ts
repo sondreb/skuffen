@@ -44,6 +44,12 @@ export interface Settings {
    * Desktop source of truth is OS-backed settings.json — never OKF, never tokens.
    */
   theme?: "auto" | "light" | "dark" | null;
+  /**
+   * Left people pane: true = photo strip, false = names.
+   * Unset follows window width (narrow defaults collapsed).
+   * Desktop source of truth is OS-backed settings.json — never OKF, never tokens.
+   */
+  peoplePaneCollapsed?: boolean | null;
 }
 
 export interface AgentMemoryTurn {

@@ -51,6 +51,9 @@ jobs:
       - name: Theme preference (auto / light / dark) tests
         run: npm run test:theme
 
+      - name: People pane collapse (photo strip) tests
+        run: npm run test:people-pane
+
       - name: Duplicate-person merge (propose-only) tests
         run: npm run test:merge
 
