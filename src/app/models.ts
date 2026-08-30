@@ -1,6 +1,6 @@
 export type ProviderId = "grok" | "gemini";
 export type FollowInterval = "daily" | "weekly" | "monthly";
-export type SuggestionSource = "ask" | "research" | "follow";
+export type SuggestionSource = "ask" | "research" | "follow" | "capture";
 export type MemoryTrust = "hostile-web" | "local";
 
 export interface FollowRecord {

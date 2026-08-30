@@ -90,6 +90,7 @@ npm run test:oauth
 npm run test:research
 npm run test:merge
 npm run test:brief
+npm run test:capture
 npm run test:update
 npm run test:version
 npm run test:e2e
@@ -175,7 +176,7 @@ Unlock uses your OS login session (the keychain). There is no Skuffen password, 
 - **Grok**: RFC 8628 device authorization at `https://auth.x.ai` (public Grok CLI client, OS keychain `me.grok.skuffen` / `grok_oauth`) plus an API-key fallback for `console.x.ai` developer keys. Calls `https://api.x.ai/v1`. The access token is never shown in the UI.
 - **Gemini**: API key + `@google/genai`.
 - If both are connected, pick one in the UI. Default is Grok.
-- Prompts include only the person you asked about — never the full graph.
+- Prompts include only the person you asked about, or this one capture — never the full graph.
 
 ## Research and Follow
 
@@ -197,6 +198,16 @@ The local brief works offline from the OKF card. Optional Grok/Gemini polish rew
 
 ```bash
 npm run test:brief
+```
+
+## Voice capture
+
+From the people UI, Latch, or the empty drawer, **Capture** takes a pasted note (browser preview) or a desktop WebView mic transcript. Grok or Gemini — whichever is connected — proposes people, dates, and follow-ups from **that capture only**. The prompt never includes the people-graph.
+
+`?demo=1` mocks the proposal with no mic and no live API keys. Review like research: check or uncheck, then **Accept** writes to the OKF bundle. **Dismiss** writes nothing. Audio bytes are dropped and are never stored. The transcript is written only if you Accept that note. Tokens stay in the OS credential store `me.grok.skuffen`. Never auto-send. Never auto-write.
+
+```bash
+npm run test:capture
 ```
 
 ## Duplicate-person merge

@@ -43,6 +43,16 @@
             </button>
           </div>
         }
+        @if (!people.locked()) {
+          <button
+            type="button"
+            [class.on]="panel === 'capture'"
+            (click)="openCapture()"
+            [attr.data-demo]="demoMode ? 'capture' : null"
+          >
+            Capture
+          </button>
+        }
         @if (!people.locked() && !empty()) {
           <button class="brass" type="button" (click)="startCreate()" [attr.data-demo]="demoMode ? 'put-someone-in' : null">
             Put someone in
@@ -89,6 +99,14 @@
             [attr.data-demo]="demoMode ? 'open-brief' : null"
           >
             Pre-meeting brief
+          </button>
+          <button
+            type="button"
+            (click)="openCapture()"
+            [disabled]="people.locked()"
+            [attr.data-demo]="demoMode ? 'open-capture' : null"
+          >
+            Capture
           </button>
           <button type="button" (click)="people.chooseFolder(); latchOpen = false" [disabled]="people.locked()">
             Bundle folder
@@ -590,6 +608,127 @@
             <p class="whisper">Put someone in first. A brief is assembled from a card already on disk.</p>
           }
         </section>
+      } @else if (panel === "capture") {
+        <section class="sheet capture-sheet" data-demo="capture-panel">
+          <header class="sheet-head">
+            <div>
+              <p class="kicker">Propose only — nothing is written until you Accept</p>
+              <h1>Capture</h1>
+            </div>
+            <button class="ghost" type="button" (click)="dismissCapture()">Back</button>
+          </header>
+          <p class="whisper">
+            Paste a voice or text note. Desktop can record through the WebView mic and send
+            transcript text only to the connected Grok or Gemini. Audio is dropped. The prompt
+            is this capture — never the people-graph. Nothing is written until you Accept.
+          </p>
+          <label>
+            Voice or text note
+            <textarea
+              [ngModel]="captureNote"
+              (ngModelChange)="captureNote = $event"
+              name="capture-note"
+              rows="5"
+              placeholder="Met Ada Demo at Golden Gate Park Tuesday. Follow up about the land-plot."
+              [attr.data-demo]="demoMode ? 'capture-note' : null"
+            ></textarea>
+          </label>
+          <div class="row">
+            @if (canRecordCapture()) {
+              <button
+                type="button"
+                [class.on]="captureRecording"
+                (click)="captureRecording ? stopCaptureRecording() : startCaptureRecording()"
+              >
+                {{ captureRecording ? "Stop" : "Record" }}
+              </button>
+            } @else if (!demoMode) {
+              <p class="whisper">
+                {{ desktop ? "Mic needs a WebView that can transcribe locally." : "Preview: paste a note. Real mic is desktop-only." }}
+              </p>
+            }
+            <button
+              class="brass"
+              type="button"
+              (click)="proposeCapture()"
+              [disabled]="!captureNote.trim() || providers.busy()"
+              [attr.data-demo]="demoMode ? 'capture-propose' : null"
+            >
+              {{ providers.busy() && panel === "capture" ? "Listening…" : "Propose structure" }}
+            </button>
+          </div>
+          @if (notice) {
+            <p class="notice">{{ notice }}</p>
+          }
+          @if (providers.error()) {
+            <p class="error">{{ providers.error() }}</p>
+          }
+          @if (providers.busy() && !captureProposal) {
+            <p class="whisper">Structuring this capture… Nothing is written yet.</p>
+          } @else if (showCaptureEmpty()) {
+            <div class="research-empty" data-capture-empty>
+              <p class="whisper">{{ captureNeedsProvider }}</p>
+              <p class="whisper">Nothing is written until you accept.</p>
+            </div>
+          } @else if (captureProposal) {
+            <p class="whisper">Check people, dates, and follow-ups. Dismiss writes nothing.</p>
+            <label class="follow-line">
+              <input
+                type="checkbox"
+                [ngModel]="allCaptureChecked()"
+                (ngModelChange)="selectAllCaptureItems($event)"
+              />
+              Select all
+            </label>
+            <div class="offers">
+              @for (entry of captureProposal.items; track entry.id) {
+                <article class="fact-offer">
+                  <label class="follow-line">
+                    <input
+                      type="checkbox"
+                      [ngModel]="entry.checked"
+                      (ngModelChange)="toggleCaptureItem(entry.id, $event)"
+                    />
+                    <span>
+                      <strong>{{ entry.item.title }}</strong>
+                      <small>
+                        {{ entry.item.kind }}
+                        @if (entry.item.personTitle && entry.item.kind !== "person") {
+                          · {{ entry.item.personTitle }}
+                        }
+                      </small>
+                      <p>{{ captureItemLabel(entry.id) }}</p>
+                    </span>
+                  </label>
+                  <button class="ghost" type="button" (click)="deleteCaptureChoice(entry.id)">Delete</button>
+                </article>
+              }
+            </div>
+            @if (captureProposal.items.length === 0) {
+              <p class="whisper">Every proposed item was deleted. Dismiss writes nothing.</p>
+            }
+            <div class="row">
+              <button
+                class="brass"
+                type="button"
+                (click)="acceptCapture()"
+                [disabled]="!captureHasChecked() || providers.busy()"
+                [attr.data-demo]="demoMode ? 'capture-accept' : null"
+              >
+                Accept selected
+              </button>
+              <button
+                class="ghost"
+                type="button"
+                (click)="dismissCapture()"
+                [attr.data-demo]="demoMode ? 'capture-dismiss' : null"
+              >
+                Dismiss
+              </button>
+            </div>
+            <p class="whisper">Accept writes checked people, dates, and follow-ups. Dismiss writes nothing. Never auto-sends.</p>
+          }
+        </section>
       } @else if (panel === "create" || panel === "edit") {
         <section class="sheet card-form">
           <h1>{{ panel === "create" ? "Who?" : "Edit card" }}</h1>
@@ -773,7 +912,7 @@
           <img src="assets/skuffen-icon.png" alt="Open wooden drawer" />
           <h1>The drawer is empty</h1>
           <p class="lede">
-            Type a name above and press Enter or Research. Or put someone in yourself.
+            Type a name above and press Enter or Research. Paste a capture. Or put someone in yourself.
           </p>
           @if (notice) {
             <p class="notice">{{ notice }}</p>
@@ -781,6 +920,9 @@
           <p class="whisper">Need Grok or Gemini? Open Latch for Providers & settings. Ctrl+, also opens Latch.</p>
           <button class="brass" type="button" (click)="startCreate()" [attr.data-demo]="demoMode ? 'put-someone-in' : null">
             Put someone in
+          </button>
+          <button type="button" (click)="openCapture()" [attr.data-demo]="demoMode ? 'capture-empty' : null">
+            Capture a note
           </button>
           @if (demoMode) {
             <button
@@ -880,6 +1022,13 @@
                 [attr.data-demo]="demoMode ? 'brief' : null"
               >
                 Brief
+              </button>
+              <button
+                type="button"
+                (click)="openCapture(person.slug)"
+                [attr.data-demo]="demoMode ? 'capture-card' : null"
+              >
+                Capture
               </button>
             </div>
 

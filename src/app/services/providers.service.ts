@@ -15,6 +15,14 @@ import {
   type MeetingBrief,
 } from "./brief";
 import {
+  buildCapturePrompt,
+  demoCaptureItems,
+  demoCapturePrompt,
+  liveCaptureRequests,
+  parseCaptureItems,
+  type CaptureItem,
+} from "./capture";
+import {
   RESEARCH_SYSTEM,
   buildNameResearchPrompt,
   buildResearchPrompt,
@@ -244,6 +252,45 @@ export class ProvidersService {
 
   reject(id: string): void {
     this.suggestions.update((items) => items.filter((item) => item.id !== id));
+  }
+
+  /**
+   * Structure one capture. Demo stays offline. Live Grok/Gemini use
+   * liveCaptureRequests (CAPTURE_SYSTEM chat, no tools, text only).
+   * Never askGrok — that inherits RESEARCH_SYSTEM. Never send audio.
+   */
+  async captureNote(note: string): Promise<CaptureItem[]> {
+    const text = note.trim();
+    if (!text) return [];
+    if (isDemoMode()) {
+      this.busy.set(true);
+      this.error.set(null);
+      this.lastPrompt.set(null);
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      this.lastPrompt.set(demoCapturePrompt(text));
+      this.busy.set(false);
+      return demoCaptureItems(text);
+    }
+    const provider = this.activeProvider();
+    if (!provider) {
+      this.error.set("Connect Grok or Gemini first.");
+      return [];
+    }
+    this.busy.set(true);
+    this.error.set(null);
+    try {
+      const prompt = buildCapturePrompt(text);
+      this.lastPrompt.set(prompt);
+      const live = liveCaptureRequests({ grokModel: GROK_MODEL, prompt });
+      const raw =
+        provider === "grok" ? await this.askGrokPolish(live.grok) : await this.askGeminiPolish(live.gemini);
+      return parseCaptureItems(raw, text);
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : String(error));
+      return [];
+    } finally {
+      this.busy.set(false);
+    }
   }
 
   /**

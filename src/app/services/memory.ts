@@ -69,7 +69,7 @@ export function wantedSummary(suggestion: FactSuggestion): string {
 }
 
 export function trustForSource(source: SuggestionSource | StoredProposal["source"]): MemoryTrust {
-  return source === "ask" ? "local" : "hostile-web";
+  return source === "ask" || source === "capture" ? "local" : "hostile-web";
 }
 
 export function recordMemoryTurn(input: {
