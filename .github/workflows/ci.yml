@@ -45,6 +45,12 @@ jobs:
       - name: Angular production build
         run: npm run build
 
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E smoke (headless, no video)
+        run: E2E_DIST=1 npm run test:e2e
+
       # Tauri desktop build is skipped here: not cheap or headless on this runner.
       # Draft Windows/Linux/macOS installers live in .github/workflows/release.yml
       # (push to main bumps patch; workflow_dispatch is optional). Do not add a

@@ -1,6 +1,7 @@
 import { Injectable, signal } from "@angular/core";
 import { GoogleGenAI } from "@google/genai";
 import { actorAgent } from "../../../packages/okf/src/index";
+import { demoResearchSuggestions } from "../demo-mode";
 import type { FactSuggestion, PersonView, ProviderId, ProviderStatus, SuggestionSource } from "../models";
 import { IoService } from "./io.service";
 import {
@@ -111,6 +112,16 @@ export class ProvidersService {
 
   async research(person: PersonView): Promise<void> {
     await this.runPrompt(person, "research", true);
+  }
+
+  /** `?demo=1` only — paints a fake proposal panel. No keys, no network. */
+  async applyDemoResearch(): Promise<void> {
+    this.busy.set(true);
+    this.error.set(null);
+    this.suggestions.set([]);
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    this.suggestions.set(demoResearchSuggestions());
+    this.busy.set(false);
   }
 
   async researchPerson(person: PersonView, source: SuggestionSource = "follow"): Promise<FactSuggestion[]> {
