@@ -50,7 +50,7 @@
           <button type="button" [class.on]="panel === 'map'" (click)="openMap()">Map</button>
         }
 
-        <button class="latch-btn" type="button" [class.on]="latchOpen" (click)="latchOpen = !latchOpen">
+        <button class="latch-btn" type="button" [class.on]="latchOpen" (click)="toggleLatch()">
           Latch
         </button>
       </div>
@@ -62,6 +62,9 @@
             <strong>Latch</strong>
             <span>Providers & settings</span>
           </header>
+          <p class="provider-chip" [class.connected]="grokChipConnected()">
+            Grok · {{ grokLabel() }}
+          </p>
           <button type="button" (click)="openProviders()">Providers</button>
           <button type="button" (click)="people.chooseFolder(); latchOpen = false" [disabled]="people.locked()">
             Bundle folder

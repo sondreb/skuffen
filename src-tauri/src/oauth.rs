@@ -35,9 +35,13 @@ pub struct DevicePending {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct StoredTokens {
+    #[serde(alias = "accessToken")]
     access_token: String,
+    #[serde(default, alias = "refreshToken")]
     refresh_token: Option<String>,
+    #[serde(default, alias = "tokenType")]
     token_type: Option<String>,
+    #[serde(default, alias = "expiresAt")]
     expires_at: Option<u64>,
 }
 
@@ -99,10 +103,7 @@ pub fn next_poll_interval(interval: u64, error: Option<&str>) -> u64 {
 
 pub fn status(app: &tauri::AppHandle) -> Result<OAuthStatus, String> {
     match secrets::get(app, TOKEN_KEY)? {
-        Some(raw) => {
-            let stored: StoredTokens = serde_json::from_str(&raw).map_err(|e| e.to_string())?;
-            Ok(status_from_stored(&stored))
-        }
+        Some(raw) => Ok(status_from_raw(&raw)),
         None => Ok(OAuthStatus {
             connected: false,
             expires_at: None,
@@ -161,6 +162,53 @@ fn status_from_stored(stored: &StoredTokens) -> OAuthStatus {
         connected: !stored.access_token.is_empty(),
         expires_at: stored.expires_at,
         token_type: stored.token_type.clone(),
+    }
+}
+
+/// Public status from whatever the OS store actually holds. Never returns token fields.
+fn status_from_raw(raw: &str) -> OAuthStatus {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return OAuthStatus {
+            connected: false,
+            expires_at: None,
+            token_type: None,
+        };
+    }
+    if let Ok(stored) = serde_json::from_str::<StoredTokens>(trimmed) {
+        return status_from_stored(&stored);
+    }
+    if let Ok(value) = serde_json::from_str::<serde_json::Value>(trimmed) {
+        if let Some(obj) = value.as_object() {
+            let access = obj
+                .get("access_token")
+                .or_else(|| obj.get("accessToken"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
+            let token_type = obj
+                .get("token_type")
+                .or_else(|| obj.get("tokenType"))
+                .and_then(|v| v.as_str())
+                .filter(|s| !s.is_empty())
+                .map(str::to_string);
+            let expires_at = obj
+                .get("expires_at")
+                .or_else(|| obj.get("expiresAt"))
+                .and_then(|v| v.as_u64());
+            let flagged = obj.get("connected").and_then(|v| v.as_bool()).unwrap_or(false)
+                || obj.get("grokOauth").and_then(|v| v.as_bool()).unwrap_or(false)
+                || obj.get("signedIn").and_then(|v| v.as_bool()).unwrap_or(false);
+            return OAuthStatus {
+                connected: flagged || !access.is_empty() || token_type.is_some(),
+                expires_at,
+                token_type,
+            };
+        }
+    }
+    OAuthStatus {
+        connected: true,
+        expires_at: None,
+        token_type: None,
     }
 }
 
@@ -381,6 +429,31 @@ mod tests {
         let dumped = json.to_string();
         assert!(!dumped.contains("sk-very-long-access-token"));
         assert!(!dumped.contains("refresh-secret"));
+    }
+
+    #[test]
+    fn status_from_camel_case_store_is_connected_without_secrets() {
+        let raw = r#"{"accessToken":"sk-secret","tokenType":"Bearer","expiresAt":1700000000}"#;
+        let status = status_from_raw(raw);
+        let json = serde_json::to_value(&status).unwrap();
+        assert_eq!(json["connected"], true);
+        assert_eq!(json["tokenType"], "Bearer");
+        assert!(json.get("accessToken").is_none());
+        let dumped = json.to_string();
+        assert!(!dumped.contains("sk-secret"));
+        assert!(!dumped.contains("accessToken"));
+    }
+
+    #[test]
+    fn status_from_token_poll_blob_is_connected_without_secrets() {
+        let raw =
+            r#"{"access_token":"sk-poll","refresh_token":"r","token_type":"Bearer","expires_in":3600}"#;
+        let status = status_from_raw(raw);
+        assert!(status.connected);
+        let dumped = serde_json::to_string(&status).unwrap();
+        assert!(!dumped.contains("sk-poll"));
+        assert!(!dumped.contains("access_token"));
+        assert!(!dumped.contains("refresh_token"));
     }
 
     #[test]

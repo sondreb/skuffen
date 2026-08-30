@@ -54,10 +54,21 @@ export function grokConnectionLabel(status: { grokOauth: boolean; grokApiKey: bo
 
 export function publicOauthStatus(raw: unknown): GrokOAuthStatus {
   const rec = asRecord(raw);
+  const tokenType = asOptionalString(rec["tokenType"] ?? rec["token_type"]);
+  const expiresAt = asOptionalNumber(rec["expiresAt"] ?? rec["expires_at"]);
+  // IPC may use camelCase, snake_case, or the stored token blob. Never copy secrets out.
+  const connected =
+    truthyFlag(rec["connected"]) ||
+    truthyFlag(rec["grokOauth"]) ||
+    truthyFlag(rec["signedIn"]) ||
+    truthyFlag(rec["signed_in"]) ||
+    Boolean(tokenType) ||
+    nonEmptyString(rec["access_token"]) ||
+    nonEmptyString(rec["accessToken"]);
   return {
-    connected: Boolean(rec["connected"]),
-    expiresAt: typeof rec["expiresAt"] === "number" ? rec["expiresAt"] : null,
-    tokenType: typeof rec["tokenType"] === "string" ? rec["tokenType"] : null,
+    connected,
+    expiresAt,
+    tokenType,
   };
 }
 
@@ -87,4 +98,20 @@ function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : {};
+}
+
+function truthyFlag(value: unknown): boolean {
+  return value === true || value === 1 || value === "true";
+}
+
+function nonEmptyString(value: unknown): boolean {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function asOptionalString(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value : null;
+}
+
+function asOptionalNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
