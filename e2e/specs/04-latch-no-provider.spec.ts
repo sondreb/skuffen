@@ -26,7 +26,7 @@ test("no-provider research opens Latch, dismiss recovers the page", async ({ dem
   await expectLatchOpen(page);
   await expect(page.getByText(/Connect Grok in Latch/)).toBeVisible();
 
-  await page.getByRole("button", { name: "Latch" }).click();
+  await page.getByRole("button", { name: "Latch", exact: true }).click();
   await expectLatchClosed(page);
   await expect(page.getByRole("heading", { name: "The drawer is empty" })).toBeVisible();
   await expect(page.getByText(/Connect Grok in Latch/)).toBeVisible();
@@ -62,7 +62,7 @@ test("no-provider research opens Latch, dismiss recovers the page", async ({ dem
   await expectLatchOpen(page);
   await expect(page.getByText("Connect Grok in Latch → Providers first.")).toBeVisible();
 
-  await page.getByRole("button", { name: "Latch" }).click();
+  await page.getByRole("button", { name: "Latch", exact: true }).click();
   await expectLatchClosed(page);
   await expect(page.getByRole("heading", { name: "Ada Demo" })).toBeVisible();
 
