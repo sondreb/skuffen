@@ -38,8 +38,9 @@ jobs:
   version:
     # Skip bot/tag re-entry and the version-bump commit push. Dispatch always runs.
     # Must match shouldSkipReleaseReentry() in scripts/bump-version.mjs.
-    # Wrap in ${{ }} so YAML does not treat !startsWith as a tag (run 33299042489).
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.actor != 'github-actions[bot]' && !startsWith(github.event.head_commit.message, 'chore: bump version to ')) }}
+    # Double-quote the whole if: 'chore: bump' has colon-space, which is illegal
+    # in an unquoted YAML scalar (runs 33299042489 / 33299195969).
+    if: "github.event_name == 'workflow_dispatch' || (github.actor != 'github-actions[bot]' && !startsWith(github.event.head_commit.message, 'chore: bump version to '))"
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.resolve.outputs.version }}
@@ -89,8 +90,8 @@ jobs:
   build:
     needs: version
     # Same skip-loop as version: no second Win/Linux/macOS matrix on the bump push.
-    # ${{ }} required: unquoted !startsWith is a YAML tag and fails the workflow file.
-    if: ${{ github.event_name == 'workflow_dispatch' || (github.actor != 'github-actions[bot]' && !startsWith(github.event.head_commit.message, 'chore: bump version to ')) }}
+    # Quoted for the same colon-space reason as the version job if.
+    if: "github.event_name == 'workflow_dispatch' || (github.actor != 'github-actions[bot]' && !startsWith(github.event.head_commit.message, 'chore: bump version to '))"
     permissions:
       contents: write
     strategy:
