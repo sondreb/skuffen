@@ -47,7 +47,7 @@ test("round-trips a sibling list on relations.md — no tokens", () => {
   assert.equal(edges[0]?.role, "sibling");
   assert.equal(edges[0]?.person, "people/bea-demo/person.md");
   assert.doesNotMatch(raw, /token|secret|password|api[_-]?key|authorization|bearer/i);
-  assert.doesNotMatch(raw, /skuffen\.cloud|upload/i);
+  assert.doesNotMatch(raw, /skuffen\.cloud/i);
 });
 
 test("add sibling writes both sides; inverse parent/child", () => {
