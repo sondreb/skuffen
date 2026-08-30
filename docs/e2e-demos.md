@@ -9,7 +9,7 @@ No ElevenLabs. No API keys. Demo people are synthetic (`Ada Demo` + a public-par
 | Script | What it does |
 | --- | --- |
 | `npm run test:e2e` | Headless Chromium smoke. No video. Safe for PR CI. |
-| `npm run demo:record` | Writes WebM under `artifacts/demos/`. Headed when a display is available; otherwise headless (ffmpeg-friendly). |
+| `npm run demo:record` | Writes WebM under `artifacts/demos/`. Headless and ffmpeg-friendly by default. |
 
 `artifacts/` is gitignored. CI must not upload videos.
 
@@ -29,10 +29,11 @@ Open `http://127.0.0.1:1420/?demo=1`. That flag only:
 
 - Adds `data-demo` hooks on a few buttons for stable locators
 - Stubs **Research with Grok** so the proposal panel and **Accept** path are visible without keys
+- Stubs address search to a synthetic Golden Gate Park hit (no Nominatim)
 
 It does not seed a people-graph, call `api.x.ai`, or write owner contacts.
 
-Geocode and (in CI) map tiles are stubbed in the Playwright helper so the smoke is deterministic. `demo:record` still loads public OSM tiles for a real-looking map; Nominatim stays stubbed so the park pin is always the same synthetic result.
+Geocode is stubbed in `?demo=1` (and again in Playwright) so the park pin is always the same synthetic result. Map tiles are stubbed in CI so the smoke does not wait on OSM. `demo:record` still loads public OSM tiles for a real-looking map.
 
 ## Specs
 
@@ -52,4 +53,4 @@ Playwright writes WebM. Convert locally if you need MP4:
 ffmpeg -i artifacts/demos/what-is-skuffen-open-the-people-drawer.webm artifacts/demos/what-is-skuffen-open-the-people-drawer.mp4
 ```
 
-Linux without a display: `demo:record` stays headless. To watch it, set `DISPLAY` and run headed, or `xvfb-run -a npm run demo:record`.
+`demo:record` is headless so it works without a display. To watch the browser, run `DEMO_HEADED=1 npm run demo:record` (needs `DISPLAY` or `xvfb-run -a`).

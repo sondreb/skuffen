@@ -1,4 +1,5 @@
 import { Injectable } from "@angular/core";
+import { DEMO_PARK_HIT, isDemoMode } from "../demo-mode";
 
 export interface GeocodeHit {
   label: string;
@@ -16,6 +17,9 @@ export class GeocodeService {
   async search(query: string): Promise<GeocodeHit[]> {
     const q = query.trim();
     if (!q) return [];
+    if (isDemoMode()) {
+      return [{ ...DEMO_PARK_HIT }];
+    }
     await this.throttle();
     const url = new URL(NOMINATIM_SEARCH);
     url.searchParams.set("format", "jsonv2");
@@ -29,6 +33,9 @@ export class GeocodeService {
   }
 
   async reverse(latitude: number, longitude: number): Promise<GeocodeHit | null> {
+    if (isDemoMode()) {
+      return { ...DEMO_PARK_HIT, latitude, longitude };
+    }
     await this.throttle();
     const url = new URL(NOMINATIM_REVERSE);
     url.searchParams.set("format", "jsonv2");

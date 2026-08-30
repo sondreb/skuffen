@@ -23,13 +23,15 @@ export const test = base.extend<{ demoPage: Page }>({
     if (!process.env.DEMO_RECORD) return;
     await mkdir(ARTIFACTS, { recursive: true });
     const video = page.video();
-    if (!video) return;
     const slug = testInfo.title
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "")
       .slice(0, 60);
-    await video.saveAs(path.join(ARTIFACTS, `${slug}.webm`));
+    await page.close();
+    if (video) {
+      await video.saveAs(path.join(ARTIFACTS, `${slug}.webm`));
+    }
   },
 });
 
@@ -44,6 +46,10 @@ export async function stubNetwork(page: Page): Promise<void> {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
+      headers: {
+        "access-control-allow-origin": "*",
+        "content-type": "application/json",
+      },
       body: JSON.stringify(url.includes("/reverse") ? hit : [hit]),
     });
   });
@@ -72,5 +78,5 @@ export async function createAdaDemo(page: Page): Promise<void> {
   await page.getByRole("button", { name: "More" }).click();
   await page.getByLabel("How you know them").fill(DEMO.person.description);
   await page.locator("[data-demo='save-person']").click();
-  await expect(page.getByRole("button", { name: /Ada Demo/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Ada Demo" })).toBeVisible();
 }
