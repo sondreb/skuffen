@@ -419,8 +419,7 @@ button:disabled {
 }
 
 .sidebar.collapsed .demo-quiet {
-  margin: 0.35rem 0.2rem 0.55rem;
-  font-size: 0.68rem;
+  display: none;
 }
 
 .main,
