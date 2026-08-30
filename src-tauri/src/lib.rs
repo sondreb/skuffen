@@ -41,6 +41,9 @@ pub struct Settings {
     /// Inspectable log of what the model was told. Not OKF. Never stores tokens.
     #[serde(default)]
     pub memory_log: Option<Vec<serde_json::Value>>,
+    /// Local owner of this app copy. Person slug, not a Skuffen account. Never tokens.
+    #[serde(default)]
+    pub self_slug: Option<String>,
 }
 
 #[tauri::command]

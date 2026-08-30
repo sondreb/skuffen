@@ -34,6 +34,7 @@ import { LAND_PLOT_KIND } from "../../packages/okf/src/index";
 import { FollowService } from "./services/follow.service";
 import { grokConnectionLabel } from "./services/grok-oauth";
 import { IoService, isTauri } from "./services/io.service";
+import { SelfService } from "./services/self.service";
 import { PeopleService } from "./services/people.service";
 import { ProvidersService } from "./services/providers.service";
 import {
@@ -163,6 +164,7 @@ export class AppComponent implements OnInit, OnDestroy {
   readonly providers = inject(ProvidersService);
   readonly geocode = inject(GeocodeService);
   readonly follow = inject(FollowService);
+  readonly self = inject(SelfService);
   private readonly io = inject(IoService);
   readonly updates = inject(UpdateService);
   readonly updateWhisper = UPDATE_WHISPER;
@@ -319,6 +321,7 @@ export class AppComponent implements OnInit, OnDestroy {
     await this.people.bootstrap();
     await this.providers.refresh();
     await this.follow.load();
+    await this.self.load();
     const settings = await this.io.getSettings();
     this.dismissedMerges.set(settings.dismissedMerges ?? []);
     this.droppedCommitments.set(settings.droppedCommitments ?? []);
@@ -1039,6 +1042,7 @@ export class AppComponent implements OnInit, OnDestroy {
     const plan = planAcceptedMerge(this.mergeProposal);
     await this.follow.retargetSlug(plan.incomingSlug, plan.keeperSlug);
     await this.follow.forgetSlug(plan.incomingSlug);
+    await this.self.retarget(plan.incomingSlug, plan.keeperSlug);
     await this.people.applyMerge(plan);
     this.mergeProposal = null;
     this.panel = "none";
@@ -1106,6 +1110,14 @@ export class AppComponent implements OnInit, OnDestroy {
     if (item.kind === "photo") return item.url || item.title;
     if (item.kind === "field") return item.value || item.title;
     return item.body || item.value || item.url || item.title;
+  }
+
+  async toggleSelf(slug: string): Promise<void> {
+    await this.self.toggle(slug);
+  }
+
+  async toggleSelf(slug: string): Promise<void> {
+    await this.self.toggle(slug);
   }
 
   async toggleFollow(enabled: boolean): Promise<void> {
