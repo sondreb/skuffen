@@ -236,8 +236,6 @@ button:disabled {
 .sidebar-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
   padding: 0.75rem 0.85rem 0.35rem;
 }
 
@@ -428,6 +426,22 @@ button:disabled {
   position: relative;
   z-index: 1;
   display: block;
+}
+
+.card-form [data-ai-search] {
+  display: block;
+  width: fit-content;
+  margin: 0.2rem 0 0.85rem;
+}
+
+.card-form .more-toggle {
+  display: block;
+  width: fit-content;
+  margin: 0 0 1.5rem;
+}
+
+.card-form .create-actions {
+  margin-top: 0;
 }
 
 .file-nav {

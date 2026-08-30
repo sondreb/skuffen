@@ -1,4 +1,4 @@
-import { expect, openDemo, test } from "../helpers/app";
+import { expect, openDemo, startNameResearch, test } from "../helpers/app";
 import { hold } from "../helpers/labels";
 
 test("name search Accept selected creates the card and shows a photo preview", async ({
@@ -6,8 +6,7 @@ test("name search Accept selected creates the card and shows a photo preview", a
 }) => {
   await openDemo(page);
 
-  await page.getByPlaceholder("Find someone").fill("Ada Lovelace");
-  await page.getByRole("button", { name: "Research" }).click();
+  await startNameResearch(page, "Ada Lovelace");
 
   const sheet = page.locator("[data-name-proposal]");
   await expect(sheet).toBeVisible();

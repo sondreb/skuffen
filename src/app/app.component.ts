@@ -977,16 +977,16 @@ export class AppComponent implements OnInit, OnDestroy {
     this.checkAllVisibleSuggestions();
   }
 
-  onFindEnter(): void {
-    if (!this.query().trim()) return;
-    if (this.filtered().length === 0) {
-      void this.researchName();
-    }
+  /** Research from Add person only. The left-pane field is a local filter. */
+  researchDraftName(): void {
+    const name = this.draft.title.trim();
+    if (!name) return;
+    void this.researchName(name);
   }
 
-  async researchName(): Promise<void> {
-    const name = this.query().trim();
-    if (!name) return;
+  async researchName(name: string): Promise<void> {
+    const q = name.trim();
+    if (!q) return;
     this.notice = null;
     this.actionError = null;
     this.menuOpen = false;
@@ -1000,15 +1000,15 @@ export class AppComponent implements OnInit, OnDestroy {
     ) {
       return;
     }
-    const suggestions = await this.providers.researchName(name);
-    this.nameProposal = proposeNameResearch(name, suggestions);
+    const suggestions = await this.providers.researchName(q);
+    this.nameProposal = proposeNameResearch(q, suggestions);
     try {
       await this.follow.storeResearch(
         "",
         this.nameProposal.facts.map((fact) => fact.suggestion),
         {
           source: "research",
-          query: name,
+          query: q,
           prompt: this.providers.lastPrompt() ?? undefined,
         },
       );

@@ -1,4 +1,4 @@
-import { expect, test } from "../helpers/app";
+import { expect, startNameResearch, test } from "../helpers/app";
 
 async function openPreview(page: import("@playwright/test").Page): Promise<void> {
   await page.goto("/");
@@ -20,8 +20,7 @@ async function expectMenuClosed(page: import("@playwright/test").Page): Promise<
 test("no-provider research opens Menu, dismiss recovers the page", async ({ demoPage: page }) => {
   await openPreview(page);
 
-  await page.getByPlaceholder("Find someone").fill("Ada Lovelace");
-  await page.getByRole("button", { name: "Research" }).click();
+  await startNameResearch(page, "Ada Lovelace");
 
   await expectMenuOpen(page);
   await expect(page.getByText(/Connect Grok in Menu/)).toBeVisible();
@@ -38,7 +37,7 @@ test("no-provider research opens Menu, dismiss recovers the page", async ({ demo
   await page.getByRole("button", { name: "Cancel" }).click();
   await expect(page.getByRole("heading", { name: "No people yet" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Research" }).click();
+  await startNameResearch(page, "Ada Lovelace");
   await expectMenuOpen(page);
   await page.keyboard.press("Escape");
   await expectMenuClosed(page);
@@ -46,13 +45,13 @@ test("no-provider research opens Menu, dismiss recovers the page", async ({ demo
   await page.getByRole("button", { name: "Dismiss" }).click();
   await expect(page.getByRole("heading", { name: "No people yet" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Research" }).click();
+  await startNameResearch(page, "Ada Lovelace");
   await expectMenuOpen(page);
   await page.locator(".well").click({ position: { x: 16, y: 16 } });
   await expectMenuClosed(page);
   await page.getByRole("button", { name: "Dismiss" }).click();
 
-  await page.getByRole("button", { name: "Research" }).click();
+  await startNameResearch(page, "Ada Lovelace");
   await expectMenuOpen(page);
   await page.getByRole("button", { name: "Close", exact: true }).click();
   await expectMenuClosed(page);

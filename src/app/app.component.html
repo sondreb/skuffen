@@ -190,41 +190,24 @@
     <aside class="sidebar" aria-label="People">
         <div class="sidebar-head">
           <h2>People</h2>
-          <button
-            class="ghost"
-            type="button"
-            (click)="startCreate()"
-            data-add-person="list"
-            [attr.data-demo]="demoMode ? 'put-someone-in' : null"
-          >
-            Add person
-          </button>
         </div>
         <div class="find-row">
           <label class="find">
-            <span class="sr">Find someone</span>
+            <span class="sr">Find person</span>
             <input
               #findInput
+              data-people-filter
               [ngModel]="query()"
               (ngModelChange)="query.set($event)"
-              (keyup.enter)="onFindEnter()"
-              placeholder="Find someone"
+              placeholder="Find person"
               autocomplete="off"
             />
           </label>
-          <button
-            class="brass"
-            type="button"
-            (click)="researchName()"
-            [disabled]="!query().trim() || providers.busy()"
-          >
-            {{ providers.busy() && panel === "propose" ? "Searching…" : "Research" }}
-          </button>
         </div>
         <nav class="people-list" aria-label="Everyone">
           @if (query().trim() && filtered().length === 0) {
             <p class="invite-line">
-              No one by that name. Press Enter or Research to propose a card from public sources.
+              No one by that name in this graph.
             </p>
           }
           @for (person of filtered(); track person.slug) {
@@ -1140,6 +1123,17 @@
         <section class="sheet card-form" data-create-form>
           <h1>{{ panel === "create" ? "Who?" : "Edit card" }}</h1>
           <label>Name <input #nameField [(ngModel)]="draft.title" name="person-name" autocomplete="off" /></label>
+          @if (panel === "create") {
+            <button
+              type="button"
+              data-ai-search
+              (click)="researchDraftName()"
+              [disabled]="!draft.title.trim() || providers.busy()"
+              [attr.data-demo]="demoMode ? 'ai-search' : null"
+            >
+              {{ providers.busy() ? "Searching…" : "AI Powered Search" }}
+            </button>
+          }
           @if (actionError) {
             <p class="error">{{ actionError }}</p>
           }
@@ -1153,9 +1147,9 @@
             </div>
             <label>About <textarea [(ngModel)]="draft.body" rows="5"></textarea></label>
           } @else {
-            <button class="ghost" type="button" (click)="showMore = true">More</button>
+            <button class="ghost more-toggle" type="button" data-create-more (click)="showMore = true">More</button>
           }
-          <div class="row">
+          <div class="row create-actions">
             <button
               class="brass"
               type="button"
@@ -1173,7 +1167,7 @@
           <header class="sheet-head">
             <div>
               <p class="kicker">Proposed card — not saved yet</p>
-              <h1>{{ nameProposal?.query || query() }}</h1>
+              <h1>{{ nameProposal?.query || draft.title }}</h1>
             </div>
             <button class="ghost" type="button" (click)="dismissProposal()">Dismiss</button>
           </header>
@@ -1370,7 +1364,7 @@
           <img src="assets/skuffen-icon.png" alt="Skuffen" />
           <h1>No people yet</h1>
           <p class="lede">
-            Type a name to find someone, or add a person.
+            Add a person to start the local graph. Filter finds people already here.
           </p>
           @if (notice) {
             <p class="notice">{{ notice }}</p>
