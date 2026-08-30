@@ -50,10 +50,11 @@ Pull-request CI (`.github/workflows/ci.yml`) runs those checks plus `npm run bui
 
 ## Draft desktop release
 
-Unsigned Windows, Linux, and macOS installers are built by **Draft desktop release** (`.github/workflows/release.yml`), not by PR CI. The GitHub Release is always `draft: true`. Sondre tests an installer, then publishes. There is no iOS/Android job, no notarization, and no SmartScreen/Play/App Store signing.
+Unsigned Windows, Linux, and macOS installers are built by **Draft desktop release** (`.github/workflows/release.yml`), not by PR CI. Every merge to `main` bumps the patch version in lockstep and opens a new **draft** GitHub Release. `workflow_dispatch` is optional. The GitHub Release is always `draft: true`. Sondre tests an installer, then publishes. There is no iOS/Android job, no notarization, and no SmartScreen/Play/App Store signing.
 
-- Actions → Draft desktop release → Run workflow. Version input default is **patch**. Or pass `0.1.1` / `minor` / `major`.
-- Or push a tag `v0.1.1`.
+- Merge to `main`: always bump **patch**, commit `chore: bump version to X.Y.Z` as github-actions[bot], build from that SHA. The bump push itself is skipped (no second matrix).
+- Optional: Actions → Draft desktop release → Run workflow. Version input default is **patch**. Or pass `0.1.1` / `minor` / `major`.
+- Tag `v*` is skip-safe for tauri-action.
 
 The workflow keeps versions in lockstep: `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`. App identifier stays `me.grok.skuffen`. Installers only — never people-graph data, tokens, or OKF fixtures.
 

@@ -1,20 +1,31 @@
 # Draft Tauri 2 desktop installers for Windows, Linux, and macOS.
 # Separate from PR CI (.github/workflows/ci.yml): pull requests never run this matrix.
+# Primary trigger: push to main (merged PRs). Always bump patch, then draft-release.
+# workflow_dispatch is an optional extra (semver or patch/minor/major, default patch).
+# Tag v* is skip-safe for tauri-action. Do not require a human to dispatch.
 # No iOS. No Android. Unsigned is expected. Sondre publishes the draft after he tests.
 # Never upload people-graph data, tokens, or OKF fixtures.
+#
+# Skip-loop: if this push is only the workflow's version-bump commit
+# (github-actions[bot] / "chore: bump version to X.Y.Z"), do not bump again and
+# do not start a second matrix. The first run's build job checkouts
+# needs.version.outputs.sha. Keep job `if` in sync with shouldSkipReleaseReentry()
+# in scripts/bump-version.mjs (npm run test:version).
 
 name: Draft desktop release
 
 on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
   workflow_dispatch:
     inputs:
       version:
         description: Semver (0.1.1) or bump keyword (patch, minor, major). Default bump patch.
         required: false
         default: patch
-  push:
-    tags:
-      - "v*"
 
 concurrency:
   group: draft-desktop-release-${{ github.ref }}
@@ -25,8 +36,9 @@ permissions:
 
 jobs:
   version:
-    # Skip the re-entry when tauri-action creates the v* tag after a dispatch build.
-    if: github.event_name == 'workflow_dispatch' || github.actor != 'github-actions[bot]'
+    # Skip bot/tag re-entry and the version-bump commit push. Dispatch always runs.
+    # Must match shouldSkipReleaseReentry() in scripts/bump-version.mjs.
+    if: github.event_name == 'workflow_dispatch' || (github.actor != 'github-actions[bot]' && !startsWith(github.event.head_commit.message, 'chore: bump version to '))
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.resolve.outputs.version }}
@@ -45,20 +57,17 @@ jobs:
       - name: Resolve lockstep version
         id: resolve
         env:
-          INPUT_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
+          # push to main: always patch (releaseVersionSpec). dispatch: input. tag v*: tag body.
+          INPUT_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.version || '' }}
         run: |
           set -euo pipefail
-          SPEC="${INPUT_VERSION:-patch}"
-          if [ "${{ github.event_name }}" = "push" ]; then
-            SPEC="${GITHUB_REF_NAME#v}"
-          fi
-          VERSION="$(node scripts/bump-version.mjs --dry-run "$SPEC")"
+          VERSION="$(node scripts/bump-version.mjs --dry-run --from-github-event)"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "Resolved $VERSION from spec $SPEC"
+          echo "Resolved $VERSION from GitHub event ${GITHUB_EVENT_NAME} ${GITHUB_REF}"
 
       - name: Commit lockstep versions
         id: commit
-        if: github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
         env:
           VERSION: ${{ steps.resolve.outputs.version }}
         run: |
@@ -78,7 +87,8 @@ jobs:
 
   build:
     needs: version
-    if: github.event_name == 'workflow_dispatch' || github.actor != 'github-actions[bot]'
+    # Same skip-loop as version: no second Win/Linux/macOS matrix on the bump push.
+    if: github.event_name == 'workflow_dispatch' || (github.actor != 'github-actions[bot]' && !startsWith(github.event.head_commit.message, 'chore: bump version to '))
     permissions:
       contents: write
     strategy:

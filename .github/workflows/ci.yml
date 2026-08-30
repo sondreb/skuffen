@@ -47,4 +47,5 @@ jobs:
 
       # Tauri desktop build is skipped here: not cheap or headless on this runner.
       # Draft Windows/Linux/macOS installers live in .github/workflows/release.yml
-      # (workflow_dispatch / tag v* only). Do not upload people-graph fixtures or secrets.
+      # (push to main bumps patch; workflow_dispatch is optional). Do not add a
+      # desktop-release matrix to PR CI. Do not upload people-graph fixtures or secrets.
