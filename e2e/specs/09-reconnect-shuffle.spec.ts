@@ -49,9 +49,9 @@ test("local reconnect suggestions from notes; pick drafts; skip/dismiss write no
   await showDemoLabel(page, "Skip writes nothing");
   await page.locator("[data-demo='shuffle-skip']").click();
   await expect(page.locator("[data-demo='shuffle-deck']")).toContainText("Bea Demo");
-  await expect(page.locator("[data-demo='shuffle-deck']")).not.toContainText("Ada Demo");
+  await expect(page.locator("[data-demo='shuffle-pick-ada-demo']")).toHaveCount(0);
 
-  await page.locator("[data-demo='shuffle-dismiss']").click();
+  await page.locator("[data-demo='shuffle-back']").click();
   await page.getByRole("button", { name: "Drawer" }).click();
   await page.locator(".person-card b").filter({ hasText: /^Ada Demo$/ }).click();
   await expect(page.getByRole("heading", { name: "Last coffee" })).toBeVisible();

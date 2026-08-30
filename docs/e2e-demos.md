@@ -28,7 +28,7 @@ Labels stay readable at that size (28px, brass border, dark plate).
 Open `http://127.0.0.1:1420/?demo=1`. That flag only:
 
 - Adds `data-demo` hooks on a few buttons for stable locators
-- Stubs **Research**, **Suggest facts**, **Follow**, and **Capture** so the proposal panel and **Accept** path are visible without keys
+- Stubs **Research**, **Suggest facts**, **Follow**, **Capture**, and **Reconnect Shuffle** draft polish so the **Accept** path is visible without keys
 - Stubs address search to a synthetic Golden Gate Park hit (no Nominatim)
 
 It does not seed a people-graph, call `api.x.ai`, call Gemini, or write owner contacts.

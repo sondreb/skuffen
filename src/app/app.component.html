@@ -631,7 +631,14 @@
               <p class="kicker">From this machine — nothing is sent</p>
               <h1>Reconnect Shuffle</h1>
             </div>
-            <button class="ghost" type="button" (click)="dismissShuffle()">Back</button>
+            <button
+              class="ghost"
+              type="button"
+              (click)="dismissShuffle()"
+              [attr.data-demo]="demoMode ? 'shuffle-back' : null"
+            >
+              Back
+            </button>
           </header>
           <p class="whisper">
             Two local suggestions a day from last notes, last accept, follow, and recency on each card.
