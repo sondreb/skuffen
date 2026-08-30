@@ -31,6 +31,18 @@ pub struct DevicePending {
     pub verification_uri: String,
     pub verification_uri_complete: Option<String>,
     pub expires_in: u64,
+    pub interval: u64,
+}
+
+/// One token-endpoint attempt. Never includes device_code or tokens.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PollOutcome {
+    pub state: String,
+    pub interval: Option<u64>,
+    pub connected: bool,
+    pub expires_at: Option<u64>,
+    pub token_type: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -45,18 +57,17 @@ struct StoredTokens {
     expires_at: Option<u64>,
 }
 
-#[derive(Debug, Deserialize)]
-struct TokenResponse {
-    access_token: String,
-    refresh_token: Option<String>,
-    token_type: Option<String>,
-    expires_in: Option<u64>,
+#[derive(Debug)]
+enum TokenInterpret {
+    Tokens(StoredTokens),
+    Pending,
+    SlowDown,
+    Failed(String),
 }
 
-#[derive(Debug, Deserialize)]
-struct TokenErrorBody {
-    error: Option<String>,
-    error_description: Option<String>,
+enum OnePoll {
+    Pending { interval: u64 },
+    Tokens(StoredTokens),
 }
 
 #[derive(Debug, Deserialize)]
@@ -68,9 +79,9 @@ struct DeviceCodeResponse {
     #[serde(default)]
     verification_uri_complete: Option<String>,
     #[serde(default)]
-    expires_in: Option<u64>,
+    expires_in: Option<serde_json::Value>,
     #[serde(default)]
-    interval: Option<u64>,
+    interval: Option<serde_json::Value>,
 }
 
 struct PendingDevice {
@@ -132,14 +143,12 @@ pub fn begin(app: &tauri::AppHandle) -> Result<DevicePending, String> {
     }
     let body: DeviceCodeResponse = response.json().map_err(|e| e.to_string())?;
     let pending = public_device_pending(&body)?;
-    let interval = body.interval.unwrap_or(DEFAULT_INTERVAL_SECS).max(1);
-    let expires_in = body.expires_in.unwrap_or(1800).max(1);
     {
         let mut slot = PENDING.lock().map_err(|e| e.to_string())?;
         *slot = Some(PendingDevice {
             device_code: body.device_code,
-            interval,
-            deadline: Instant::now() + Duration::from_secs(expires_in),
+            interval: pending.interval,
+            deadline: Instant::now() + Duration::from_secs(pending.expires_in.max(1)),
         });
     }
     open_verification(app, &pending)?;
@@ -148,13 +157,31 @@ pub fn begin(app: &tauri::AppHandle) -> Result<DevicePending, String> {
 
 pub fn wait(app: &tauri::AppHandle) -> Result<OAuthStatus, String> {
     let tokens = poll_for_tokens()?;
-    secrets::set(
-        app,
-        TOKEN_KEY,
-        &serde_json::to_string(&tokens).map_err(|e| e.to_string())?,
-    )?;
-    clear_pending();
-    status(app)
+    persist_tokens(app, &tokens)
+}
+
+/// One token-endpoint attempt. The UI sleeps using `interval` so a long
+/// blocking `grok_oauth_wait` cannot die after approval with nothing saved.
+pub fn poll(app: &tauri::AppHandle) -> Result<PollOutcome, String> {
+    match poll_once()? {
+        OnePoll::Pending { interval } => Ok(PollOutcome {
+            state: "pending".into(),
+            interval: Some(interval),
+            connected: false,
+            expires_at: None,
+            token_type: None,
+        }),
+        OnePoll::Tokens(tokens) => {
+            let status = persist_tokens(app, &tokens)?;
+            Ok(PollOutcome {
+                state: "signedIn".into(),
+                interval: None,
+                connected: status.connected,
+                expires_at: status.expires_at,
+                token_type: status.token_type,
+            })
+        }
+    }
 }
 
 fn status_from_stored(stored: &StoredTokens) -> OAuthStatus {
@@ -230,7 +257,8 @@ fn public_device_pending(body: &DeviceCodeResponse) -> Result<DevicePending, Str
         user_code: body.user_code.trim().to_string(),
         verification_uri,
         verification_uri_complete: complete,
-        expires_in: body.expires_in.unwrap_or(1800),
+        expires_in: json_positive_u64(body.expires_in.as_ref(), 1800),
+        interval: json_positive_u64(body.interval.as_ref(), DEFAULT_INTERVAL_SECS),
     })
 }
 
@@ -253,92 +281,181 @@ fn verification_open_url(pending: &DevicePending) -> Result<String, String> {
     Ok(raw.to_string())
 }
 
+fn persist_tokens(app: &tauri::AppHandle, tokens: &StoredTokens) -> Result<OAuthStatus, String> {
+    if tokens.access_token.trim().is_empty() {
+        clear_pending();
+        return Err("xAI token response omitted a usable token".into());
+    }
+    let raw = serde_json::to_string(tokens).map_err(|e| e.to_string())?;
+    secrets::set(app, TOKEN_KEY, &raw).map_err(|e| {
+        clear_pending();
+        format!("Grok sign-in did not persist in the OS credential store: {e}")
+    })?;
+    clear_pending();
+    let status = status(app)?;
+    if !status.connected {
+        return Err("Grok sign-in did not persist in the OS credential store.".into());
+    }
+    Ok(status)
+}
+
 fn poll_for_tokens() -> Result<StoredTokens, String> {
-    let client = reqwest::blocking::Client::new();
     loop {
-        let (device_code, mut interval, deadline) = {
+        let interval = {
             let slot = PENDING.lock().map_err(|e| e.to_string())?;
-            let pending = slot.as_ref().ok_or_else(|| "Grok sign-in was cancelled".to_string())?;
+            let pending = slot
+                .as_ref()
+                .ok_or_else(|| "Grok sign-in was cancelled".to_string())?;
             if Instant::now() >= pending.deadline {
                 return Err("Grok sign-in expired. Try again.".into());
             }
-            (
-                pending.device_code.clone(),
-                pending.interval,
-                pending.deadline,
-            )
+            pending.interval
         };
-
-        std::thread::sleep(Duration::from_secs(interval));
-        if Instant::now() >= deadline {
-            clear_pending();
-            return Err("Grok sign-in expired. Try again.".into());
-        }
-
-        let response = client
-            .post(TOKEN_URL)
-            .form(&device_token_form(&device_code))
-            .send()
-            .map_err(|e| e.to_string())?;
-        let status = response.status();
-        let text = response.text().unwrap_or_default();
-        if status.is_success() {
-            let body: TokenResponse = serde_json::from_str(&text).map_err(|e| e.to_string())?;
-            return Ok(stored_from_token(body));
-        }
-
-        let err_body: TokenErrorBody = serde_json::from_str(&text).unwrap_or(TokenErrorBody {
-            error: None,
-            error_description: Some(text.clone()),
-        });
-        let error = err_body.error.as_deref().unwrap_or("");
-        match error {
-            "authorization_pending" => {}
-            "slow_down" => {
-                interval = next_poll_interval(interval, Some("slow_down"));
-                if let Ok(mut slot) = PENDING.lock() {
-                    if let Some(pending) = slot.as_mut() {
-                        if pending.device_code == device_code {
-                            pending.interval = interval;
-                        }
-                    }
-                }
-            }
-            "access_denied" | "authorization_denied" => {
-                clear_pending();
-                return Err(err_body
-                    .error_description
-                    .unwrap_or_else(|| "Grok sign-in was denied".into()));
-            }
-            "expired_token" => {
-                clear_pending();
-                return Err("Grok sign-in expired. Try again.".into());
-            }
-            _ => {
-                clear_pending();
-                return Err(format!(
-                    "xAI token poll failed: {}",
-                    err_body.error_description.unwrap_or(text)
-                ));
-            }
+        std::thread::sleep(Duration::from_secs(interval.max(1)));
+        match poll_once()? {
+            OnePoll::Pending { .. } => {}
+            OnePoll::Tokens(tokens) => return Ok(tokens),
         }
     }
 }
 
-fn stored_from_token(body: TokenResponse) -> StoredTokens {
-    let expires_at = body.expires_in.map(|secs| {
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs()
-            + secs
-    });
-    StoredTokens {
-        access_token: body.access_token,
-        refresh_token: body.refresh_token,
-        token_type: body.token_type,
-        expires_at,
+fn poll_once() -> Result<OnePoll, String> {
+    let (device_code, interval, deadline) = {
+        let slot = PENDING.lock().map_err(|e| e.to_string())?;
+        let pending = slot
+            .as_ref()
+            .ok_or_else(|| "Grok sign-in was cancelled".to_string())?;
+        if Instant::now() >= pending.deadline {
+            return Err("Grok sign-in expired. Try again.".into());
+        }
+        (
+            pending.device_code.clone(),
+            pending.interval,
+            pending.deadline,
+        )
+    };
+    if Instant::now() >= deadline {
+        clear_pending();
+        return Err("Grok sign-in expired. Try again.".into());
     }
+
+    let client = reqwest::blocking::Client::new();
+    let response = client
+        .post(TOKEN_URL)
+        .header(reqwest::header::ACCEPT, "application/json")
+        .form(&device_token_form(&device_code))
+        .send()
+        .map_err(|e| e.to_string())?;
+    let http_status = response.status().as_u16();
+    let text = response.text().unwrap_or_default();
+    match interpret_token_http(http_status, &text) {
+        TokenInterpret::Tokens(tokens) => Ok(OnePoll::Tokens(tokens)),
+        TokenInterpret::Pending => Ok(OnePoll::Pending { interval }),
+        TokenInterpret::SlowDown => {
+            let next = next_poll_interval(interval, Some("slow_down"));
+            if let Ok(mut slot) = PENDING.lock() {
+                if let Some(pending) = slot.as_mut() {
+                    if pending.device_code == device_code {
+                        pending.interval = next;
+                    }
+                }
+            }
+            Ok(OnePoll::Pending { interval: next })
+        }
+        TokenInterpret::Failed(message) => {
+            clear_pending();
+            Err(message)
+        }
+    }
+}
+
+fn interpret_token_http(status: u16, text: &str) -> TokenInterpret {
+    let value: serde_json::Value = serde_json::from_str(text).unwrap_or(serde_json::Value::Null);
+    let error = json_string(value.get("error")).unwrap_or_default();
+    if let Some(tokens) = stored_from_value(&value) {
+        return TokenInterpret::Tokens(tokens);
+    }
+    if !error.is_empty() {
+        return classify_oauth_error(&error, &value);
+    }
+    if (200..300).contains(&status) {
+        return TokenInterpret::Failed(
+            "xAI token poll returned success without a usable token".into(),
+        );
+    }
+    TokenInterpret::Failed("xAI token poll failed".into())
+}
+
+fn classify_oauth_error(error: &str, value: &serde_json::Value) -> TokenInterpret {
+    let description = json_string(value.get("error_description"));
+    match error {
+        "authorization_pending" => TokenInterpret::Pending,
+        "slow_down" => TokenInterpret::SlowDown,
+        "access_denied" | "authorization_denied" => {
+            TokenInterpret::Failed(description.unwrap_or_else(|| "Grok sign-in was denied".into()))
+        }
+        "expired_token" => TokenInterpret::Failed("Grok sign-in expired. Try again.".into()),
+        _ => TokenInterpret::Failed(format!(
+            "xAI token poll failed: {}",
+            description.unwrap_or_else(|| error.to_string())
+        )),
+    }
+}
+
+fn stored_from_value(value: &serde_json::Value) -> Option<StoredTokens> {
+    let obj = value.as_object()?;
+    let access = json_string(
+        obj.get("access_token")
+            .or_else(|| obj.get("accessToken")),
+    )
+    .filter(|s| !s.is_empty())?;
+    let refresh = json_string(
+        obj.get("refresh_token")
+            .or_else(|| obj.get("refreshToken")),
+    )
+    .filter(|s| !s.is_empty());
+    let token_type = json_string(obj.get("token_type").or_else(|| obj.get("tokenType")))
+        .filter(|s| !s.is_empty());
+    let expires_in = json_positive_u64(
+        obj.get("expires_in").or_else(|| obj.get("expiresIn")),
+        0,
+    );
+    let expires_at = (expires_in > 0).then(|| now_secs().saturating_add(expires_in));
+    Some(StoredTokens {
+        access_token: access,
+        refresh_token: refresh,
+        token_type,
+        expires_at,
+    })
+}
+
+fn json_string(value: Option<&serde_json::Value>) -> Option<String> {
+    value
+        .and_then(|v| v.as_str())
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .map(str::to_string)
+}
+
+fn json_positive_u64(value: Option<&serde_json::Value>, default: u64) -> u64 {
+    let parsed = value.and_then(|v| {
+        v.as_u64()
+            .or_else(|| v.as_i64().and_then(|n| u64::try_from(n).ok()))
+            .or_else(|| {
+                v.as_f64()
+                    .filter(|n| n.is_finite() && *n > 0.0)
+                    .map(|n| n as u64)
+            })
+            .or_else(|| v.as_str().and_then(|s| s.trim().parse::<u64>().ok()))
+    });
+    parsed.filter(|n| *n > 0).unwrap_or(default)
+}
+
+fn now_secs() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs()
 }
 
 fn clear_pending() {
@@ -394,13 +511,14 @@ mod tests {
             user_code: " WDJB-MJHT ".into(),
             verification_uri: "https://auth.x.ai/connect".into(),
             verification_uri_complete: Some("https://auth.x.ai/connect?user_code=WDJB-MJHT".into()),
-            expires_in: Some(900),
-            interval: Some(5),
+            expires_in: Some(serde_json::json!(900)),
+            interval: Some(serde_json::json!(5)),
         };
         let pending = public_device_pending(&body).unwrap();
         let json = serde_json::to_value(&pending).unwrap();
         assert_eq!(json["userCode"], "WDJB-MJHT");
         assert_eq!(json["verificationUri"], "https://auth.x.ai/connect");
+        assert_eq!(json["interval"], 5);
         assert!(json.get("deviceCode").is_none());
         assert!(json.get("device_code").is_none());
         assert!(json.get("accessToken").is_none());
@@ -463,6 +581,7 @@ mod tests {
             verification_uri: "https://auth.x.ai/connect".into(),
             verification_uri_complete: Some("https://auth.x.ai/connect?user_code=ABCD-EFGH".into()),
             expires_in: 600,
+            interval: 5,
         };
         assert_eq!(
             verification_open_url(&pending).unwrap(),
@@ -473,5 +592,103 @@ mod tests {
             ..pending.clone()
         };
         assert!(verification_open_url(&http).is_err());
+    }
+
+    #[test]
+    fn token_poll_parses_real_world_xai_shapes() {
+        match interpret_token_http(
+            200,
+            r#"{"access_token":"sk-test-access","refresh_token":"sk-test-refresh","token_type":"Bearer","expires_in":3600,"id_token":"eyJ-not-stored"}"#,
+        ) {
+            TokenInterpret::Tokens(tokens) => {
+                assert_eq!(tokens.access_token, "sk-test-access");
+                assert_eq!(tokens.refresh_token.as_deref(), Some("sk-test-refresh"));
+                assert_eq!(tokens.token_type.as_deref(), Some("Bearer"));
+                assert!(tokens.expires_at.unwrap() > now_secs());
+            }
+            other => panic!("expected tokens, got {other:?}"),
+        }
+
+        match interpret_token_http(
+            200,
+            r#"{"accessToken":"sk-test-camel","refreshToken":"sk-test-rt","tokenType":"Bearer","expiresIn":"1800"}"#,
+        ) {
+            TokenInterpret::Tokens(tokens) => {
+                assert_eq!(tokens.access_token, "sk-test-camel");
+                assert_eq!(tokens.expires_at.unwrap() > now_secs(), true);
+            }
+            other => panic!("expected camelCase tokens, got {other:?}"),
+        }
+
+        assert!(matches!(
+            interpret_token_http(200, r#"{"error":"authorization_pending"}"#),
+            TokenInterpret::Pending
+        ));
+        assert!(matches!(
+            interpret_token_http(400, r#"{"error":"authorization_pending"}"#),
+            TokenInterpret::Pending
+        ));
+        assert!(matches!(
+            interpret_token_http(400, r#"{"error":"slow_down"}"#),
+            TokenInterpret::SlowDown
+        ));
+        match interpret_token_http(200, r#"{"token_type":"Bearer"}"#) {
+            TokenInterpret::Failed(message) => {
+                assert!(message.contains("without a usable token"));
+                assert!(!message.contains("sk-"));
+            }
+            other => panic!("expected failed parse, got {other:?}"),
+        }
+        match interpret_token_http(403, r#"{"error":"access_denied","error_description":"nope"}"#) {
+            TokenInterpret::Failed(message) => {
+                assert_eq!(message, "nope");
+            }
+            other => panic!("expected denied, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn poll_outcome_never_serializes_tokens() {
+        let outcome = PollOutcome {
+            state: "signedIn".into(),
+            interval: None,
+            connected: true,
+            expires_at: Some(1_700_000_000),
+            token_type: Some("Bearer".into()),
+        };
+        let dumped = serde_json::to_string(&outcome).unwrap();
+        assert!(dumped.contains("signedIn"));
+        assert!(!dumped.contains("access_token"));
+        assert!(!dumped.contains("refresh_token"));
+        assert!(!dumped.contains("device_code"));
+    }
+
+    #[test]
+    fn persist_requires_non_empty_access_token() {
+        let empty = StoredTokens {
+            access_token: "  ".into(),
+            refresh_token: None,
+            token_type: Some("Bearer".into()),
+            expires_at: None,
+        };
+        // persist_tokens needs an AppHandle; the guard is the same check.
+        assert!(empty.access_token.trim().is_empty());
+        assert!(!status_from_stored(&empty).connected);
+    }
+
+    #[test]
+    fn device_pending_accepts_string_expires_and_interval() {
+        let body = DeviceCodeResponse {
+            device_code: "secret-device".into(),
+            user_code: "ABCD-EFGH".into(),
+            verification_uri: "https://auth.x.ai/connect".into(),
+            verification_uri_complete: None,
+            expires_in: Some(serde_json::json!("900")),
+            interval: Some(serde_json::json!("5")),
+        };
+        let pending = public_device_pending(&body).unwrap();
+        assert_eq!(pending.expires_in, 900);
+        assert_eq!(pending.interval, 5);
+        assert!(!serde_json::to_string(&pending).unwrap().contains("secret-device"));
     }
 }

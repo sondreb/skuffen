@@ -257,6 +257,11 @@ fn grok_oauth_wait(app: tauri::AppHandle) -> Result<oauth::OAuthStatus, String> 
 }
 
 #[tauri::command]
+fn grok_oauth_poll(app: tauri::AppHandle) -> Result<oauth::PollOutcome, String> {
+    oauth::poll(&app)
+}
+
+#[tauri::command]
 fn grok_oauth_status(app: tauri::AppHandle) -> Result<oauth::OAuthStatus, String> {
     oauth::status(&app)
 }
@@ -316,6 +321,7 @@ pub fn run() {
             fetch_public_bytes,
             grok_oauth_begin,
             grok_oauth_wait,
+            grok_oauth_poll,
             grok_oauth_status,
             grok_oauth_logout,
             desktop_runtime_info,

@@ -3,8 +3,10 @@ import type { Settings, VaultStatus } from "../models";
 import {
   BROWSER_OAUTH_ERROR,
   type GrokDevicePending,
+  type GrokOAuthPoll,
   type GrokOAuthStatus,
   publicDevicePending,
+  publicOauthPoll,
   publicOauthStatus,
 } from "./grok-oauth";
 import type { DesktopRuntime, GithubRelease } from "./update";
@@ -194,6 +196,11 @@ export class IoService {
   async grokOauthWait(): Promise<GrokOAuthStatus> {
     if (!isTauri()) throw new Error(BROWSER_OAUTH_ERROR);
     return publicOauthStatus(await this.invoke("grok_oauth_wait"));
+  }
+
+  async grokOauthPoll(): Promise<GrokOAuthPoll> {
+    if (!isTauri()) throw new Error(BROWSER_OAUTH_ERROR);
+    return publicOauthPoll(await this.invoke("grok_oauth_poll"));
   }
 
   async grokOauthStatus(): Promise<GrokOAuthStatus> {

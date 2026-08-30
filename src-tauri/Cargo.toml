@@ -21,7 +21,10 @@ tauri-plugin-opener = "2"
 tauri-plugin-dialog = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-keyring = "3"
+# keyring 3 has no default features. Without a platform store it uses an
+# in-process mock: set_password succeeds on one Entry, get_password on the
+# next Entry misses, and the 0600 file fallback is never written.
+keyring = { version = "3", features = ["apple-native", "windows-native"] }
 reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls"] }
 base64 = "0.22"
 rand = "0.8"
