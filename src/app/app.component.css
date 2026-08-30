@@ -66,7 +66,7 @@ small {
 
 button {
   border: 1px solid var(--line);
-  background: #162022;
+  background: var(--button);
   color: var(--ink);
   border-radius: 8px;
   padding: 0.45rem 0.75rem;
@@ -93,8 +93,8 @@ button.tool:focus-visible {
 
 button.brass,
 button.on {
-  background: var(--teal-deep);
-  border-color: var(--teal);
+  background: var(--accent-deep);
+  border-color: var(--accent);
   color: var(--paper);
 }
 
@@ -134,15 +134,24 @@ button:disabled {
   font-size: 0.72rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--teal);
+  color: var(--accent);
+}
+
+.theme-picker {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.theme-picker button {
+  flex: 1;
 }
 
 .memory-count {
   min-width: 1.25rem;
   padding: 0.05rem 0.4rem;
   border-radius: 999px;
-  background: var(--teal-deep);
-  color: var(--teal-glow);
+  background: var(--accent-deep);
+  color: var(--accent-soft);
   font-size: 0.78rem;
 }
 
@@ -159,10 +168,10 @@ button:disabled {
   flex-direction: column;
   gap: 0.35rem;
   padding: 0.9rem 0.9rem 1rem;
-  background: #121c1e;
+  background: var(--chrome);
   border: 1px solid var(--line);
   border-radius: 10px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--shadow);
   animation: menu-in 160ms ease both;
 }
 
@@ -199,9 +208,9 @@ button:disabled {
 }
 
 .provider-chip.connected {
-  border-color: var(--teal);
-  color: var(--teal-glow);
-  background: rgba(46, 196, 182, 0.1);
+  border-color: var(--accent);
+  color: var(--accent-soft);
+  background: var(--accent-wash);
 }
 
 .menu-sheet .whisper {
@@ -257,7 +266,7 @@ button:disabled {
 }
 
 .find input {
-  background: #0a1012;
+  background: var(--input);
 }
 
 .people-list {
@@ -285,21 +294,21 @@ button:disabled {
 
 .person-card:hover,
 .person-card:focus-visible {
-  background: rgba(46, 196, 182, 0.06);
+  background: var(--hover);
 }
 
 .person-card.on {
-  background: rgba(46, 196, 182, 0.12);
+  background: var(--selected);
   border-color: var(--line);
-  box-shadow: inset 3px 0 0 var(--teal);
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .person-card.is-self {
-  box-shadow: inset 3px 0 0 var(--teal-glow);
+  box-shadow: inset 3px 0 0 var(--accent-soft);
 }
 
 .person-card.on.is-self {
-  box-shadow: inset 3px 0 0 var(--teal);
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .person-meta {
@@ -329,8 +338,8 @@ button:disabled {
   display: grid;
   place-items: center;
   overflow: hidden;
-  background: var(--teal-deep);
-  color: var(--teal-glow);
+  background: var(--accent-deep);
+  color: var(--accent-soft);
   font-size: 0.72rem;
   font-weight: 600;
 }
@@ -358,9 +367,9 @@ button:disabled {
   position: relative;
   margin: 0 0 1rem;
   padding: 0.55rem 0.8rem;
-  border: 1px solid rgba(46, 196, 182, 0.28);
+  border: 1px solid var(--accent-line);
   border-radius: 8px;
-  background: rgba(46, 196, 182, 0.08);
+  background: var(--accent-wash);
   color: var(--ink);
   font-size: 0.9rem;
 }
@@ -458,7 +467,7 @@ button:disabled {
 .threads article,
 .prints article,
 .offers article {
-  background: #141c1e;
+  background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 1.1rem 1.15rem;
@@ -506,8 +515,8 @@ button:disabled {
   display: grid;
   place-items: center;
   overflow: hidden;
-  background: var(--teal-deep);
-  color: var(--teal-glow);
+  background: var(--accent-deep);
+  color: var(--accent-soft);
   font-size: 1.35rem;
   font-weight: 600;
 }
@@ -576,7 +585,7 @@ button:disabled {
   height: auto;
   object-fit: cover;
   border-radius: 8px;
-  background: rgba(16, 24, 26, 0.45);
+  background: var(--thumb);
 }
 
 .person-menu {
@@ -584,10 +593,10 @@ button:disabled {
   z-index: 8;
   min-width: 12.5rem;
   padding: 0.3rem;
-  background: #121c1e;
+  background: var(--chrome);
   border: 1px solid var(--line);
   border-radius: 10px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--shadow);
 }
 
 .person-menu button {
@@ -599,7 +608,7 @@ button:disabled {
 
 .person-menu button:hover,
 .person-menu button:focus-visible {
-  background: rgba(46, 196, 182, 0.12);
+  background: var(--selected);
   border-color: var(--line);
 }
 
@@ -612,13 +621,13 @@ button:disabled {
 
 .self-line {
   margin: 0.2rem 0 0;
-  color: var(--teal-glow);
+  color: var(--accent-soft);
   font-size: 0.86rem;
 }
 
 .self-toggle.on {
-  border-color: var(--teal);
-  color: var(--teal-glow);
+  border-color: var(--accent);
+  color: var(--accent-soft);
 }
 
 .kicker {
@@ -639,7 +648,7 @@ button:disabled {
 .slips p,
 .slips .timeline-row p,
 .threads p {
-  color: #d5dedf;
+  color: var(--prose);
   white-space: pre-wrap;
 }
 
@@ -680,7 +689,7 @@ button:disabled {
 .card-go button:hover,
 .card-go button:focus-visible {
   color: var(--paper);
-  border-color: var(--teal);
+  border-color: var(--accent);
 }
 
 .surface {
@@ -694,8 +703,8 @@ button:disabled {
 
 .drop.hot,
 .app.dragging .drop {
-  border-color: var(--teal);
-  box-shadow: 0 0 0 1px rgba(46, 196, 182, 0.3);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-line);
 }
 
 .quick-note .row input {
@@ -739,7 +748,7 @@ button:disabled {
   margin-top: 0.35rem;
   object-fit: cover;
   border-radius: 8px;
-  background: rgba(16, 24, 26, 0.45);
+  background: var(--thumb);
 }
 
 .chip-x {
@@ -780,9 +789,9 @@ button:disabled {
 .device-pending {
   margin: 0.75rem 0 1rem;
   padding: 0.85rem 1rem;
-  border: 1px dashed var(--teal);
+  border: 1px dashed var(--accent);
   border-radius: 10px;
-  background: rgba(46, 196, 182, 0.06);
+  background: var(--accent-wash);
 }
 
 .user-code {
@@ -790,7 +799,7 @@ button:disabled {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 1.65rem;
   letter-spacing: 0.14em;
-  color: var(--teal-glow);
+  color: var(--accent-soft);
 }
 
 label {
@@ -814,9 +823,9 @@ label {
 .research-empty {
   margin: 0.65rem 0 0;
   padding: 0.75rem 0.85rem;
-  border: 1px dashed var(--teal);
+  border: 1px dashed var(--accent);
   border-radius: 10px;
-  background: rgba(46, 196, 182, 0.06);
+  background: var(--accent-wash);
 }
 
 .research-empty .whisper {
@@ -851,7 +860,7 @@ label {
   border: 1px solid var(--line);
   border-radius: 12px;
   overflow: hidden;
-  background: #0d1c1a;
+  background: var(--map);
 }
 
 .map-frame.tall {
@@ -905,7 +914,7 @@ label {
   padding: 0.85rem;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: #121a1c;
+  background: var(--surface);
 }
 
 .memory-group header,
@@ -926,7 +935,7 @@ label {
 
 .told summary {
   cursor: pointer;
-  color: var(--teal-glow);
+  color: var(--accent-soft);
 }
 
 .told pre,
@@ -940,7 +949,7 @@ label {
   font-size: 0.82rem;
   line-height: 1.4;
   border-radius: 8px;
-  background: #0a1012;
+  background: var(--input);
   color: var(--paper);
 }
 
@@ -973,7 +982,7 @@ label {
   padding: 0.85rem 1rem;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: #121a1c;
+  background: var(--surface);
 }
 
 .brief-card header {
@@ -1024,9 +1033,9 @@ label {
   gap: 0.65rem;
   margin: 0 0 0.75rem;
   padding: 0.5rem 0.75rem;
-  border: 1px solid rgba(46, 196, 182, 0.22);
+  border: 1px solid var(--accent-line);
   border-radius: 10px;
-  background: rgba(46, 196, 182, 0.06);
+  background: var(--accent-wash);
   color: var(--mute);
 }
 
@@ -1054,7 +1063,7 @@ label {
 
 .demo-quiet:hover,
 .demo-quiet:focus-visible {
-  color: var(--teal-glow);
+  color: var(--accent-soft);
   background: transparent;
   box-shadow: none;
 }

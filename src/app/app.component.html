@@ -136,6 +136,40 @@
           @if (self.owner(); as you) {
             <p class="whisper" data-self-owner>You · {{ you.title }}</p>
           }
+          <p class="menu-kicker">Appearance</p>
+          <div class="theme-picker" role="radiogroup" aria-label="Theme" data-theme-picker>
+            <button
+              type="button"
+              role="radio"
+              data-theme-choice="auto"
+              [class.on]="theme.preference() === 'auto'"
+              [attr.aria-checked]="theme.preference() === 'auto'"
+              (click)="theme.set('auto')"
+            >
+              Auto
+            </button>
+            <button
+              type="button"
+              role="radio"
+              data-theme-choice="light"
+              [class.on]="theme.preference() === 'light'"
+              [attr.aria-checked]="theme.preference() === 'light'"
+              (click)="theme.set('light')"
+            >
+              Light
+            </button>
+            <button
+              type="button"
+              role="radio"
+              data-theme-choice="dark"
+              [class.on]="theme.preference() === 'dark'"
+              [attr.aria-checked]="theme.preference() === 'dark'"
+              (click)="theme.set('dark')"
+            >
+              Dark
+            </button>
+          </div>
+          <p class="whisper">Auto follows this computer. The choice lives in app settings, not the people-graph.</p>
           <button type="button" (click)="openProviders()">Providers</button>
           <button type="button" (click)="people.chooseFolder(); menuOpen = false">
             Bundle folder

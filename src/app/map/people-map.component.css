@@ -10,22 +10,22 @@
   min-height: inherit;
   border-radius: 14px;
   overflow: hidden;
-  background: #0d1c1a;
+  background: var(--map);
 }
 
 :host ::ng-deep .leaflet-container {
-  background: #0d1c1a;
+  background: var(--map);
   font: inherit;
-  color: #e8eef0;
+  color: var(--ink);
 }
 
 :host ::ng-deep .leaflet-control-attribution {
-  background: rgba(12, 18, 20, 0.82);
-  color: #8fa3a8;
+  background: color-mix(in srgb, var(--charcoal) 82%, transparent);
+  color: var(--mute);
 }
 
 :host ::ng-deep .leaflet-control-attribution a {
-  color: #7ef0df;
+  color: var(--accent-soft);
 }
 
 :host ::ng-deep .skuffen-pin {
@@ -39,18 +39,18 @@
   height: 16px;
   margin: 3px;
   border-radius: 999px;
-  box-shadow: 0 0 0 2px #10181a, 0 0 12px rgba(46, 196, 182, 0.45);
+  box-shadow: 0 0 0 2px var(--well), 0 0 12px var(--accent-wash);
 }
 
 :host ::ng-deep .skuffen-pin-person span {
-  background: #2ec4b6;
+  background: var(--accent);
 }
 
 :host ::ng-deep .skuffen-pin-active span {
-  background: #7ef0df;
-  box-shadow: 0 0 0 2px #7ef0df, 0 0 14px rgba(46, 196, 182, 0.55);
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 2px var(--accent-soft), 0 0 14px var(--accent-line);
 }
 
 :host ::ng-deep .skuffen-pin-pending span {
-  background: #7ef0df;
+  background: var(--accent-soft);
 }

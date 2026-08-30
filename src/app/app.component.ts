@@ -38,6 +38,7 @@ import { FollowService } from "./services/follow.service";
 import { grokConnectionLabel } from "./services/grok-oauth";
 import { IoService, isTauri } from "./services/io.service";
 import { SelfService } from "./services/self.service";
+import { ThemeService } from "./services/theme.service";
 import { PeopleService } from "./services/people.service";
 import { ProvidersService } from "./services/providers.service";
 import {
@@ -184,6 +185,7 @@ export class AppComponent implements OnInit, OnDestroy {
   readonly geocode = inject(GeocodeService);
   readonly follow = inject(FollowService);
   readonly self = inject(SelfService);
+  readonly theme = inject(ThemeService);
   private readonly io = inject(IoService);
   private readonly cdr = inject(ChangeDetectorRef);
   readonly updates = inject(UpdateService);
@@ -357,6 +359,7 @@ export class AppComponent implements OnInit, OnDestroy {
     await this.providers.refresh();
     await this.follow.load();
     await this.self.load();
+    await this.theme.load();
     const settings = await this.io.getSettings();
     this.dismissedMerges.set(settings.dismissedMerges ?? []);
     this.droppedCommitments.set(settings.droppedCommitments ?? []);

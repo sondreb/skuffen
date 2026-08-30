@@ -48,6 +48,9 @@ jobs:
       - name: Local self / app-owner tests
         run: npm run test:self
 
+      - name: Theme preference (auto / light / dark) tests
+        run: npm run test:theme
+
       - name: Duplicate-person merge (propose-only) tests
         run: npm run test:merge
 
