@@ -1696,7 +1696,12 @@
                           />
                           <span>
                             <strong>{{ item.title }}</strong>
-                            <small>{{ item.source || "ask" }} · {{ item.kind }}</small>
+                            <small>
+                              {{ item.source || "ask" }} · {{ item.kind }}
+                              @if (item.field) {
+                                · {{ item.field }}
+                              }
+                            </small>
                             <p>{{ suggestionLabel(item) }}</p>
                           </span>
                         </label>

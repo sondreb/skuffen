@@ -10,7 +10,11 @@ import type {
 } from "../models";
 
 export const RESEARCH_SYSTEM =
-  "You return compact JSON only. Search public web sources. Never request the full people-graph. Never invent people. Never draft or send messages.";
+  "You return compact JSON only. Search public web sources. Never request the full people-graph. Never invent people. Never invent contact details. Never draft or send messages.";
+
+/** Shared by Research and name-to-research. Suggestions only — Accept is the write. */
+export const WEBSITE_CONTACT_INSTRUCTION =
+  "When a personal or main website is known or found (homepage, social URL, or search), read that public page and extract any email and phone published there. Propose those as field facts: kind field, field email or phone. Do not invent contact details that are not on the page.";
 
 const INTERVAL_MS: Record<FollowInterval, number> = {
   daily: 24 * 60 * 60 * 1000,
@@ -20,7 +24,7 @@ const INTERVAL_MS: Record<FollowInterval, number> = {
 
 export type PersonPromptInput = Pick<
   PersonView,
-  "slug" | "title" | "description" | "givenName" | "familyName" | "body" | "notes" | "social"
+  "slug" | "title" | "description" | "givenName" | "familyName" | "email" | "phone" | "body" | "notes" | "social"
 >;
 
 export type OkfWriteIntent =
@@ -82,6 +86,14 @@ export function dueFollows(
   );
 }
 
+function knownPublicPages(person: PersonPromptInput): string {
+  const pages = person.social
+    .map((item) => item.url?.trim())
+    .filter((url): url is string => Boolean(url));
+  if (pages.length === 0) return "(none — search for a personal or main website)";
+  return pages.map((url) => `- ${url}`).join("\n");
+}
+
 export function buildResearchPrompt(person: PersonPromptInput): string {
   const notes = person.notes.map((n) => `- ${n.title}: ${n.body.slice(0, 280)}`).join("\n") || "(none)";
   const social =
@@ -90,7 +102,8 @@ export function buildResearchPrompt(person: PersonPromptInput): string {
   return [
     "You help a local-only personal CRM called Skuffen.",
     "Search the public web for current, sourced facts about this one person.",
-    "Suggest at most 8 structured facts: contact details, social URLs, about/bio, and public profile photo URLs when known.",
+    WEBSITE_CONTACT_INSTRUCTION,
+    "Suggest at most 8 structured facts: email, phone, social URLs, about/bio, and public profile photo URLs when known.",
     "Results are suggestions only.",
     "Do not invent people. Do not create a new person. Do not ask for or assume the rest of the people-graph.",
     "Do not draft outreach. Do not send messages. Do not upload or request the full graph.",
@@ -99,9 +112,12 @@ export function buildResearchPrompt(person: PersonPromptInput): string {
     `Given name: ${person.givenName ?? ""}`,
     `Family name: ${person.familyName ?? ""}`,
     `Description: ${person.description ?? ""}`,
+    `Existing email: ${person.email?.trim() || "(none)"}`,
+    `Existing phone: ${person.phone?.trim() || "(none)"}`,
     `About:\n${person.body}`,
     `Existing notes:\n${notes}`,
     `Existing social:\n${social}`,
+    `Known public pages:\n${knownPublicPages(person)}`,
   ].join("\n");
 }
 
@@ -110,9 +126,12 @@ export function buildNameResearchPrompt(name: string): string {
     "You help a local-only personal CRM called Skuffen.",
     "Search the public web for current, sourced facts about this one person.",
     "The only identifier you have is the name the user typed.",
+    "If search finds a personal or main website, read that public page.",
+    WEBSITE_CONTACT_INSTRUCTION,
     "Suggest structured facts: name, email, phone, social URLs, about/bio, public profile photo URLs, other contact facts.",
     "Use kind photo with a public http(s) image URL. Do not scrape behind logins.",
     "Do not invent people. Do not invent additional people. Do not ask for or assume the rest of the people-graph.",
+    "Do not invent contact details that are not published on a public page.",
     "Do not draft outreach. Do not send messages. Do not upload or request the full graph.",
     `Return ONLY JSON: ${SUGGESTION_SCHEMA}`,
     `Name: ${name.trim()}`,

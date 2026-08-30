@@ -6,6 +6,7 @@ import {
   assertNoAutoWrite,
   buildNameResearchPrompt,
   buildResearchPrompt,
+  WEBSITE_CONTACT_INSTRUCTION,
   checkedSuggestions,
   deleteProposedFact,
   dismissNameProposal,
@@ -85,6 +86,49 @@ test("research prompt includes only that person and never the full graph", () =>
   assert.doesNotMatch(prompt, /people\/(?!ada-lovelace)/);
 });
 
+test("research prompt asks for website email and phone as field facts", () => {
+  const prompt = buildResearchPrompt(
+    person({
+      email: undefined,
+      phone: undefined,
+      social: [
+        {
+          id: "s1",
+          path: "people/ada-lovelace/social/site.md",
+          title: "Homepage",
+          network: "website",
+          url: "https://ada.example",
+        },
+      ],
+    }),
+  );
+  assert.equal(prompt.includes(WEBSITE_CONTACT_INSTRUCTION), true);
+  assert.match(prompt, /kind field, field email or phone/);
+  assert.match(prompt, /Do not invent contact details that are not on the page/);
+  assert.match(prompt, /Existing email: \(none\)/);
+  assert.match(prompt, /Existing phone: \(none\)/);
+  assert.match(prompt, /Known public pages:/);
+  assert.match(prompt, /https:\/\/ada\.example/);
+  assert.doesNotMatch(prompt, /Bob Example|reconnect shuffle|meeting brief/i);
+  assert.doesNotMatch(prompt, /people\/(?!ada-lovelace)/);
+});
+
+test("research prompt lists existing contact fields and does not invent extras", () => {
+  const prompt = buildResearchPrompt(
+    person({
+      email: "ada@example.com",
+      phone: "+44 20 0000",
+    }),
+  );
+  assert.match(prompt, /Existing email: ada@example.com/);
+  assert.match(prompt, /Existing phone: \+44 20 0000/);
+  assert.match(prompt, /https:\/\/en\.wikipedia\.org\/wiki\/Ada_Lovelace/);
+  assert.doesNotMatch(prompt, /full people-graph/);
+
+  const noPages = buildResearchPrompt(person({ social: [] }));
+  assert.match(noPages, /none — search for a personal or main website/);
+});
+
 test("research and follow propose only — no OKF write without Accept", () => {
   const okfWrites: unknown[] = [];
   const parsed = parseSuggestions(
@@ -109,6 +153,53 @@ test("explicit Accept is the only path that yields an OKF write intent", () => {
     slug: "ada-lovelace",
     title: "First algorithm",
     body: "Wrote notes on the Analytical Engine.",
+  });
+});
+
+test("website email and phone are checkable field facts; Accept writes them", () => {
+  const writes: unknown[] = [];
+  const parsed = parseSuggestions(
+    JSON.stringify({
+      suggestions: [
+        { kind: "field", field: "email", title: "Email", value: "ada@example.com" },
+        { kind: "field", field: "phone", title: "Phone", value: "+44 20 0000" },
+      ],
+    }),
+    "research",
+  );
+  assert.equal(parsed.length, 2);
+  assert.equal(parsed[0]?.kind, "field");
+  assert.equal(parsed[0]?.field, "email");
+  assert.equal(parsed[0]?.value, "ada@example.com");
+  assert.equal(parsed[1]?.kind, "field");
+  assert.equal(parsed[1]?.field, "phone");
+  assert.equal(parsed[1]?.value, "+44 20 0000");
+  assert.equal(proposeOnly(parsed).length, 0);
+  assertNoAutoWrite(writes);
+
+  const proposal = proposeNameResearch("Ada Lovelace", parsed);
+  const email = proposal.facts.find((fact) => fact.suggestion.field === "email")!;
+  const phone = proposal.facts.find((fact) => fact.suggestion.field === "phone")!;
+  assert.equal(email.checked, true);
+  assert.equal(phone.checked, true);
+  assert.equal(email.suggestion.kind, "field");
+  assert.equal(phone.suggestion.kind, "field");
+
+  const plan = planAcceptedNameProposal(proposal);
+  assert.ok(plan);
+  assert.equal(plan.person.email, "ada@example.com");
+  assert.equal(plan.person.phone, "+44 20 0000");
+  assert.deepEqual(writesForAcceptedSuggestion("ada-lovelace", email.suggestion), {
+    type: "field",
+    slug: "ada-lovelace",
+    field: "email",
+    value: "ada@example.com",
+  });
+  assert.deepEqual(writesForAcceptedSuggestion("ada-lovelace", phone.suggestion), {
+    type: "field",
+    slug: "ada-lovelace",
+    field: "phone",
+    value: "+44 20 0000",
   });
 });
 
@@ -163,6 +254,8 @@ test("Grok research request uses web_search and never dumps the graph or tokens"
   assert.equal("search_parameters" in body, false);
   const json = JSON.stringify(body);
   assert.match(json, /Never request the full people-graph/);
+  assert.match(json, /Never invent contact details/);
+  assert.match(json, /personal or main website/);
   assert.doesNotMatch(json, /grok_api_key|access_token|localStorage/);
   assert.doesNotMatch(json, /Bob Example|reconnect shuffle|meeting brief/i);
 });
@@ -207,6 +300,9 @@ test("name research prompt includes only the typed name and never the graph", ()
   assert.match(prompt, /Name: Ada Lovelace/);
   assert.match(prompt, /The only identifier you have is the name the user typed/);
   assert.match(prompt, /public profile photo/);
+  assert.match(prompt, /If search finds a personal or main website/);
+  assert.match(prompt, /Do not invent contact details that are not published on a public page/);
+  assert.equal(prompt.includes(WEBSITE_CONTACT_INSTRUCTION), true);
   assert.doesNotMatch(prompt, /Existing notes|Existing social|Given name:|Family name:|Description:/);
   assert.doesNotMatch(prompt, /Bob Example|reconnect shuffle|meeting brief/i);
   assert.doesNotMatch(prompt, /people\//);
