@@ -114,6 +114,17 @@ test("skip-loop: bot or chore bump commit must not bump again", () => {
   );
 });
 
+test("release.yml wraps !startsWith in ${{ }} so YAML does not parse a tag", () => {
+  const yaml = readFileSync(join(fileURLToPath(new URL(".", import.meta.url)), "..", ".github", "workflows", "release.yml"), "utf8");
+  const ifLines = yaml.split("\n").map((line) => line.trim()).filter((line) => line.startsWith("if:"));
+  assert.ok(ifLines.some((line) => line.includes("!startsWith")), "skip-loop if must keep !startsWith");
+  for (const line of ifLines) {
+    if (line.includes("!")) {
+      assert.match(line, /^if: \$\{\{ .+ \}\}$/, `unquoted ! is a YAML tag: ${line}`);
+    }
+  }
+});
+
 test("applyVersion writes lockstep files and leaves identifier alone", () => {
   const root = mkdtempSync(join(tmpdir(), "skuffen-version-"));
   mkdirSync(join(root, "src-tauri"), { recursive: true });
