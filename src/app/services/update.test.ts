@@ -138,6 +138,19 @@ test("bundle stays unsigned GitHub fallback: no updater artifacts, ayatana-only 
   assert.match(nsis, /WiX leftover: uninstall that MSI once/);
   assert.doesNotMatch(nsis, /TAURI_SIGNING_PRIVATE_KEY/);
 
+  // #73: one-click skips the finish page, so .onInstSuccess must launch.
+  // Stock Tauri gated that on /R (never present on double-click).
+  const onInstSuccess = nsis.match(/Function \.onInstSuccess[\s\S]*?^FunctionEnd/m)?.[0] ?? "";
+  assert.match(onInstSuccess, /\$UpdateMode = 1/);
+  assert.match(onInstSuccess, /Return/);
+  assert.match(onInstSuccess, /\$\{Silent\}/);
+  assert.match(onInstSuccess, /\$\{GetOptions\} \$CMDLINE "\/R"/);
+  const passiveIdx = onInstSuccess.indexOf("${ElseIf} $PassiveMode = 1");
+  assert.ok(passiveIdx >= 0, "PassiveMode launch branch is missing");
+  const passiveLaunch = onInstSuccess.slice(passiveIdx);
+  assert.match(passiveLaunch, /nsis_tauri_utils::RunAsUser/);
+  assert.doesNotMatch(passiveLaunch, /\$\{GetOptions\} \$CMDLINE "\/R"/);
+
   const release = readFileSync(join(root, ".github", "workflows", "release.yml"), "utf8");
   assert.match(release, /releaseDraft: true/);
   assert.match(release, /uploadUpdaterJson: false/);
