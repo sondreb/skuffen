@@ -223,6 +223,23 @@ export function assertLocalBriefNeedsNoNetwork(brief: MeetingBrief): void {
   }
 }
 
+const MAIL_INGEST =
+  /gmail|imap\b|smtp\b|pop3|calendar\.google|googleapis\.com\/calendar|microsoft\.graph|outlook\.office|ews\/exchange/i;
+
+/** Latch extra care: event context is paste-only. No mailbox or calendar ingest. */
+export function assertNoMailIngest(payload: string): void {
+  if (MAIL_INGEST.test(payload)) {
+    throw new Error("brief must not ingest mail or cloud calendar");
+  }
+}
+
+/** Latch extra care: polish/local brief may include this one card, never a sibling. */
+export function assertOneCardOnly(payload: string, sibling: string): void {
+  if (sibling && payload.includes(sibling)) {
+    throw new Error("brief must not include sibling people or the full graph");
+  }
+}
+
 export function buildPolishPrompt(brief: MeetingBrief): string {
   return [
     "You help a local-only personal CRM called Skuffen.",

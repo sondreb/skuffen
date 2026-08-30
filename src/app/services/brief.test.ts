@@ -7,6 +7,8 @@ import {
   BRIEF_SYSTEM,
   applyPolishedTalkingPoints,
   assertLocalBriefNeedsNoNetwork,
+  assertNoMailIngest,
+  assertOneCardOnly,
   briefProposeWrites,
   buildLocalBrief,
   buildPolishPrompt,
@@ -231,4 +233,60 @@ test("event paste fills title, when, and where without leaving the machine", () 
   assert.match(brief.markdown, /Catch-up/);
   assert.match(brief.markdown, /Tuesday 10:00/);
   assert.equal(brief.networkUsed, false);
+});
+
+test("Latch extra care: one OKF card, Accept-only write, no graph upload, no mail ingest, no auto-send", () => {
+  const writes: unknown[] = [];
+  const sends: unknown[] = [];
+  const siblingProposal = makeStoredProposal({
+    id: "p-bob",
+    slug: "bob-example",
+    source: "research",
+    createdAt: "2026-08-30T10:00:00Z",
+    suggestions: [
+      {
+        id: "bob-note",
+        source: "research",
+        kind: "note",
+        title: "Bob only",
+        body: "Sibling card — must never enter Ada's brief.",
+      },
+    ],
+  });
+  const event = parseEventPaste("Coffee with Ada Demo\nTuesday 10:00\nGolden Gate Park");
+  const brief = buildLocalBrief({
+    person: person(),
+    proposals: [pendingProposal(), siblingProposal],
+    follow: follow(),
+    event,
+  });
+  const payload = [brief.markdown, brief.who, ...brief.followUps.map((item) => item.body)].join("\n");
+
+  assert.equal(brief.source, "local");
+  assert.equal(brief.networkUsed, false);
+  assertLocalBriefNeedsNoNetwork(brief);
+  assertNoMailIngest(payload);
+  assertNoMailIngest(JSON.stringify(event));
+  assertOneCardOnly(payload, "Bob Example");
+  assertOneCardOnly(payload, "bob-example");
+  assertOneCardOnly(payload, "Sibling card");
+  assert.match(brief.markdown, /Ada Demo/);
+  assert.match(brief.markdown, /Last coffee/);
+  assert.deepEqual(briefProposeWrites(), []);
+  assertNoAutoWrite(writes);
+  assertNoAutoSend(sends);
+
+  const prompt = buildPolishPrompt(brief);
+  const live = livePolishRequests({ grokModel: "grok-4-latest", prompt });
+  const liveJson = `${prompt}\n${JSON.stringify(live.grok.body)}\n${JSON.stringify(live.gemini)}`;
+  assertOneCardOnly(liveJson, "bob-example");
+  assertOneCardOnly(liveJson, "Sibling card");
+  assertNoMailIngest(liveJson);
+  assert.match(prompt, /Do not send messages/);
+  assert.match(prompt, /Do not upload or request the full graph/);
+  assert.doesNotMatch(liveJson, /gmail|imap|smtp|calendar\.google/i);
+
+  const intent = writesForAcceptedBrief(brief);
+  assert.equal(intent.type, "note");
+  assert.equal(intent.slug, "ada-demo");
 });
