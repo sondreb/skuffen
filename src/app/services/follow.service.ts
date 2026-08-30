@@ -1,16 +1,26 @@
 import { Injectable, computed, inject, signal } from "@angular/core";
-import { demoResearchSuggestions, isDemoMode } from "../demo-mode";
-import type { FactSuggestion, FollowInterval, FollowRecord, StoredProposal } from "../models";
+import { demoResearchPrompt, demoResearchSuggestions, isDemoMode } from "../demo-mode";
+import type { AgentMemoryTurn, FactSuggestion, FollowInterval, FollowRecord, StoredProposal, SuggestionSource } from "../models";
+import {
+  appendMemoryTurn,
+  clearMemoryLog,
+  deleteMemoryTurn,
+  makeStoredProposal,
+  recordMemoryTurn,
+  removeProposal,
+} from "./memory";
 import { IoService } from "./io.service";
 import { PeopleService } from "./people.service";
 import { ProvidersService } from "./providers.service";
 import {
+  buildResearchPrompt,
   dueFollows,
   mergeFollow,
   normalizeInterval,
   proposalsForSlug,
   recordFollowRun,
   removeSuggestion,
+  settingsWithoutSecrets,
   unfollow as dropFollow,
   upsertProposal,
 } from "./research";
@@ -25,6 +35,7 @@ export class FollowService {
 
   readonly follows = signal<FollowRecord[]>([]);
   readonly proposals = signal<StoredProposal[]>([]);
+  readonly memoryLog = signal<AgentMemoryTurn[]>([]);
   readonly ticking = signal(false);
   readonly lastTickAt = signal<string | null>(null);
 
@@ -46,6 +57,7 @@ export class FollowService {
     const settings = await this.io.getSettings();
     this.follows.set((settings.follows ?? []).map((item) => ({ ...item, interval: normalizeInterval(item.interval) })));
     this.proposals.set(settings.proposals ?? []);
+    this.memoryLog.set(settings.memoryLog ?? []);
   }
 
   async start(): Promise<void> {
@@ -64,18 +76,39 @@ export class FollowService {
     }
   }
 
-  async storeResearch(slug: string, suggestions: FactSuggestion[]): Promise<void> {
+  async storeResearch(
+    slug: string,
+    suggestions: FactSuggestion[],
+    options?: { source?: SuggestionSource; prompt?: string; query?: string },
+  ): Promise<void> {
     if (!suggestions.length) return;
     const now = new Date();
-    this.proposals.set(
-      upsertProposal(this.proposals(), {
-        id: `research-${slug}-${now.getTime()}`,
-        slug,
-        source: "research",
-        createdAt: now.toISOString(),
-        suggestions,
-      }),
-    );
+    const source = options?.source ?? "research";
+    const proposal = makeStoredProposal({
+      id: `${source}-${slug || options?.query || "name"}-${now.getTime()}`,
+      slug,
+      query: options?.query,
+      source,
+      createdAt: now.toISOString(),
+      prompt: options?.prompt,
+      suggestions,
+    });
+    this.proposals.set(upsertProposal(this.proposals(), proposal));
+    if (options?.prompt) {
+      this.memoryLog.set(
+        appendMemoryTurn(
+          this.memoryLog(),
+          recordMemoryTurn({
+            now,
+            slug: slug || undefined,
+            query: options.query,
+            source,
+            prompt: options.prompt,
+            suggestions,
+          }),
+        ),
+      );
+    }
     await this.persist();
   }
 
@@ -85,22 +118,22 @@ export class FollowService {
     const next = enabled ? mergeFollow(this.follows(), slug, interval, new Date()) : dropFollow(this.follows(), slug);
     this.follows.set(next);
     if (enabled && isDemoMode()) {
-      const now = new Date();
-      this.proposals.set(
-        upsertProposal(this.proposals(), {
-          id: `follow-${slug}-demo`,
-          slug,
-          source: "follow",
-          createdAt: now.toISOString(),
-          suggestions: demoResearchSuggestions("follow"),
-        }),
-      );
+      const person = this.people.people().find((item) => item.slug === slug);
+      const suggestions = demoResearchSuggestions("follow");
+      const prompt = demoResearchPrompt(person?.title ?? slug);
+      await this.storeResearch(slug, suggestions, { source: "follow", prompt });
+      return;
     }
     await this.persist();
   }
 
   async rejectSuggestion(id: string): Promise<void> {
     this.proposals.set(removeSuggestion(this.proposals(), id));
+    await this.persist();
+  }
+
+  async dismissProposal(proposalId: string): Promise<void> {
+    this.proposals.set(removeProposal(this.proposals(), proposalId));
     await this.persist();
   }
 
@@ -130,6 +163,16 @@ export class FollowService {
     await this.persist();
   }
 
+  async deleteTold(id: string): Promise<void> {
+    this.memoryLog.set(deleteMemoryTurn(this.memoryLog(), id));
+    await this.persist();
+  }
+
+  async clearTold(): Promise<void> {
+    this.memoryLog.set(clearMemoryLog());
+    await this.persist();
+  }
+
   async tick(): Promise<void> {
     if (this.ticking() || this.people.locked()) return;
     const provider = this.providers.activeProvider();
@@ -142,20 +185,34 @@ export class FollowService {
     try {
       let follows = this.follows();
       let proposals = this.proposals();
+      let memoryLog = this.memoryLog();
       for (const follow of due) {
         const person = this.people.people().find((item) => item.slug === follow.slug);
         if (!person) continue;
         const now = new Date();
         try {
+          const prompt = buildResearchPrompt(person);
           const suggestions = await this.providers.researchPerson(person, "follow");
           if (suggestions.length) {
-            proposals = upsertProposal(proposals, {
+            const proposal = makeStoredProposal({
               id: `follow-${person.slug}-${now.getTime()}`,
               slug: person.slug,
               source: "follow",
               createdAt: now.toISOString(),
+              prompt,
               suggestions,
             });
+            proposals = upsertProposal(proposals, proposal);
+            memoryLog = appendMemoryTurn(
+              memoryLog,
+              recordMemoryTurn({
+                now,
+                slug: person.slug,
+                source: "follow",
+                prompt,
+                suggestions,
+              }),
+            );
           }
           follows = follows.map((item) => (item.slug === follow.slug ? recordFollowRun(item, now, true) : item));
         } catch {
@@ -164,6 +221,7 @@ export class FollowService {
       }
       this.follows.set(follows);
       this.proposals.set(proposals);
+      this.memoryLog.set(memoryLog);
       this.lastTickAt.set(new Date().toISOString());
       await this.persist();
     } finally {
@@ -173,10 +231,13 @@ export class FollowService {
 
   private async persist(): Promise<void> {
     const settings = await this.io.getSettings();
-    await this.io.saveSettings({
-      ...settings,
-      follows: this.follows(),
-      proposals: this.proposals(),
-    });
+    await this.io.saveSettings(
+      settingsWithoutSecrets({
+        ...settings,
+        follows: this.follows(),
+        proposals: this.proposals(),
+        memoryLog: this.memoryLog(),
+      }) as typeof settings,
+    );
   }
 }
