@@ -19,6 +19,16 @@
         <button
           type="button"
           class="tool"
+          [class.on]="panel === 'create'"
+          (click)="startCreate()"
+          data-add-person="chrome"
+          [attr.data-demo]="demoMode ? 'put-someone-in' : null"
+        >
+          Add person
+        </button>
+        <button
+          type="button"
+          class="tool"
           [class.on]="panel === 'capture'"
           (click)="openCapture()"
           [attr.data-demo]="demoMode ? 'capture' : null"
@@ -189,6 +199,7 @@
             class="ghost"
             type="button"
             (click)="startCreate()"
+            data-add-person="list"
             [attr.data-demo]="demoMode ? 'put-someone-in' : null"
           >
             Add person
@@ -1132,9 +1143,12 @@
           }
         </section>
       } @else if (panel === "create" || panel === "edit") {
-        <section class="sheet card-form">
+        <section class="sheet card-form" data-create-form>
           <h1>{{ panel === "create" ? "Who?" : "Edit card" }}</h1>
-          <label>Name <input #nameField [(ngModel)]="draft.title" name="person-name" /></label>
+          <label>Name <input #nameField [(ngModel)]="draft.title" name="person-name" autocomplete="off" /></label>
+          @if (actionError) {
+            <p class="error">{{ actionError }}</p>
+          }
           @if (showMore || panel === "edit") {
             <div class="grid">
               <label>How you know them <input [(ngModel)]="draft.description" /></label>
@@ -1335,7 +1349,13 @@
           }
           <p class="whisper">Need Grok or Gemini? Menu holds Providers. Ctrl+, opens Menu. / finds someone.</p>
           <div class="invite-actions">
-            <button class="brass" type="button" (click)="startCreate()" [attr.data-demo]="demoMode ? 'put-someone-in' : null">
+            <button
+              class="brass"
+              type="button"
+              (click)="startCreate()"
+              data-add-person="empty"
+              [attr.data-demo]="demoMode ? 'put-someone-in' : null"
+            >
               Add person
             </button>
             <button type="button" (click)="openCapture()" [attr.data-demo]="demoMode ? 'capture-empty' : null">
