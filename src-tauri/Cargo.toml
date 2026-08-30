@@ -1,6 +1,6 @@
 [package]
 name = "skuffen"
-version = "0.1.5"
+version = "0.1.6"
 description = "Local-only personal intelligence. People-graph on disk as OKF."
 authors = ["Sondre Bjellås"]
 edition = "2021"
