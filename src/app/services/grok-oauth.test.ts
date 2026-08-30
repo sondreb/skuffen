@@ -68,6 +68,17 @@ test("public OAuth status and device pending never expose tokens", () => {
   assert.equal(payloadHasSecretFields(status), false);
   assert.doesNotMatch(JSON.stringify(status), /sk-should-never-surface|refresh-hidden|device-hidden|access_token/);
 
+  const fromPoll = publicOauthStatus({
+    access_token: "sk-poll-secret",
+    refresh_token: "refresh-hidden",
+    token_type: "Bearer",
+    expires_in: 3600,
+  });
+  assert.equal(fromPoll.connected, true);
+  assert.equal(fromPoll.tokenType, "Bearer");
+  assert.equal(payloadHasSecretFields(fromPoll), false);
+  assert.doesNotMatch(JSON.stringify(fromPoll), /sk-poll-secret|refresh-hidden|access_token/);
+
   const pending = publicDevicePending({
     userCode: "WDJB-MJHT",
     verificationUri: "https://auth.x.ai/connect",

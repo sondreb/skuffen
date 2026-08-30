@@ -3,8 +3,8 @@ import { GoogleGenAI } from "@google/genai";
 import { actorAgent } from "../../../packages/okf/src/index";
 import { demoResearchSuggestions, isDemoMode } from "../demo-mode";
 import type { FactSuggestion, PersonView, ProviderId, ProviderStatus, SuggestionSource } from "../models";
-import type { GrokDevicePending } from "./grok-oauth";
-import { GROK_API_KEY_SECRET_KEY, GROK_OAUTH_SECRET_KEY } from "./grok-oauth";
+import type { GrokDevicePending, GrokOAuthStatus } from "./grok-oauth";
+import { GROK_API_KEY_SECRET_KEY, GROK_OAUTH_SECRET_KEY, publicOauthStatus } from "./grok-oauth";
 import { IoService } from "./io.service";
 import {
   RESEARCH_SYSTEM,
@@ -38,11 +38,11 @@ export class ProvidersService {
 
   constructor(private readonly io: IoService) {}
 
-  async refresh(): Promise<void> {
+  async refresh(oauthOverride?: GrokOAuthStatus): Promise<void> {
     const settings = await this.io.getSettings();
     const grokKey = await this.io.secretGet(GROK_API_KEY);
     const geminiKey = await this.io.secretGet(GEMINI_API_KEY);
-    const oauth = await this.io.grokOauthStatus();
+    const oauth = publicOauthStatus(oauthOverride ?? (await this.io.grokOauthStatus()));
     this.status.set({
       grokOauth: oauth.connected,
       grokApiKey: Boolean(grokKey),
@@ -108,9 +108,10 @@ export class ProvidersService {
     try {
       const pending = await this.io.grokOauthBegin();
       this.devicePending.set(pending);
-      await this.io.grokOauthWait();
+      const oauth = await this.io.grokOauthWait();
       this.devicePending.set(null);
-      await this.refresh();
+      // Apply the poll result immediately. A follow-up status IPC can lag or use another shape.
+      await this.refresh(oauth);
     } catch (error) {
       this.devicePending.set(null);
       this.error.set(error instanceof Error ? error.message : String(error));

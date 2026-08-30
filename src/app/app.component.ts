@@ -115,6 +115,7 @@ export class AppComponent implements OnInit, OnDestroy {
     const slug = this.people.selected()?.slug;
     return slug ? this.follow.followFor(slug) : null;
   });
+  readonly grokLabel = computed(() => grokConnectionLabel(this.providers.status()));
 
   async ngOnInit(): Promise<void> {
     await this.people.bootstrap();
@@ -715,6 +716,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.latchOpen = false;
     this.panel = "providers";
     this.people.selected.set(null);
+    void this.providers.refresh();
   }
 
   async unlock(): Promise<void> {
@@ -781,8 +783,13 @@ export class AppComponent implements OnInit, OnDestroy {
     return this.activeProvider() === "gemini" ? "Gemini" : "Grok";
   }
 
-  grokLabel(): string {
-    return grokConnectionLabel(this.providers.status());
+  toggleLatch(): void {
+    this.latchOpen = !this.latchOpen;
+    if (this.latchOpen) void this.providers.refresh();
+  }
+
+  grokChipConnected(): boolean {
+    return this.providers.grokConnected();
   }
 }
 

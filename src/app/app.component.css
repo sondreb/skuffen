@@ -94,6 +94,12 @@
   display: block;
 }
 
+.brand strong {
+  font-family: var(--font-display);
+  font-weight: 560;
+  letter-spacing: -0.02em;
+}
+
 .brand span,
 .kicker,
 .whisper,
@@ -187,6 +193,23 @@ button:disabled {
 .latch-sheet header span {
   color: var(--mute);
   font-size: 0.85rem;
+}
+
+.provider-chip {
+  margin: 0 0 0.15rem;
+  padding: 0.32rem 0.65rem;
+  width: fit-content;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--mute);
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+}
+
+.provider-chip.connected {
+  border-color: var(--teal);
+  color: var(--teal-glow);
+  background: rgba(46, 196, 182, 0.1);
 }
 
 .latch-sheet .whisper {
