@@ -154,12 +154,14 @@ button:disabled {
 
 .latch-btn {
   margin-left: auto;
+  position: relative;
+  z-index: 5;
 }
 
 .scrim {
   position: fixed;
   inset: 0;
-  background: transparent;
+  background: rgba(0, 0, 0, 0.45);
   border: 0;
   padding: 0;
   z-index: 3;
@@ -182,6 +184,10 @@ button:disabled {
 }
 
 .latch-sheet header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
   margin: 0 0 0.2rem;
 }
 

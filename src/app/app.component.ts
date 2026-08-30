@@ -166,10 +166,18 @@ export class AppComponent implements OnInit, OnDestroy {
     this.follow.stop();
   }
 
+  toggleLatch(): void {
+    this.latchOpen = !this.latchOpen;
+  }
+
+  closeLatch(): void {
+    this.latchOpen = false;
+  }
+
   @HostListener("document:keydown.escape")
   onEscape(): void {
     if (this.latchOpen) {
-      this.latchOpen = false;
+      this.closeLatch();
       return;
     }
     if (this.panel === "propose") {

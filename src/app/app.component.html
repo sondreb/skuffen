@@ -56,11 +56,14 @@
       </div>
 
       @if (latchOpen) {
-        <button class="scrim" type="button" (click)="latchOpen = false" aria-label="Close latch"></button>
-        <aside class="latch-sheet">
+        <button class="scrim" type="button" (click)="closeLatch()" aria-label="Close latch"></button>
+        <aside class="latch-sheet" role="dialog" aria-label="Latch">
           <header>
-            <strong>Latch</strong>
-            <span>Providers & settings</span>
+            <div>
+              <strong>Latch</strong>
+              <span>Providers & settings</span>
+            </div>
+            <button class="ghost" type="button" (click)="closeLatch()">Close</button>
           </header>
           <p class="provider-chip" [class.connected]="grokChipConnected()">
             Grok · {{ grokLabel() }}
