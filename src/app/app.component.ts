@@ -1,6 +1,6 @@
 import { Component, computed, HostListener, inject, OnDestroy, OnInit, signal } from "@angular/core";
 import { FormsModule } from "@angular/forms";
-import { DEMO_MERGE, DEMO_SHUFFLE, isDemoMode } from "./demo-mode";
+import { DEMO_COMMITMENTS, DEMO_MERGE, DEMO_SHUFFLE, isDemoMode } from "./demo-mode";
 import { PeopleMapComponent, type MapPin } from "./map/people-map.component";
 import type {
   FactSuggestion,
@@ -76,6 +76,25 @@ import {
   type TimelineEvent,
 } from "./services/timeline";
 import {
+  COMMITMENTS_EMPTY,
+  buildCommitmentList,
+  commitmentTitle,
+  commitmentsOpenWrites,
+  dismissCommitmentWrites,
+  dropCommitmentWrites,
+  proposeCommitmentWrites,
+  proposeCommitmentsFromAcceptedNotes,
+  proposeCommitmentsFromText,
+  rememberDroppedCommitment,
+  setAllCommitmentsChecked,
+  setCommitmentChecked,
+  commitmentNoteBody,
+  writesForAcceptedCommitments,
+  writesForDoneCommitment,
+  type CommitmentProposal,
+  type CommitmentRow,
+} from "./services/commitments";
+import {
   CAPTURE_NEEDS_PROVIDER,
   DEMO_CAPTURE_NOTE,
   captureItemsAsSuggestions,
@@ -108,7 +127,8 @@ type Panel =
   | "memory"
   | "brief"
   | "capture"
-  | "shuffle";
+  | "shuffle"
+  | "commitments";
 type SpeechSession = {
   stop: () => void;
   abort?: () => void;
@@ -120,7 +140,7 @@ type SpeechSession = {
   continuous: boolean;
   start: () => void;
 };
-type FactSurface = "none" | "drop" | "pin" | "note" | "suggest" | "timeline";
+type FactSurface = "none" | "drop" | "pin" | "note" | "suggest" | "timeline" | "commitments";
 
 @Component({
   selector: "app-root",
@@ -178,9 +198,12 @@ export class AppComponent implements OnInit, OnDestroy {
   pickedShuffle: ReconnectSuggestion | null = null;
   reconnectDraft: ReconnectDraft | null = null;
   private skippedShuffleSlugs = new Set<string>();
+  commitmentProposal: CommitmentProposal | null = null;
+  commitmentSourceNote = "";
   captureRecording = false;
   private captureSpeech: SpeechSession | null = null;
   readonly dismissedMerges = signal<string[]>([]);
+  readonly droppedCommitments = signal<string[]>([]);
   checkedSuggestionIds = new Set<string>();
   readonly desktop = isTauri();
   readonly landPlotKind = LAND_PLOT_KIND;
@@ -253,6 +276,21 @@ export class AppComponent implements OnInit, OnDestroy {
   readonly captureNeedsProvider = CAPTURE_NEEDS_PROVIDER;
   readonly demoCaptureNote = DEMO_CAPTURE_NOTE;
   readonly timelineEmpty = TIMELINE_EMPTY;
+  readonly commitmentsEmpty = COMMITMENTS_EMPTY;
+  readonly allCommitments = computed(() =>
+    buildCommitmentList({
+      people: this.people.people(),
+      droppedIds: this.droppedCommitments(),
+    }),
+  );
+  readonly selectedCommitments = computed(() => {
+    const person = this.people.selected();
+    if (!person) return [];
+    return buildCommitmentList({
+      people: [person],
+      droppedIds: this.droppedCommitments(),
+    });
+  });
   readonly selectedTimeline = computed(() => {
     const person = this.people.selected();
     if (!person) return [];
@@ -268,6 +306,7 @@ export class AppComponent implements OnInit, OnDestroy {
     await this.follow.load();
     const settings = await this.io.getSettings();
     this.dismissedMerges.set(settings.dismissedMerges ?? []);
+    this.droppedCommitments.set(settings.droppedCommitments ?? []);
     if (!this.people.locked()) {
       await this.follow.start();
     }
@@ -312,6 +351,10 @@ export class AppComponent implements OnInit, OnDestroy {
     }
     if (this.panel === "shuffle") {
       this.dismissShuffle();
+      return;
+    }
+    if (this.panel === "commitments") {
+      this.closeCommitments();
       return;
     }
     if (
@@ -427,6 +470,12 @@ export class AppComponent implements OnInit, OnDestroy {
   openTimeline(): void {
     timelineOpenWrites();
     this.fact = this.fact === "timeline" ? "none" : "timeline";
+    this.notice = null;
+  }
+
+  openCardCommitments(): void {
+    commitmentsOpenWrites();
+    this.fact = this.fact === "commitments" ? "none" : "commitments";
     this.notice = null;
   }
 
@@ -978,6 +1027,11 @@ export class AppComponent implements OnInit, OnDestroy {
     await this.io.saveSettings({ ...settings, dismissedMerges: this.dismissedMerges() });
   }
 
+  private async persistDroppedCommitments(): Promise<void> {
+    const settings = await this.io.getSettings();
+    await this.io.saveSettings({ ...settings, droppedCommitments: this.droppedCommitments() });
+  }
+
   allProposalChecked(): boolean {
     return Boolean(this.nameProposal && this.nameProposal.facts.length > 0 && this.nameProposal.facts.every((fact) => fact.checked));
   }
@@ -1302,6 +1356,145 @@ export class AppComponent implements OnInit, OnDestroy {
     }
     this.skippedShuffleSlugs = new Set();
     this.openShuffle();
+  }
+
+  openCommitments(slug?: string): void {
+    commitmentsOpenWrites();
+    this.latchOpen = false;
+    this.panel = "commitments";
+    this.fact = "none";
+    this.notice = null;
+    this.commitmentProposal = null;
+    if (slug) {
+      void this.people.select(slug);
+    }
+    if (this.demoMode && !this.commitmentSourceNote.trim()) {
+      this.commitmentSourceNote = DEMO_COMMITMENTS.items[0].sourceBody;
+    }
+  }
+
+  closeCommitments(): void {
+    dismissCommitmentWrites();
+    this.commitmentProposal = null;
+    this.commitmentSourceNote = "";
+    this.panel = "none";
+    this.notice = null;
+  }
+
+  commitmentPerson(): PersonView | null {
+    return this.people.selected() ?? this.people.people()[0] ?? null;
+  }
+
+  proposeCommitmentsFromCard(): void {
+    const person = this.commitmentPerson();
+    if (!person) {
+      this.notice = "Put someone in first. Promises are extracted from a card already on disk.";
+      return;
+    }
+    proposeCommitmentWrites();
+    this.notice = null;
+    void this.people.select(person.slug);
+    this.commitmentProposal = proposeCommitmentsFromAcceptedNotes(person);
+    if (!this.commitmentProposal.items.length) {
+      this.notice = "No new promises on this card. Accept a note or capture that contains one, then propose.";
+    }
+  }
+
+  proposeCommitmentsFromSource(): void {
+    const person = this.commitmentPerson();
+    const text = this.commitmentSourceNote.trim();
+    if (!person) {
+      this.notice = "Put someone in first. Prompts include only that person.";
+      return;
+    }
+    if (!text) return;
+    proposeCommitmentWrites();
+    this.notice = null;
+    void this.people.select(person.slug);
+    this.commitmentProposal = proposeCommitmentsFromText(person, text, "capture");
+    if (!this.commitmentProposal.items.length) {
+      this.notice = "No promise in that note. Try “I promised to…” or “I’ll…”.";
+    }
+  }
+
+  toggleCommitmentItem(id: string, checked: boolean): void {
+    if (!this.commitmentProposal) return;
+    this.commitmentProposal = setCommitmentChecked(this.commitmentProposal, id, checked);
+  }
+
+  selectAllCommitmentItems(checked: boolean): void {
+    if (!this.commitmentProposal) return;
+    this.commitmentProposal = setAllCommitmentsChecked(this.commitmentProposal, checked);
+  }
+
+  allCommitmentsChecked(): boolean {
+    return Boolean(
+      this.commitmentProposal &&
+        this.commitmentProposal.items.length > 0 &&
+        this.commitmentProposal.items.every((item) => item.checked),
+    );
+  }
+
+  commitmentHasChecked(): boolean {
+    return Boolean(this.commitmentProposal?.items.some((item) => item.checked));
+  }
+
+  async acceptCommitments(): Promise<void> {
+    if (!this.commitmentProposal) return;
+    const writes = writesForAcceptedCommitments(this.commitmentProposal);
+    for (const write of writes) {
+      await this.people.addNote(write.slug, write.title, write.body);
+    }
+    this.commitmentProposal = null;
+    this.commitmentSourceNote = "";
+    this.notice = null;
+  }
+
+  dismissCommitmentProposal(): void {
+    dismissCommitmentWrites();
+    this.commitmentProposal = null;
+    this.notice = null;
+  }
+
+  async markCommitmentDone(row: CommitmentRow): Promise<void> {
+    const write = writesForDoneCommitment(row);
+    if (!write) return;
+    await this.people.addNote(write.slug, write.title, write.body);
+    this.notice = null;
+  }
+
+  async dropCommitment(row: CommitmentRow): Promise<void> {
+    dropCommitmentWrites();
+    this.droppedCommitments.set(rememberDroppedCommitment(this.droppedCommitments(), row.id));
+    await this.persistDroppedCommitments();
+    this.notice = null;
+  }
+
+  async seedDemoCommitments(): Promise<void> {
+    if (!this.demoMode) return;
+    const draft = DEMO_COMMITMENTS;
+    let ada = this.people.people().find((item) => item.title === draft.person.title);
+    if (!ada) {
+      ada = await this.people.createPerson({
+        title: draft.person.title,
+        description: draft.person.description,
+        email: draft.person.email,
+      });
+    }
+    const existingTitles = new Set(ada.notes.map((note) => note.title));
+    for (const item of draft.items) {
+      if (!existingTitles.has(item.sourceTitle)) {
+        await this.people.addNote(ada.slug, item.sourceTitle, item.sourceBody);
+        existingTitles.add(item.sourceTitle);
+      }
+      const title = commitmentTitle(item.what);
+      if (!existingTitles.has(title)) {
+        const dueDate = "dueDate" in item ? item.dueDate : undefined;
+        await this.people.addNote(ada.slug, title, commitmentNoteBody({ what: item.what, dueDate }));
+        existingTitles.add(title);
+      }
+    }
+    this.openCommitments(ada.slug);
   }
 
   canRecordCapture(): boolean {

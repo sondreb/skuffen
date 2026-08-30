@@ -35,6 +35,9 @@ pub struct Settings {
     pub proposals: Option<Vec<serde_json::Value>>,
     #[serde(default)]
     pub dismissed_merges: Option<Vec<String>>,
+    /// Dropped commitment OKF paths. Not OKF. Never stores tokens.
+    #[serde(default)]
+    pub dropped_commitments: Option<Vec<String>>,
     /// Inspectable log of what the model was told. Not OKF. Never stores tokens.
     #[serde(default)]
     pub memory_log: Option<Vec<serde_json::Value>>,

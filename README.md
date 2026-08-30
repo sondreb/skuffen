@@ -79,7 +79,7 @@ npm start
 
 The browser preview **cannot encrypt the people-graph honestly** — there is no OS keychain in `npm start`. The graph stays in a localStorage stand-in (plaintext). Use `npm run tauri dev` for OS-backed encryption. Grok/Gemini API keys and OAuth tokens still stay in memory for the current tab only. They are never written to `localStorage`, `sessionStorage`, or any other durable browser storage, and they vanish on reload.
 
-OKF / vault / MCP / browser-secret / OAuth / research-follow / merge-proposal / brief / capture / shuffle / update-check checks:
+OKF / vault / MCP / browser-secret / OAuth / research-follow / merge-proposal / brief / capture / shuffle / timeline / commitments / update-check checks:
 
 ```bash
 npm run test:okf
@@ -92,6 +92,8 @@ npm run test:merge
 npm run test:brief
 npm run test:capture
 npm run test:shuffle
+npm run test:timeline
+npm run test:commitments
 npm run test:update
 npm run test:version
 npm run test:e2e
@@ -233,6 +235,20 @@ Timeline is a view of the OKF card already on disk. File path stays identity. Op
 
 ```bash
 npm run test:timeline
+```
+
+## Commitments
+
+Latch → **Commitments** (or the person-card section) lists promises you made, across people, extracted from notes and voice captures you already Accepted. Each row is who, what you promised, and an optional local due date.
+
+Propose from a capture or a note: check or uncheck, then **Accept** writes a commitment note on that card. **Dismiss** writes nothing. **Mark done** writes a Done note. **Drop** stores a local skip — no new OKF file. Never auto-send. Never email or SMS. In-app list only.
+
+Prompts (if any) include only that person, never the full graph. File path stays identity. Accept is the only OKF write for new commitments. Tokens stay in the OS credential store `me.grok.skuffen`. Never `localStorage`. Never OKF.
+
+`?demo=1` can show 1–2 synthetic commitments on Ada Demo from local files.
+
+```bash
+npm run test:commitments
 ```
 
 ## Duplicate-person merge

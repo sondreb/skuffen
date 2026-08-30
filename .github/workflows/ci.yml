@@ -57,6 +57,9 @@ jobs:
       - name: Person-card timeline (local memory tape) tests
         run: npm run test:timeline
 
+      - name: Commitments (local, never auto-send) tests
+        run: npm run test:commitments
+
       - name: GitHub update check (offline fixtures)
         run: npm run test:update
 
