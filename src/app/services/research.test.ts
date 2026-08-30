@@ -4,18 +4,29 @@ import type { FactSuggestion, FollowRecord, PersonView } from "../models.ts";
 import {
   assertNoAutoSend,
   assertNoAutoWrite,
+  buildNameResearchPrompt,
   buildResearchPrompt,
+  checkedSuggestions,
+  deleteProposedFact,
+  dismissNameProposal,
   dueFollows,
   extractModelText,
   geminiResearchConfig,
   grokResearchRequest,
+  isPublicHttpUrl,
+  keepFetchedPhoto,
   mergeFollow,
   nextRunAt,
   parseSuggestions,
+  photoFileNameFromUrl,
+  planAcceptedNameProposal,
   proposalsForSlug,
+  proposeNameResearch,
   proposeOnly,
   recordFollowRun,
   removeSuggestion,
+  setAllFactsChecked,
+  setFactChecked,
   settingsWithoutSecrets,
   unfollow,
   upsertProposal,
@@ -182,6 +193,129 @@ test("rejecting a follow proposal drops it without an OKF write", () => {
   assert.equal(after.length, 0);
   assert.equal(proposalsForSlug(after, "ada-lovelace").length, 0);
   assertNoAutoWrite(writes);
+});
+
+test("name research prompt includes only the typed name and never the graph", () => {
+  const prompt = buildNameResearchPrompt("Ada Lovelace");
+  assert.match(prompt, /Name: Ada Lovelace/);
+  assert.match(prompt, /The only identifier you have is the name the user typed/);
+  assert.match(prompt, /public profile photo/);
+  assert.doesNotMatch(prompt, /Existing notes|Existing social|Given name:|Family name:|Description:/);
+  assert.doesNotMatch(prompt, /Bob Example|reconnect shuffle|meeting brief/i);
+  assert.doesNotMatch(prompt, /people\//);
+});
+
+test("research-from-name proposes and writes only checked fields on Accept", () => {
+  const writes: unknown[] = [];
+  const parsed = parseSuggestions(
+    JSON.stringify({
+      suggestions: [
+        { kind: "field", field: "title", title: "Name", value: "Ada Lovelace" },
+        { kind: "field", field: "email", title: "Email", value: "ada@example.com" },
+        { kind: "field", field: "phone", title: "Phone", value: "+44 20 0000" },
+        { kind: "field", field: "body", title: "About", value: "Mathematician and writer." },
+        {
+          kind: "social",
+          title: "Wikipedia",
+          network: "wikipedia",
+          url: "https://en.wikipedia.org/wiki/Ada_Lovelace",
+        },
+        {
+          kind: "photo",
+          title: "Portrait",
+          url: "https://upload.wikimedia.org/wikipedia/commons/ada.jpg",
+        },
+      ],
+    }),
+    "research",
+  );
+  assert.equal(proposeOnly(parsed).length, 0);
+  assertNoAutoWrite(writes);
+
+  const proposal = proposeNameResearch("Ada Lovelace", parsed);
+  const email = proposal.facts.find((fact) => fact.suggestion.field === "email")!;
+  const phone = proposal.facts.find((fact) => fact.suggestion.field === "phone")!;
+  const about = proposal.facts.find((fact) => fact.suggestion.field === "body")!;
+  let next = setFactChecked(proposal, email.id, true);
+  next = setFactChecked(next, phone.id, false);
+  next = deleteProposedFact(next, about.id);
+
+  const plan = planAcceptedNameProposal(next);
+  assert.ok(plan);
+  assert.equal(plan.person.title, "Ada Lovelace");
+  assert.equal(plan.person.email, "ada@example.com");
+  assert.equal(plan.person.phone, undefined);
+  assert.equal(plan.person.body, undefined);
+  assert.deepEqual(
+    plan.extras.map((item) => item.kind).sort(),
+    ["photo", "social"],
+  );
+  const intents = plan.extras.map((item) => writesForAcceptedSuggestion("ada-lovelace", item));
+  assert.ok(intents.some((item) => item.type === "social"));
+  assert.ok(intents.some((item) => item.type === "photo"));
+  assert.ok(!intents.some((item) => item.type === "field"));
+});
+
+test("unchecked and deleted name-research fields are not written", () => {
+  const parsed = parseSuggestions(
+    JSON.stringify({
+      suggestions: [
+        { kind: "field", field: "email", title: "Email", value: "wrong@example.com" },
+        { kind: "field", field: "phone", title: "Phone", value: "+00" },
+        { kind: "note", title: "Rumor", body: "Skip this." },
+      ],
+    }),
+    "research",
+  );
+  const proposal = proposeNameResearch("Ada Lovelace", parsed);
+  const email = proposal.facts.find((fact) => fact.suggestion.field === "email")!;
+  const rumor = proposal.facts.find((fact) => fact.suggestion.title === "Rumor")!;
+  const next = deleteProposedFact(setFactChecked(proposal, email.id, false), rumor.id);
+  const plan = planAcceptedNameProposal(next);
+  assert.ok(plan);
+  assert.equal(plan.person.email, undefined);
+  assert.equal(
+    plan.extras.some((item) => item.title === "Rumor"),
+    false,
+  );
+  assert.deepEqual(
+    checkedSuggestions(next).map((item) => item.field ?? item.kind),
+    ["title", "phone"],
+  );
+});
+
+test("dismissing a name research proposal writes nothing", () => {
+  const writes: unknown[] = [];
+  const proposal = proposeNameResearch("Ada Lovelace", [
+    { id: "n1", kind: "field", field: "email", title: "Email", value: "ada@example.com" },
+  ]);
+  const dismissed = dismissNameProposal();
+  assert.equal(dismissed, null);
+  assert.equal(planAcceptedNameProposal(setAllFactsChecked(proposal, false)), null);
+  assert.deepEqual(proposeOnly(proposal.facts.map((fact) => fact.suggestion)), []);
+  assertNoAutoWrite(writes);
+});
+
+test("photo bytes stay off disk until Accept, and a failed fetch is skipped", () => {
+  const suggestion: FactSuggestion = {
+    id: "photo-1",
+    kind: "photo",
+    title: "Portrait",
+    url: "https://example.com/ada.jpg",
+  };
+  const intent = writesForAcceptedSuggestion("ada-lovelace", suggestion);
+  assert.deepEqual(intent, {
+    type: "photo",
+    slug: "ada-lovelace",
+    url: "https://example.com/ada.jpg",
+    title: "Portrait",
+  });
+  if (intent.type !== "photo") throw new Error("expected photo write");
+  assert.equal(keepFetchedPhoto(intent, null), null);
+  const stored = keepFetchedPhoto(intent, new Uint8Array([1, 2, 3]));
+  assert.equal(stored?.bytes.byteLength, 3);
+  assert.equal(isPublicHttpUrl("javascript:alert(1)"), false);
+  assert.equal(photoFileNameFromUrl("https://cdn.example/pic.PNG", "research-1"), "research-1.png");
 });
 
 test("extractModelText reads Responses API and chat completions", () => {

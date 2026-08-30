@@ -2,17 +2,28 @@ import { Component, computed, HostListener, inject, OnDestroy, OnInit, signal } 
 import { FormsModule } from "@angular/forms";
 import { isDemoMode } from "./demo-mode";
 import { PeopleMapComponent, type MapPin } from "./map/people-map.component";
-import type { FactSuggestion, FollowInterval, PersonView, ProviderId } from "./models";
+import type { FactSuggestion, FollowInterval, NameResearchProposal, PersonView, ProviderId } from "./models";
 import { GeocodeService, type GeocodeHit } from "./services/geocode.service";
 import { LAND_PLOT_KIND } from "../../packages/okf/src/index";
 import { FollowService } from "./services/follow.service";
 import { grokConnectionLabel } from "./services/grok-oauth";
-import { isTauri } from "./services/io.service";
+import { IoService, isTauri } from "./services/io.service";
 import { PeopleService } from "./services/people.service";
 import { ProvidersService } from "./services/providers.service";
-import { normalizeInterval, writesForAcceptedSuggestion } from "./services/research";
+import {
+  deleteProposedFact,
+  dismissNameProposal,
+  keepFetchedPhoto,
+  normalizeInterval,
+  photoFileNameFromUrl,
+  planAcceptedNameProposal,
+  proposeNameResearch,
+  setAllFactsChecked,
+  setFactChecked,
+  writesForAcceptedSuggestion,
+} from "./services/research";
 
-type Panel = "none" | "create" | "edit" | "providers" | "map";
+type Panel = "none" | "create" | "edit" | "providers" | "map" | "propose";
 type FactSurface = "none" | "drop" | "pin" | "note" | "suggest";
 
 @Component({
@@ -26,6 +37,7 @@ export class AppComponent implements OnInit, OnDestroy {
   readonly providers = inject(ProvidersService);
   readonly geocode = inject(GeocodeService);
   readonly follow = inject(FollowService);
+  private readonly io = inject(IoService);
 
   readonly query = signal("");
   panel: Panel = "none";
@@ -55,6 +67,8 @@ export class AppComponent implements OnInit, OnDestroy {
   linkSlug = "";
   grokKey = "";
   geminiKey = "";
+  nameProposal: NameResearchProposal | null = null;
+  checkedSuggestionIds = new Set<string>();
   readonly desktop = isTauri();
   readonly landPlotKind = LAND_PLOT_KIND;
   readonly demoMode = isDemoMode();
@@ -117,8 +131,20 @@ export class AppComponent implements OnInit, OnDestroy {
       this.latchOpen = false;
       return;
     }
+    if (this.panel === "propose") {
+      this.dismissProposal();
+      return;
+    }
     if (this.panel === "providers" || this.panel === "create" || this.panel === "edit" || this.panel === "map") {
       this.panel = "none";
+    }
+  }
+
+  @HostListener("document:keydown", ["$event"])
+  onDocumentKey(event: KeyboardEvent): void {
+    if ((event.ctrlKey || event.metaKey) && event.key === ",") {
+      event.preventDefault();
+      this.latchOpen = true;
     }
   }
 
@@ -130,10 +156,12 @@ export class AppComponent implements OnInit, OnDestroy {
     this.pinDropped = false;
     this.addingSocial = false;
     this.providers.clearSuggestions();
+    this.nameProposal = null;
     this.resetLocationDraft(person);
     await this.people.select(person.slug);
     if (this.follow.suggestionsFor(person.slug).length) {
       this.fact = "suggest";
+      this.checkAllVisibleSuggestions();
     }
   }
 
@@ -157,6 +185,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.pinDropped = false;
     this.addingSocial = false;
     this.providers.clearSuggestions();
+    this.nameProposal = null;
     this.resetLocationDraft(null);
     await this.people.select(null);
   }
@@ -167,6 +196,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.panel = "create";
     this.latchOpen = false;
     this.fact = "none";
+    this.nameProposal = null;
     this.people.selected.set(null);
     this.resetLocationDraft(null);
   }
@@ -463,10 +493,14 @@ export class AppComponent implements OnInit, OnDestroy {
     this.fact = "suggest";
     this.notice = null;
     if (!this.activeProvider()) {
-      this.notice = "Connect Grok or Gemini in the latch first.";
+      this.notice = "Connect Grok in Latch → Providers first.";
+      this.latchOpen = true;
       return;
     }
-    if (person) await this.providers.suggest(person);
+    if (person) {
+      await this.providers.suggest(person);
+      this.checkAllVisibleSuggestions();
+    }
   }
 
   async research(): Promise<void> {
@@ -477,15 +511,93 @@ export class AppComponent implements OnInit, OnDestroy {
       if (!person) return;
       await this.providers.applyDemoResearch();
       await this.follow.storeResearch(person.slug, this.providers.suggestions());
+      this.checkAllVisibleSuggestions();
       return;
     }
     if (!this.activeProvider()) {
-      this.notice = "Connect Grok or Gemini in the latch first.";
+      this.notice = "Connect Grok in Latch → Providers first.";
+      this.latchOpen = true;
       return;
     }
     if (!person) return;
     await this.providers.research(person);
     await this.follow.storeResearch(person.slug, this.providers.suggestions());
+    this.checkAllVisibleSuggestions();
+  }
+
+  onFindEnter(): void {
+    if (!this.query().trim()) return;
+    if (this.filtered().length === 0) {
+      void this.researchName();
+    }
+  }
+
+  async researchName(): Promise<void> {
+    const name = this.query().trim();
+    if (!name) return;
+    this.notice = null;
+    this.latchOpen = false;
+    if (!this.activeProvider()) {
+      this.notice = "Connect Grok in Latch → Providers first. There is no Skuffen cloud account.";
+      this.latchOpen = true;
+      return;
+    }
+    this.panel = "propose";
+    this.people.selected.set(null);
+    this.nameProposal = null;
+    const suggestions = await this.providers.researchName(name);
+    this.nameProposal = proposeNameResearch(name, suggestions);
+  }
+
+  toggleProposalFact(id: string, checked: boolean): void {
+    if (!this.nameProposal) return;
+    this.nameProposal = setFactChecked(this.nameProposal, id, checked);
+  }
+
+  selectAllProposalFacts(checked: boolean): void {
+    if (!this.nameProposal) return;
+    this.nameProposal = setAllFactsChecked(this.nameProposal, checked);
+  }
+
+  deleteProposalFact(id: string): void {
+    if (!this.nameProposal) return;
+    this.nameProposal = deleteProposedFact(this.nameProposal, id);
+  }
+
+  dismissProposal(): void {
+    this.nameProposal = null;
+    this.panel = "none";
+    this.notice = null;
+    void dismissNameProposal();
+  }
+
+  async acceptNameProposal(): Promise<void> {
+    if (!this.nameProposal) return;
+    const plan = planAcceptedNameProposal(this.nameProposal);
+    if (!plan) return;
+    const generatedBy = this.providers.actorForActive();
+    const created = await this.people.createPerson({ ...plan.person, generatedBy });
+    const skippedPhotos = await this.applyExtras(created.slug, plan.extras, generatedBy);
+    this.nameProposal = null;
+    this.panel = "none";
+    this.query.set("");
+    this.notice = skippedPhotos
+      ? `${skippedPhotos} photo${skippedPhotos === 1 ? "" : "s"} could not be fetched. The rest of the card was saved.`
+      : null;
+  }
+
+  proposalHasChecked(): boolean {
+    return Boolean(this.nameProposal?.facts.some((fact) => fact.checked));
+  }
+
+  allProposalChecked(): boolean {
+    return Boolean(this.nameProposal && this.nameProposal.facts.length > 0 && this.nameProposal.facts.every((fact) => fact.checked));
+  }
+
+  suggestionLabel(item: FactSuggestion): string {
+    if (item.kind === "photo") return item.url || item.title;
+    if (item.kind === "field") return item.value || item.title;
+    return item.body || item.value || item.url || item.title;
   }
 
   async toggleFollow(enabled: boolean): Promise<void> {
@@ -505,21 +617,101 @@ export class AppComponent implements OnInit, OnDestroy {
     const person = this.people.selected();
     if (!person) return;
     const generatedBy = this.providers.actorForActive();
-    const write = writesForAcceptedSuggestion(person.slug, suggestion);
-    if (write.type === "social") {
-      await this.people.addSocial(write.slug, write.network, write.url, write.handle, generatedBy);
-    } else if (write.type === "field") {
-      await this.people.updatePerson(write.slug, { [write.field]: write.value });
-    } else {
-      await this.people.addNote(write.slug, write.title, write.body, generatedBy);
+    const skipped = await this.applyExtras(person.slug, [suggestion], generatedBy);
+    if (skipped) {
+      this.notice = "That photo could not be fetched. Nothing else was skipped.";
     }
     this.providers.reject(suggestion.id);
+    const next = new Set(this.checkedSuggestionIds);
+    next.delete(suggestion.id);
+    this.checkedSuggestionIds = next;
     await this.follow.acceptLocalOnly(suggestion.id);
+  }
+
+  async acceptCheckedSuggestions(): Promise<void> {
+    const selected = this.visibleSuggestions().filter((item) => this.checkedSuggestionIds.has(item.id));
+    for (const item of selected) {
+      await this.accept(item);
+    }
   }
 
   reject(suggestion: FactSuggestion): void {
     this.providers.reject(suggestion.id);
+    const next = new Set(this.checkedSuggestionIds);
+    next.delete(suggestion.id);
+    this.checkedSuggestionIds = next;
     void this.follow.rejectSuggestion(suggestion.id);
+  }
+
+  toggleSuggestionCheck(id: string, checked: boolean): void {
+    const next = new Set(this.checkedSuggestionIds);
+    if (checked) next.add(id);
+    else next.delete(id);
+    this.checkedSuggestionIds = next;
+  }
+
+  selectAllVisibleSuggestions(checked: boolean): void {
+    if (checked) this.checkAllVisibleSuggestions();
+    else this.checkedSuggestionIds = new Set();
+  }
+
+  allVisibleSuggestionsChecked(): boolean {
+    const items = this.visibleSuggestions();
+    return items.length > 0 && items.every((item) => this.checkedSuggestionIds.has(item.id));
+  }
+
+  hasCheckedSuggestions(): boolean {
+    return this.visibleSuggestions().some((item) => this.checkedSuggestionIds.has(item.id));
+  }
+
+  private checkAllVisibleSuggestions(): void {
+    this.checkedSuggestionIds = new Set(this.visibleSuggestions().map((item) => item.id));
+  }
+
+  async clearContact(field: "email" | "phone"): Promise<void> {
+    const person = this.people.selected();
+    if (!person) return;
+    await this.people.clearContactField(person.slug, field);
+  }
+
+  async removeSocial(path: string): Promise<void> {
+    const person = this.people.selected();
+    if (!person) return;
+    await this.people.removeSocial(person.slug, path);
+  }
+
+  async removePhoto(photo: PersonView["photos"][number]): Promise<void> {
+    const person = this.people.selected();
+    if (!person) return;
+    await this.people.removePhoto(person.slug, photo);
+  }
+
+  private async applyExtras(slug: string, extras: FactSuggestion[], generatedBy: string): Promise<number> {
+    let skippedPhotos = 0;
+    for (const extra of extras) {
+      const write = writesForAcceptedSuggestion(slug, extra);
+      if (write.type === "photo") {
+        const stored = keepFetchedPhoto(write, await this.io.fetchPublicBytes(write.url));
+        if (!stored) {
+          skippedPhotos += 1;
+          continue;
+        }
+        await this.people.addPhotoBytes(
+          slug,
+          photoFileNameFromUrl(write.url, `research-${Date.now().toString(36)}`),
+          stored.bytes,
+          write.title,
+          generatedBy,
+        );
+      } else if (write.type === "social") {
+        await this.people.addSocial(write.slug, write.network, write.url, write.handle, generatedBy);
+      } else if (write.type === "field") {
+        await this.people.updatePerson(write.slug, { [write.field]: write.value });
+      } else {
+        await this.people.addNote(write.slug, write.title, write.body, generatedBy);
+      }
+    }
+    return skippedPhotos;
   }
 
   openProviders(): void {

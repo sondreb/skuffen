@@ -1,4 +1,13 @@
-import type { FactSuggestion, FollowInterval, FollowRecord, PersonView, StoredProposal } from "../models";
+import type {
+  FactSuggestion,
+  FollowInterval,
+  FollowRecord,
+  NameResearchProposal,
+  PersonField,
+  PersonView,
+  ProposedFact,
+  StoredProposal,
+} from "../models";
 
 export const RESEARCH_SYSTEM =
   "You return compact JSON only. Search public web sources. Never request the full people-graph. Never invent people. Never draft or send messages.";
@@ -17,7 +26,36 @@ export type PersonPromptInput = Pick<
 export type OkfWriteIntent =
   | { type: "note"; slug: string; title: string; body: string }
   | { type: "social"; slug: string; network: string; url: string; handle?: string }
-  | { type: "field"; slug: string; field: "description" | "body"; value: string };
+  | { type: "field"; slug: string; field: PersonField; value: string }
+  | { type: "photo"; slug: string; url: string; title?: string };
+
+export type PersonDraft = {
+  title: string;
+  description?: string;
+  givenName?: string;
+  familyName?: string;
+  email?: string;
+  phone?: string;
+  body?: string;
+};
+
+export type NameAcceptPlan = {
+  person: PersonDraft;
+  extras: FactSuggestion[];
+};
+
+const PERSON_FIELDS = new Set<PersonField>([
+  "title",
+  "description",
+  "body",
+  "email",
+  "phone",
+  "givenName",
+  "familyName",
+]);
+
+const SUGGESTION_SCHEMA =
+  '{"suggestions":[{"kind":"note"|"social"|"field"|"photo","title":"","body":"","network":"","url":"","handle":"","field":"title"|"description"|"body"|"email"|"phone"|"givenName"|"familyName","value":""}]}';
 
 export function normalizeInterval(value: unknown): FollowInterval {
   return value === "daily" || value === "monthly" ? value : "weekly";
@@ -52,10 +90,11 @@ export function buildResearchPrompt(person: PersonPromptInput): string {
   return [
     "You help a local-only personal CRM called Skuffen.",
     "Search the public web for current, sourced facts about this one person.",
-    "Suggest at most 5 structured facts. Results are suggestions only.",
+    "Suggest at most 8 structured facts: contact details, social URLs, about/bio, and public profile photo URLs when known.",
+    "Results are suggestions only.",
     "Do not invent people. Do not create a new person. Do not ask for or assume the rest of the people-graph.",
     "Do not draft outreach. Do not send messages. Do not upload or request the full graph.",
-    'Return ONLY JSON: {"suggestions":[{"kind":"note"|"social"|"field","title":"","body":"","network":"","url":"","handle":"","field":"description"|"body","value":""}]}',
+    `Return ONLY JSON: ${SUGGESTION_SCHEMA}`,
     `Name: ${person.title}`,
     `Given name: ${person.givenName ?? ""}`,
     `Family name: ${person.familyName ?? ""}`,
@@ -63,6 +102,20 @@ export function buildResearchPrompt(person: PersonPromptInput): string {
     `About:\n${person.body}`,
     `Existing notes:\n${notes}`,
     `Existing social:\n${social}`,
+  ].join("\n");
+}
+
+export function buildNameResearchPrompt(name: string): string {
+  return [
+    "You help a local-only personal CRM called Skuffen.",
+    "Search the public web for current, sourced facts about this one person.",
+    "The only identifier you have is the name the user typed.",
+    "Suggest structured facts: name, email, phone, social URLs, about/bio, public profile photo URLs, other contact facts.",
+    "Use kind photo with a public http(s) image URL. Do not scrape behind logins.",
+    "Do not invent people. Do not invent additional people. Do not ask for or assume the rest of the people-graph.",
+    "Do not draft outreach. Do not send messages. Do not upload or request the full graph.",
+    `Return ONLY JSON: ${SUGGESTION_SCHEMA}`,
+    `Name: ${name.trim()}`,
   ].join("\n");
 }
 
@@ -79,13 +132,13 @@ export function parseSuggestions(text: string, source: FactSuggestion["source"] 
   return (parsed.suggestions ?? []).map((item, index) => ({
     id: `${source}-${Date.now()}-${index}`,
     source,
-    kind: item.kind === "social" || item.kind === "field" ? item.kind : "note",
+    kind: item.kind === "social" || item.kind === "field" || item.kind === "photo" ? item.kind : "note",
     title: String(item.title ?? "Suggestion"),
     body: item.body,
     network: item.network,
     url: item.url,
     handle: item.handle,
-    field: item.field === "body" ? "body" : item.field === "description" ? "description" : undefined,
+    field: PERSON_FIELDS.has(item.field as PersonField) ? (item.field as PersonField) : undefined,
     value: item.value,
   }));
 }
@@ -135,6 +188,9 @@ export function geminiResearchConfig(): { tools: Array<{ googleSearch: Record<st
 }
 
 export function writesForAcceptedSuggestion(slug: string, suggestion: FactSuggestion): OkfWriteIntent {
+  if (suggestion.kind === "photo" && suggestion.url && isPublicHttpUrl(suggestion.url)) {
+    return { type: "photo", slug, url: suggestion.url, title: suggestion.title };
+  }
   if (suggestion.kind === "social" && suggestion.url) {
     return {
       type: "social",
@@ -153,6 +209,120 @@ export function writesForAcceptedSuggestion(slug: string, suggestion: FactSugges
     title: suggestion.title,
     body: suggestion.body || suggestion.value || suggestion.title,
   };
+}
+
+export function isPublicHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
+export function photoFileNameFromUrl(url: string, stamp = "research"): string {
+  let ext = "jpg";
+  try {
+    const path = new URL(url).pathname;
+    const match = path.match(/\.(jpe?g|png|webp|gif)$/i);
+    if (match) {
+      const raw = match[1].toLowerCase();
+      ext = raw === "jpeg" ? "jpg" : raw;
+    }
+  } catch {
+    /* default jpg */
+  }
+  return `${stamp}.${ext}`;
+}
+
+export function keepFetchedPhoto(
+  write: Extract<OkfWriteIntent, { type: "photo" }>,
+  bytes: Uint8Array | null,
+): { slug: string; url: string; title?: string; bytes: Uint8Array } | null {
+  if (!bytes || bytes.byteLength === 0) return null;
+  return { slug: write.slug, url: write.url, title: write.title, bytes };
+}
+
+export function proposeNameResearch(query: string, suggestions: FactSuggestion[]): NameResearchProposal {
+  const name = query.trim();
+  const facts: ProposedFact[] = [];
+  const hasTitle = suggestions.some((item) => item.kind === "field" && item.field === "title" && item.value?.trim());
+  if (!hasTitle) {
+    facts.push({
+      id: "name-title",
+      checked: true,
+      suggestion: {
+        id: "name-title",
+        source: "research",
+        kind: "field",
+        field: "title",
+        title: "Name",
+        value: name,
+      },
+    });
+  }
+  for (const suggestion of suggestions) {
+    facts.push({ id: suggestion.id, checked: true, suggestion });
+  }
+  return { query: name, facts };
+}
+
+export function setFactChecked(
+  proposal: NameResearchProposal,
+  id: string,
+  checked: boolean,
+): NameResearchProposal {
+  return {
+    ...proposal,
+    facts: proposal.facts.map((fact) => (fact.id === id ? { ...fact, checked } : fact)),
+  };
+}
+
+export function setAllFactsChecked(proposal: NameResearchProposal, checked: boolean): NameResearchProposal {
+  return {
+    ...proposal,
+    facts: proposal.facts.map((fact) => ({ ...fact, checked })),
+  };
+}
+
+export function deleteProposedFact(proposal: NameResearchProposal, id: string): NameResearchProposal {
+  return {
+    ...proposal,
+    facts: proposal.facts.filter((fact) => fact.id !== id),
+  };
+}
+
+export function checkedSuggestions(proposal: NameResearchProposal): FactSuggestion[] {
+  return proposal.facts.filter((fact) => fact.checked).map((fact) => fact.suggestion);
+}
+
+export function personDraftFromAccepted(query: string, accepted: FactSuggestion[]): PersonDraft {
+  const draft: PersonDraft = { title: query.trim() || "Untitled" };
+  for (const item of accepted) {
+    if (item.kind !== "field" || !item.field || !item.value?.trim()) continue;
+    const value = item.value.trim();
+    if (item.field === "title") draft.title = value;
+    if (item.field === "description") draft.description = value;
+    if (item.field === "givenName") draft.givenName = value;
+    if (item.field === "familyName") draft.familyName = value;
+    if (item.field === "email") draft.email = value;
+    if (item.field === "phone") draft.phone = value;
+    if (item.field === "body") draft.body = value;
+  }
+  return draft;
+}
+
+export function planAcceptedNameProposal(proposal: NameResearchProposal): NameAcceptPlan | null {
+  const accepted = checkedSuggestions(proposal);
+  if (accepted.length === 0) return null;
+  return {
+    person: personDraftFromAccepted(proposal.query, accepted),
+    extras: accepted.filter((item) => item.kind !== "field"),
+  };
+}
+
+export function dismissNameProposal(): NameAcceptPlan | null {
+  return null;
 }
 
 export function proposeOnly(_suggestions: FactSuggestion[]): OkfWriteIntent[] {

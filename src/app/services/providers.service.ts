@@ -8,6 +8,7 @@ import { GROK_API_KEY_SECRET_KEY, GROK_OAUTH_SECRET_KEY } from "./grok-oauth";
 import { IoService } from "./io.service";
 import {
   RESEARCH_SYSTEM,
+  buildNameResearchPrompt,
   buildResearchPrompt,
   extractModelText,
   geminiResearchConfig,
@@ -149,6 +150,30 @@ export class ProvidersService {
     return parseSuggestions(text, source);
   }
 
+  async researchName(name: string): Promise<FactSuggestion[]> {
+    const provider = this.activeProvider();
+    if (!provider) {
+      this.error.set("Connect Grok or Gemini first.");
+      return [];
+    }
+    this.busy.set(true);
+    this.error.set(null);
+    this.suggestions.set([]);
+    try {
+      const prompt = buildNameResearchPrompt(name);
+      const text =
+        provider === "grok" ? await this.askGrok(prompt, true) : await this.askGemini(prompt, true);
+      const parsed = parseSuggestions(text, "research");
+      this.suggestions.set(parsed);
+      return parsed;
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : String(error));
+      return [];
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
   private async runPrompt(person: PersonView, source: SuggestionSource, webSearch: boolean): Promise<void> {
     const provider = this.activeProvider();
     if (!provider) {
@@ -191,9 +216,9 @@ export class ProvidersService {
       person.social.map((s) => `- ${s.network ?? "profile"} ${s.handle ?? ""} ${s.url ?? ""}`).join("\n") || "(none)";
     return [
       "You help a local-only personal CRM called Skuffen.",
-      "Suggest at most 5 structured facts about this one person.",
+      "Suggest at most 8 structured facts about this one person, including contact details and public photo URLs when known.",
       "Do not ask for or assume the rest of the people-graph.",
-      "Return ONLY JSON: {\"suggestions\":[{\"kind\":\"note\"|\"social\"|\"field\",\"title\":\"\",\"body\":\"\",\"network\":\"\",\"url\":\"\",\"handle\":\"\",\"field\":\"description\"|\"body\",\"value\":\"\"}]}",
+      "Return ONLY JSON: {\"suggestions\":[{\"kind\":\"note\"|\"social\"|\"field\"|\"photo\",\"title\":\"\",\"body\":\"\",\"network\":\"\",\"url\":\"\",\"handle\":\"\",\"field\":\"title\"|\"description\"|\"body\"|\"email\"|\"phone\",\"value\":\"\"}]}",
       `Name: ${person.title}`,
       `Description: ${person.description ?? ""}`,
       `About:\n${person.body}`,
