@@ -28,23 +28,29 @@ Real Angular web preview (`npm start`) at 1280×720. Synthetic **Ada Demo** data
 
 ## Demos
 
-Short walkthroughs of the same real web preview. On-screen labels. Real browser UI, synthetic demo data, AI providers mocked.
+Short walkthroughs of the same real web preview. On-screen labels. Real browser UI, synthetic demo data, AI providers mocked. Click a still to play the clip.
 
 <video src="https://github.com/sondreb/skuffen/releases/download/docs-media/01-what-is-skuffen.mp4" controls>
-  <a href="docs/media/01-what-is-skuffen.mp4">What is Skuffen</a>
+  <a href="https://github.com/sondreb/skuffen/blob/main/docs/media/01-what-is-skuffen.mp4">What is Skuffen</a>
 </video>
+
+[![What is Skuffen](docs/media/screenshot-drawer.png)](https://github.com/sondreb/skuffen/blob/main/docs/media/01-what-is-skuffen.mp4)
 
 *What is Skuffen. Real browser UI. Synthetic demo data. AI providers mocked.*
 
 <video src="https://github.com/sondreb/skuffen/releases/download/docs-media/02-add-person-and-place.mp4" controls>
-  <a href="docs/media/02-add-person-and-place.mp4">Add a person and a place</a>
+  <a href="https://github.com/sondreb/skuffen/blob/main/docs/media/02-add-person-and-place.mp4">Add a person and a place</a>
 </video>
+
+[![Add a person and a place](docs/media/screenshot-person.png)](https://github.com/sondreb/skuffen/blob/main/docs/media/02-add-person-and-place.mp4)
 
 *Add a person and a place. Real browser UI. Synthetic demo data. AI providers mocked.*
 
 <video src="https://github.com/sondreb/skuffen/releases/download/docs-media/03-grok-research-you-accept.mp4" controls>
-  <a href="docs/media/03-grok-research-you-accept.mp4">Grok research, you accept</a>
+  <a href="https://github.com/sondreb/skuffen/blob/main/docs/media/03-grok-research-you-accept.mp4">Grok research, you accept</a>
 </video>
+
+[![Grok research, you accept](docs/media/screenshot-research.png)](https://github.com/sondreb/skuffen/blob/main/docs/media/03-grok-research-you-accept.mp4)
 
 *Grok research, you accept. Real browser UI. Synthetic demo data. AI providers mocked.*
 
