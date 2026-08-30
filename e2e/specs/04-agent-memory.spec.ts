@@ -16,13 +16,13 @@ test("inspectable memory lists pending facts; Accept writes; Dismiss drops", asy
 
   await expect(page.getByRole("heading", { name: "Memory" })).toBeVisible();
   await expect(page.locator("[data-demo='memory-panel']")).toBeVisible();
-  await expect(page.getByText("Pending facts")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Pending facts" })).toBeVisible();
   await expect(page.getByText("Public park mention (demo)")).toBeVisible();
-  await expect(page.getByText(/Public web — hostile until Accept/)).toBeVisible();
-  await expect(page.getByText("What the model was told").first()).toBeVisible();
-  await page.getByText("What the model was told").first().click();
-  await expect(page.getByText(/Name: Ada Demo/)).toBeVisible();
-  await expect(page.getByText("Follow schedules")).toBeVisible();
+  await expect(page.getByText(/Public web — hostile until Accept/).first()).toBeVisible();
+  await expect(page.locator("details.told summary")).toHaveText("What the model was told");
+  await page.locator("details.told summary").click();
+  await expect(page.locator("details.told pre")).toContainText("Name: Ada Demo");
+  await expect(page.getByRole("heading", { name: "Follow schedules" })).toBeVisible();
 
   await page.locator("[data-demo='memory-dismiss']").click();
   await expect(page.getByText("Nothing pending. Research or Follow only proposes.")).toBeVisible();
