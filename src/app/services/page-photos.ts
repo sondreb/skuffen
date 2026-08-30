@@ -114,6 +114,10 @@ function parseAttrs(raw: string): Record<string, string> {
   return attrs;
 }
 
+function attr(attrs: Record<string, string>, key: string): string {
+  return attrs[key] ?? "";
+}
+
 function tags(html: string, name: string): Array<Record<string, string>> {
   const out: Array<Record<string, string>> = [];
   const re = new RegExp(`<${name}\\b([^>]*)>`, "gi");
@@ -137,9 +141,9 @@ function resolvePageUrl(href: string, pageUrl: string): string | null {
 }
 
 function tinyDeclaredSize(attrs: Record<string, string>): boolean {
-  const width = Number.parseInt(attrs.width ?? "", 10);
-  const height = Number.parseInt(attrs.height ?? "", 10);
-  const sizes = attrs.sizes ?? "";
+  const width = Number.parseInt(attr(attrs, "width"), 10);
+  const height = Number.parseInt(attr(attrs, "height"), 10);
+  const sizes = attr(attrs, "sizes");
   if (Number.isFinite(width) && width > 0 && width <= 64) return true;
   if (Number.isFinite(height) && height > 0 && height <= 64) return true;
   if (/\b(?:16|24|32|48)x(?:16|24|32|48)\b/i.test(sizes)) return true;
@@ -151,7 +155,7 @@ function looksLikeLogo(text: string): boolean {
 }
 
 function titleForPhoto(attrs: Record<string, string>, fallback: string): string {
-  const alt = attrs.alt?.trim();
+  const alt = attr(attrs, "alt").trim();
   if (alt && alt.length <= 80 && !looksLikeLogo(alt)) return alt;
   return fallback;
 }
@@ -196,32 +200,32 @@ export function extractProfilePhotoCandidates(
   })();
 
   for (const meta of tags(html, "meta")) {
-    const key = `${meta.property ?? ""} ${meta.name ?? ""}`.toLowerCase();
-    const content = meta.content ?? "";
+    const key = `${attr(meta, "property")} ${attr(meta, "name")}`.toLowerCase();
+    const content = attr(meta, "content");
     if (/\b(?:og:image|og:image:url|twitter:image|twitter:image:src)\b/.test(key)) {
       addCandidate(found, seen, resolvePageUrl(content, pageUrl), 100, `Photo from ${host}`);
     }
-    if (meta.itemprop?.toLowerCase() === "image") {
+    if (attr(meta, "itemprop").toLowerCase() === "image") {
       addCandidate(found, seen, resolvePageUrl(content, pageUrl), 90, `Photo from ${host}`);
     }
   }
 
   for (const link of tags(html, "link")) {
-    const rel = link.rel ?? "";
+    const rel = attr(link, "rel");
     if (ICON_REL.test(rel)) continue;
     if (/\bimage_src\b/i.test(rel)) {
-      addCandidate(found, seen, resolvePageUrl(link.href ?? "", pageUrl), 85, `Photo from ${host}`);
+      addCandidate(found, seen, resolvePageUrl(attr(link, "href"), pageUrl), 85, `Photo from ${host}`);
     }
   }
 
   for (const img of tags(html, "img")) {
     if (tinyDeclaredSize(img)) continue;
-    const src = resolvePageUrl(img.src ?? img["data-src"] ?? "", pageUrl);
+    const src = resolvePageUrl(attr(img, "src") || attr(img, "data-src"), pageUrl);
     if (!src) continue;
-    const hint = `${img.class ?? ""} ${img.id ?? ""} ${img.alt ?? ""} ${img.title ?? ""}`;
-    if (looksLikeLogo(hint) || ICON_REL.test(img.rel ?? "")) continue;
+    const hint = `${attr(img, "class")} ${attr(img, "id")} ${attr(img, "alt")} ${attr(img, "title")}`;
+    if (looksLikeLogo(hint) || ICON_REL.test(attr(img, "rel"))) continue;
     let score = 20;
-    if (HEADSHOT.test(hint) || img.itemprop?.toLowerCase() === "image") score = 80;
+    if (HEADSHOT.test(hint) || attr(img, "itemprop").toLowerCase() === "image") score = 80;
     else if (nameInText(hint, names)) score = 70;
     else if (IMAGE_EXT.test(src) && !looksLikeLogo(src)) score = 30;
     else continue;
