@@ -33,7 +33,7 @@ import {
   type PendingMemoryGroup,
 } from "./services/memory";
 import { GeocodeService, type GeocodeHit } from "./services/geocode.service";
-import { DOCUMENT_KIND } from "../../packages/okf/src/index";
+import { DOCUMENT_KIND, type RelationKind } from "../../packages/okf/src/index";
 import { FollowService } from "./services/follow.service";
 import { grokConnectionLabel } from "./services/grok-oauth";
 import { IoService, isTauri } from "./services/io.service";
@@ -145,6 +145,15 @@ import {
   type CaptureProposal,
   type CaptureSource,
 } from "./services/capture";
+import {
+  RELATION_KINDS,
+  filterPeopleByRelation,
+  otherPeopleForRelation,
+  relationKindLabel,
+  relationRoleLabel,
+  relationRoleOptions,
+  relationCue,
+} from "./services/relations";
 import { UPDATE_WHISPER } from "./services/update";
 import { UpdateService } from "./services/update.service";
 
@@ -201,6 +210,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private readonly nameField = viewChild<ElementRef<HTMLInputElement>>("nameField");
 
   readonly query = signal("");
+  readonly relationKindFilter = signal<RelationKind | "">("");
   /** Signal-backed so `@if (panel === "create")` and `browsing` stay in sync after Add person. */
   private readonly panelState = signal<Panel>("none");
   get panel(): Panel {
@@ -234,6 +244,11 @@ export class AppComponent implements OnInit, OnDestroy {
   socialNetwork = "";
   socialHandle = "";
   socialUrl = "";
+  addingRelation = false;
+  relationTarget = "";
+  relationKind: RelationKind = "family";
+  relationRole = "sibling";
+  relationCustomRole = "";
   docTitle = "";
   docNote = "";
   linkSlug = "";
@@ -263,12 +278,10 @@ export class AppComponent implements OnInit, OnDestroy {
   readonly desktop = isTauri();
   readonly demoMode = isDemoMode();
 
-  readonly filtered = computed(() => {
-    const q = this.query().trim().toLowerCase();
-    const all = this.people.people();
-    if (!q) return all;
-    return all.filter((person) => `${person.title} ${person.description ?? ""}`.toLowerCase().includes(q));
-  });
+  readonly filtered = computed(() =>
+    filterPeopleByRelation(this.people.people(), this.query(), this.relationKindFilter()),
+  );
+  readonly relationKinds = RELATION_KINDS;
 
   readonly empty = computed(() => this.people.ready() && this.people.people().length === 0);
   readonly browsing = computed(
@@ -517,6 +530,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.actionError = null;
     this.pinDropped = false;
     this.addingSocial = false;
+    this.addingRelation = false;
     this.providers.clearSuggestions();
     this.nameProposal = null;
     this.researchRequestedWithoutProvider = false;
@@ -548,6 +562,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.actionError = null;
     this.pinDropped = false;
     this.addingSocial = false;
+    this.addingRelation = false;
     this.closeImagePreview();
     this.providers.clearSuggestions();
     this.nameProposal = null;
@@ -650,6 +665,66 @@ export class AppComponent implements OnInit, OnDestroy {
     await this.people.addNote(person.slug, title, body);
     this.noteTitle = "";
     this.noteBody = "";
+  }
+
+  relationOthers(slug: string): Array<{ slug: string; title: string }> {
+    return otherPeopleForRelation(this.people.people(), slug).map((item) => ({
+      slug: item.slug,
+      title: item.title,
+    }));
+  }
+
+  relationRoleChoices(): string[] {
+    return relationRoleOptions(this.relationKind);
+  }
+
+  onRelationKindChange(kind: RelationKind): void {
+    this.relationKind = kind;
+    const presets = relationRoleOptions(kind);
+    if (!presets.includes(this.relationRole)) this.relationRole = presets[0] ?? "custom";
+  }
+
+  setRelationKindFilter(kind: RelationKind | ""): void {
+    this.relationKindFilter.set(kind);
+  }
+
+  kindLabelForRelation(kind: RelationKind): string {
+    return relationKindLabel(kind);
+  }
+
+  roleLabelForRelation(role: string): string {
+    return relationRoleLabel(role);
+  }
+
+  async addRelation(): Promise<void> {
+    const person = this.people.selected();
+    if (!person || !this.relationTarget) return;
+    const role =
+      this.relationRole === "custom" ? this.relationCustomRole.trim() : this.relationRole;
+    if (!role) return;
+    this.actionError = null;
+    try {
+      await this.people.addRelation(person.slug, {
+        relatedSlug: this.relationTarget,
+        kind: this.relationKind,
+        role,
+      });
+      this.relationTarget = "";
+      this.relationCustomRole = "";
+      this.addingRelation = false;
+    } catch (error) {
+      this.actionError = error instanceof Error ? error.message : String(error);
+    }
+  }
+
+  async removeRelation(edge: PersonView["relations"][number]): Promise<void> {
+    const person = this.people.selected();
+    if (!person) return;
+    await this.people.removeRelation(person.slug, {
+      relatedSlug: edge.slug,
+      kind: edge.kind,
+      role: edge.role,
+    });
   }
 
   async addSocial(): Promise<void> {
@@ -975,7 +1050,7 @@ export class AppComponent implements OnInit, OnDestroy {
       return;
     }
     if (person) {
-      await this.providers.suggest(person);
+      await this.providers.suggest(person, this.relationOthers(person.slug));
       await this.follow.storeResearch(person.slug, this.providers.suggestions(), {
         source: "ask",
         prompt: this.providers.lastPrompt() ?? undefined,
@@ -992,7 +1067,7 @@ export class AppComponent implements OnInit, OnDestroy {
       return;
     }
     if (!person) return;
-    await this.providers.research(person);
+    await this.providers.research(person, this.relationOthers(person.slug));
     await this.follow.storeResearch(person.slug, this.providers.suggestions(), {
       source: "research",
       prompt: this.providers.lastPrompt() ?? undefined,
@@ -1268,6 +1343,9 @@ export class AppComponent implements OnInit, OnDestroy {
   suggestionLabel(item: FactSuggestion): string {
     if (item.kind === "photo") return item.url || item.title;
     if (item.kind === "field") return item.value || item.title;
+    if (item.kind === "relation") {
+      return `${item.relationRole || "relation"} · ${item.relatedSlug || item.title}`;
+    }
     return item.body || item.value || item.url || item.title;
   }
 
@@ -1427,6 +1505,13 @@ export class AppComponent implements OnInit, OnDestroy {
         await this.people.addSocial(write.slug, write.network, write.url, write.handle, generatedBy);
       } else if (write.type === "field") {
         await this.people.updatePerson(write.slug, { [write.field]: write.value });
+      } else if (write.type === "relation") {
+        if (!this.people.people().some((item) => item.slug === write.relatedSlug)) continue;
+        await this.people.addRelation(write.slug, {
+          relatedSlug: write.relatedSlug,
+          kind: write.relationKind,
+          role: write.relationRole,
+        });
       } else {
         await this.people.addNote(write.slug, write.title, write.body, generatedBy);
       }
@@ -2053,6 +2138,8 @@ export class AppComponent implements OnInit, OnDestroy {
     if (person.description) bits.push(person.description);
     if (this.self.isSelf(person.slug)) bits.push("This is me");
     if (this.follow.followFor(person.slug)) bits.push("Followed");
+    const related = relationCue(person);
+    if (related) bits.push(related);
     const proposed = this.follow.suggestionsFor(person.slug).length;
     if (proposed) bits.push(`${proposed} proposed`);
     return bits.join(" · ");

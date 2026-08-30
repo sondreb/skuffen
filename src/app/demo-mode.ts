@@ -1,4 +1,5 @@
 import type { FactSuggestion } from "./models";
+import { demoRelationSuggestion } from "./services/relations";
 
 /** Public-park pin used by `?demo=1` geocode. Not a real contact address. */
 export const DEMO_PARK_HIT = {
@@ -32,7 +33,11 @@ export function demoResearchPrompt(name: string): string {
   ].join("\n");
 }
 
-export function demoResearchSuggestions(source: FactSuggestion["source"] = "research"): FactSuggestion[] {
+export function demoResearchSuggestions(
+  source: FactSuggestion["source"] = "research",
+  others: Array<{ slug: string; title: string }> = [],
+): FactSuggestion[] {
+  const other = others[0];
   return [
     {
       id: `demo-${source}-ada-note`,
@@ -64,6 +69,7 @@ export function demoResearchSuggestions(source: FactSuggestion["source"] = "rese
       title: "Public portrait (demo)",
       url: demoPublicPhotoUrl(),
     },
+    ...(other ? [demoRelationSuggestion(source, other)] : []),
   ];
 }
 

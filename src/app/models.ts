@@ -116,6 +116,18 @@ export interface PersonView {
     subjects: string[];
     at?: string;
   }>;
+  /** Typed links to other local people. File path is identity. */
+  relations: PersonRelation[];
+}
+
+export type RelationKind = "family" | "business" | "other";
+
+export interface PersonRelation {
+  kind: RelationKind;
+  role: string;
+  slug: string;
+  path: string;
+  title: string;
 }
 
 export interface PersonLocation {
@@ -134,7 +146,7 @@ export type PersonField = "title" | "description" | "body" | "email" | "phone" |
 export interface FactSuggestion {
   id: string;
   source?: SuggestionSource;
-  kind: "note" | "social" | "field" | "photo";
+  kind: "note" | "social" | "field" | "photo" | "relation";
   title: string;
   body?: string;
   network?: string;
@@ -142,6 +154,9 @@ export interface FactSuggestion {
   handle?: string;
   field?: PersonField;
   value?: string;
+  relationKind?: RelationKind;
+  relationRole?: string;
+  relatedSlug?: string;
 }
 
 export interface ProposedFact {

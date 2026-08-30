@@ -65,6 +65,9 @@ export function wantedSummary(suggestion: FactSuggestion): string {
   if (suggestion.kind === "field") {
     return `${suggestion.field ?? "field"}: ${suggestion.value || suggestion.title}`;
   }
+  if (suggestion.kind === "relation") {
+    return `${suggestion.relationRole || "relation"} · ${suggestion.relatedSlug || suggestion.title}`;
+  }
   return suggestion.body || suggestion.value || suggestion.url || suggestion.title;
 }
 

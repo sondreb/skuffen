@@ -15,11 +15,21 @@ import {
   documentFilePath,
   documentLinkedToPerson,
   emptyLog,
+  createRelationsDocument,
+  inverseRelationRole,
   locationFromDocument,
+  normalizeRelationRole,
   parseDocument,
   personImageResource,
   personPath,
   placePath,
+  relationsFromDocument,
+  relationsPath,
+  removeRelation,
+  slugFromPersonPath,
+  upsertRelation,
+  type OkfRelation,
+  type RelationKind,
   serializeBundleIndex,
   serializeDocument,
   serializePeopleIndex,
@@ -58,6 +68,13 @@ export interface PersonView {
     kind?: string;
     note?: string;
     subjects: string[];
+  }>;
+  relations: Array<{
+    kind: string;
+    role: string;
+    slug: string;
+    path: string;
+    title: string;
   }>;
 }
 
@@ -103,7 +120,13 @@ export class OkfBundle {
   searchPeople(query: string): PersonView[] {
     const q = query.toLowerCase();
     return this.listPeople().filter((person) => {
-      const hay = [person.title, person.description, person.body, ...person.notes.map((n) => n.title)]
+      const hay = [
+        person.title,
+        person.description,
+        person.body,
+        ...person.notes.map((n) => n.title),
+        ...person.relations.map((edge) => `${edge.kind} ${edge.role} ${edge.title}`),
+      ]
         .filter(Boolean)
         .join("\n")
         .toLowerCase();
@@ -155,7 +178,52 @@ export class OkfBundle {
       photos,
       location,
       documents: this.documentsFor(slug),
+      relations: this.relationsFor(slug),
     };
+  }
+
+  addRelation(slug: string, input: { relatedSlug: string; kind: RelationKind; role: string }): PersonView {
+    if (slug === input.relatedSlug) throw new Error("Cannot relate a person to themselves");
+    if (!this.getPerson(slug) || !this.getPerson(input.relatedSlug)) {
+      throw new Error("Both people must already be in this local graph");
+    }
+    const role = normalizeRelationRole(input.kind, input.role);
+    if (!role) throw new Error("Relation needs a role");
+    const forward: OkfRelation = { kind: input.kind, role, person: personPath(input.relatedSlug) };
+    const back: OkfRelation = {
+      kind: input.kind,
+      role: inverseRelationRole(role),
+      person: personPath(slug),
+    };
+    this.writeRelations(slug, upsertRelation(this.readRelations(slug), forward));
+    this.writeRelations(input.relatedSlug, upsertRelation(this.readRelations(input.relatedSlug), back));
+    this.log(
+      "Update",
+      `Linked [${slug}](/${personPath(slug)}) as ${role} of [${input.relatedSlug}](/${personPath(input.relatedSlug)}).`,
+    );
+    return this.getPerson(slug)!;
+  }
+
+  removeRelation(slug: string, input: { relatedSlug: string; kind: RelationKind; role: string }): PersonView {
+    const role = normalizeRelationRole(input.kind, input.role);
+    this.writeRelations(
+      slug,
+      removeRelation(this.readRelations(slug), {
+        person: personPath(input.relatedSlug),
+        kind: input.kind,
+        role,
+      }),
+    );
+    this.writeRelations(
+      input.relatedSlug,
+      removeRelation(this.readRelations(input.relatedSlug), {
+        person: personPath(slug),
+        kind: input.kind,
+        role: inverseRelationRole(role),
+      }),
+    );
+    this.log("Update", `Removed relation [${input.relatedSlug}](/${personPath(input.relatedSlug)}).`);
+    return this.getPerson(slug)!;
   }
 
   setLocation(
@@ -267,6 +335,46 @@ export class OkfBundle {
       .map((line) => line.trim())
       .filter((line) => line.startsWith("* "))
       .slice(0, limit);
+  }
+
+  private relationsFor(slug: string): PersonView["relations"] {
+    const titles = new Map(
+      this.listSlugs().map((other) => {
+        const path = personPath(other);
+        const raw = this.read(path);
+        const title = raw ? String(parseDocument(path, raw).frontmatter.title ?? other) : other;
+        return [other, title] as const;
+      }),
+    );
+    return this.readRelations(slug)
+      .map((edge) => {
+        const other = slugFromPersonPath(edge.person);
+        if (!other || other === slug) return null;
+        return {
+          kind: edge.kind,
+          role: edge.role,
+          slug: other,
+          path: edge.person,
+          title: titles.get(other) ?? other,
+        };
+      })
+      .filter((item): item is PersonView["relations"][number] => item !== null);
+  }
+
+  private readRelations(slug: string): OkfRelation[] {
+    const path = relationsPath(slug);
+    const raw = this.read(path);
+    if (!raw) return [];
+    return relationsFromDocument(parseDocument(path, raw));
+  }
+
+  private writeRelations(slug: string, relations: OkfRelation[]): void {
+    const path = relationsPath(slug);
+    if (relations.length === 0) {
+      deleteBundleFile(this.root, path);
+      return;
+    }
+    this.writeDoc(createRelationsDocument({ slug, relations }));
   }
 
   private documentsFor(slug: string): PersonView["documents"] {

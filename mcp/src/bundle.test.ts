@@ -121,6 +121,32 @@ test("MCP writes plaintext even when a leftover vault key is present", () => {
   assert.equal(reloaded.documents[0].kind, "document");
 });
 
+test("MCP add sibling writes both cards; delete slug edges; no tokens", () => {
+  const root = mkdtempSync(join(tmpdir(), "skuffen-mcp-rel-"));
+  const bundle = new OkfBundle(root);
+  bundle.ensure();
+  const ada = bundle.createPerson({ title: "Ada Demo" });
+  const bea = bundle.createPerson({ title: "Bea Demo" });
+  bundle.addRelation(ada.slug, { relatedSlug: bea.slug, kind: "family", role: "sibling" });
+
+  const adaView = bundle.getPerson(ada.slug);
+  const beaView = bundle.getPerson(bea.slug);
+  assert.equal(adaView?.relations[0]?.slug, bea.slug);
+  assert.equal(adaView?.relations[0]?.role, "sibling");
+  assert.equal(beaView?.relations[0]?.slug, ada.slug);
+  assert.equal(beaView?.relations[0]?.title, "Ada Demo");
+
+  const onDisk = readFileSync(join(root, "people/ada-demo/relations.md"), "utf8");
+  assert.match(onDisk, /type: Relations/);
+  assert.match(onDisk, /people\/bea-demo\/person\.md/);
+  assert.doesNotMatch(onDisk, /token|secret|password|api[_-]?key|authorization|bearer/i);
+  assert.doesNotMatch(onDisk, /skuffen\.cloud/);
+
+  bundle.removeRelation(ada.slug, { relatedSlug: bea.slug, kind: "family", role: "sibling" });
+  assert.equal(bundle.getPerson(ada.slug)?.relations.length, 0);
+  assert.equal(bundle.getPerson(bea.slug)?.relations.length, 0);
+});
+
 test("MCP leftover ciphertext decrypts once, then refuses without the key", () => {
   const root = mkdtempSync(join(tmpdir(), "skuffen-mcp-leftover-"));
   const key = generateKey();

@@ -13,5 +13,6 @@ export function publicPersonView(person: Record<string, unknown>): Record<string
     photos: person.photos,
     location: person.location,
     documents: person.documents,
+    relations: person.relations,
   });
 }

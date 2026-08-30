@@ -64,6 +64,8 @@ function person(overrides: Partial<PersonView> = {}): PersonView {
       },
     ],
     photos: [],
+    documents: [],
+    relations: [],
     ...overrides,
   };
 }
@@ -158,6 +160,39 @@ test("explicit Accept is the only path that yields an OKF write intent", () => {
     slug: "ada-lovelace",
     title: "First algorithm",
     body: "Wrote notes on the Analytical Engine.",
+  });
+});
+
+test("relation suggestions write only on Accept — uncheck yields nothing", () => {
+  const parsed = parseSuggestions(
+    JSON.stringify({
+      suggestions: [
+        {
+          kind: "relation",
+          title: "Sibling of Bea Demo",
+          relationKind: "family",
+          relationRole: "sibling",
+          relatedSlug: "bea-demo",
+        },
+      ],
+    }),
+    "research",
+  );
+  assert.equal(parsed[0]?.kind, "relation");
+  assert.deepEqual(proposeOnly(parsed), []);
+  const proposal = proposeNameResearch("Ada", parsed);
+  const allOff = setAllFactsChecked(proposal, false);
+  assert.equal(planAcceptedNameProposal(allOff), null);
+  const onlyTitle = setFactChecked(allOff, "name-title", true);
+  const plan = planAcceptedNameProposal(onlyTitle);
+  assert.ok(plan);
+  assert.equal(plan.extras.length, 0);
+  assert.deepEqual(writesForAcceptedSuggestion("ada-demo", parsed[0]!), {
+    type: "relation",
+    slug: "ada-demo",
+    relatedSlug: "bea-demo",
+    relationKind: "family",
+    relationRole: "sibling",
   });
 });
 

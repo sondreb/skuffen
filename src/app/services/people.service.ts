@@ -10,30 +10,41 @@ import {
   createPersonDocument,
   createPhotoDocument,
   createPlaceDocument,
+  createRelationsDocument,
   createSocialDocument,
   documentConceptPath,
   documentFilePath,
   documentLinkedToPerson,
   emptyLog,
+  inverseRelationRole,
   locationFromDocument,
+  normalizeRelationRole,
   parseDocument,
   personDir,
   personImageResource,
   personPath,
   photoFilePath,
   placePath,
+  relationsFromDocument,
+  relationsPath,
+  removeRelation,
+  retargetRelationsForSlug,
   sanitizeFileName,
   serializeBundleIndex,
   serializeDocument,
   serializePeopleIndex,
+  slugFromPersonPath,
   slugify,
   subjectPaths,
-  verifiedList,
+  upsertRelation,
+  wipeRelationsForSlug,
   type OkfDocument,
   type OkfFrontmatter,
+  type OkfRelation,
   type PlaceSource,
+  type RelationKind,
 } from "../../../packages/okf/src/index";
-import type { PersonLocation, PersonView } from "../models";
+import type { PersonLocation, PersonRelation, PersonView } from "../models";
 import { localPhotoBundlePath, localPhotoDataUrl, personListPhotoUrl } from "../list-photo";
 import type { MergePlan } from "./merge";
 import { IoService } from "./io.service";
@@ -110,9 +121,10 @@ export class PeopleService {
         this.error.set(error instanceof Error ? error.message : String(error));
       }
     }
-    this.people.set(people);
+    const titled = resolveRelationTitles(people);
+    this.people.set(titled);
     const current = this.selected();
-    this.selected.set(current ? people.find((p) => p.slug === current.slug) ?? null : null);
+    this.selected.set(current ? titled.find((p) => p.slug === current.slug) ?? null : null);
     await this.refreshVaultStatus();
   }
 
@@ -395,11 +407,65 @@ export class PeopleService {
     const person = this.people().find((item) => item.slug === slug);
     const title = person?.title ?? slug;
     await this.unlinkPersonFromDocuments(slug);
+    await this.wipeRelationsForSlug(slug);
     await this.deletePersonFolder(slug);
     await this.log("Update", `Deleted [${title}](/${personPath(slug)}).`);
     if (this.selected()?.slug === slug) this.selected.set(null);
     await this.reload();
     await this.rebuildIndexes();
+  }
+
+  async addRelation(
+    slug: string,
+    input: { relatedSlug: string; kind: RelationKind; role: string },
+  ): Promise<void> {
+    const relatedSlug = input.relatedSlug.trim();
+    if (!relatedSlug || relatedSlug === slug) throw new Error("Pick another local person");
+    const other = this.people().find((item) => item.slug === relatedSlug);
+    if (!other) throw new Error("That person is not in this local graph");
+    const role = normalizeRelationRole(input.kind, input.role);
+    if (!role) throw new Error("Pick a relation role");
+    const forward: OkfRelation = { kind: input.kind, role, person: personPath(relatedSlug) };
+    const back: OkfRelation = {
+      kind: input.kind,
+      role: inverseRelationRole(role),
+      person: personPath(slug),
+    };
+    await this.writeRelations(slug, upsertRelation(await this.readRelations(slug), forward));
+    await this.writeRelations(relatedSlug, upsertRelation(await this.readRelations(relatedSlug), back));
+    await this.log(
+      "Update",
+      `Linked [${slug}](/${personPath(slug)}) as ${role} of [${relatedSlug}](/${personPath(relatedSlug)}).`,
+    );
+    await this.reload();
+    await this.select(slug);
+  }
+
+  async removeRelation(
+    slug: string,
+    input: { relatedSlug: string; kind: RelationKind; role: string },
+  ): Promise<void> {
+    const relatedSlug = input.relatedSlug.trim();
+    const role = normalizeRelationRole(input.kind, input.role);
+    await this.writeRelations(
+      slug,
+      removeRelation(await this.readRelations(slug), {
+        person: personPath(relatedSlug),
+        kind: input.kind,
+        role,
+      }),
+    );
+    await this.writeRelations(
+      relatedSlug,
+      removeRelation(await this.readRelations(relatedSlug), {
+        person: personPath(slug),
+        kind: input.kind,
+        role: inverseRelationRole(role),
+      }),
+    );
+    await this.log("Update", `Removed relation [${relatedSlug}](/${personPath(relatedSlug)}).`);
+    await this.reload();
+    await this.select(slug);
   }
 
   async addDocument(
@@ -551,6 +617,7 @@ export class PeopleService {
       await this.retargetDocument(document.slug, plan.incomingSlug, plan.keeperSlug);
     }
     await this.retargetRemainingDocuments(plan.incomingSlug, plan.keeperSlug);
+    await this.retargetRelations(plan.incomingSlug, plan.keeperSlug);
 
     await this.deletePersonFolder(plan.incomingSlug);
     await this.log(
@@ -626,7 +693,7 @@ export class PeopleService {
     const photos = [];
     let location: PersonLocation | undefined;
     for (const file of files) {
-      if (!file.endsWith(".md") || file.endsWith("/person.md")) continue;
+      if (!file.endsWith(".md") || file.endsWith("/person.md") || file.endsWith("/relations.md")) continue;
       const text = await this.io.readText(this.bundleRoot(), file);
       if (!text) continue;
       const item = parseDocument(file, text);
@@ -681,7 +748,70 @@ export class PeopleService {
       photos,
       location,
       documents: await this.loadDocumentsForPerson(slug),
+      relations: await this.loadRelationsForPerson(slug),
     };
+  }
+
+  private async loadRelationsForPerson(slug: string): Promise<PersonRelation[]> {
+    const path = relationsPath(slug);
+    const raw = await this.io.readText(this.bundleRoot(), path);
+    if (!raw) return [];
+    const doc = parseDocument(path, raw);
+    return relationsFromDocument(doc)
+      .map((edge) => {
+        const other = slugFromPersonPath(edge.person);
+        if (!other || other === slug) return null;
+        return {
+          kind: edge.kind,
+          role: edge.role,
+          slug: other,
+          path: edge.person,
+          title: other,
+        };
+      })
+      .filter((item): item is PersonRelation => item !== null);
+  }
+
+  private async readRelations(slug: string): Promise<OkfRelation[]> {
+    const path = relationsPath(slug);
+    const raw = await this.io.readText(this.bundleRoot(), path);
+    if (!raw) return [];
+    return relationsFromDocument(parseDocument(path, raw));
+  }
+
+  private async writeRelations(slug: string, relations: OkfRelation[]): Promise<void> {
+    const path = relationsPath(slug);
+    if (relations.length === 0) {
+      await this.io.deleteFile(this.bundleRoot(), path);
+      return;
+    }
+    await this.writeDoc(createRelationsDocument({ slug, relations }));
+  }
+
+  private async wipeRelationsForSlug(slug: string): Promise<void> {
+    for (const person of this.people()) {
+      if (person.slug === slug) continue;
+      const next = wipeRelationsForSlug(await this.readRelations(person.slug), slug);
+      await this.writeRelations(person.slug, next);
+    }
+  }
+
+  private async retargetRelations(fromSlug: string, toSlug: string): Promise<void> {
+    const incoming = await this.readRelations(fromSlug);
+    let keeper = retargetRelationsForSlug(await this.readRelations(toSlug), fromSlug, toSlug).filter(
+      (edge) => slugFromPersonPath(edge.person) !== toSlug,
+    );
+    for (const edge of incoming) {
+      const other = slugFromPersonPath(edge.person);
+      if (!other || other === toSlug || other === fromSlug) continue;
+      keeper = upsertRelation(keeper, { ...edge, person: personPath(other) });
+    }
+    await this.writeRelations(toSlug, keeper);
+    for (const person of this.people()) {
+      if (person.slug === fromSlug || person.slug === toSlug) continue;
+      const next = retargetRelationsForSlug(await this.readRelations(person.slug), fromSlug, toSlug);
+      await this.writeRelations(person.slug, next);
+    }
   }
 
   private async writePersonImage(slug: string, resource?: string): Promise<void> {
@@ -805,6 +935,17 @@ export class PeopleService {
     await this.io.writeText(this.bundleRoot(), "index.md", serializeBundleIndex(entries));
     await this.io.writeText(this.bundleRoot(), "people/index.md", serializePeopleIndex(entries));
   }
+}
+
+function resolveRelationTitles(people: PersonView[]): PersonView[] {
+  const titles = new Map(people.map((person) => [person.slug, person.title]));
+  return people.map((person) => ({
+    ...person,
+    relations: person.relations.map((edge) => ({
+      ...edge,
+      title: titles.get(edge.slug) ?? edge.title,
+    })),
+  }));
 }
 
 function optionalString(value: unknown): string | undefined {

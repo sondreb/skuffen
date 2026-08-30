@@ -121,7 +121,13 @@ export class FollowService {
     this.follows.set(next);
     if (enabled && isDemoMode()) {
       const person = this.people.people().find((item) => item.slug === slug);
-      const suggestions = demoResearchSuggestions("follow");
+      const suggestions = demoResearchSuggestions(
+        "follow",
+        this.people
+          .people()
+          .filter((item) => item.slug !== slug)
+          .map((item) => ({ slug: item.slug, title: item.title })),
+      );
       const prompt = demoResearchPrompt(person?.title ?? slug);
       await this.storeResearch(slug, suggestions, { source: "follow", prompt });
       return;
@@ -200,7 +206,14 @@ export class FollowService {
         const now = new Date();
         try {
           const prompt = buildResearchPrompt(person);
-          const suggestions = await this.providers.researchPerson(person, "follow");
+          const suggestions = await this.providers.researchPerson(
+            person,
+            "follow",
+            this.people
+              .people()
+              .filter((item) => item.slug !== person.slug)
+              .map((item) => ({ slug: item.slug, title: item.title })),
+          );
           if (suggestions.length) {
             const proposal = makeStoredProposal({
               id: `follow-${person.slug}-${now.getTime()}`,
