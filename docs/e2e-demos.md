@@ -28,7 +28,7 @@ Labels stay readable at that size (28px, brass border, dark plate).
 Open `http://127.0.0.1:1420/?demo=1`. That flag only:
 
 - Adds `data-demo` hooks on a few buttons for stable locators
-- Stubs **Research**, **Suggest facts**, and **Follow** so the proposal panel and **Accept** path are visible without keys
+- Stubs **Research**, **Suggest facts**, **Follow**, and **Capture** so the proposal panel and **Accept** path are visible without keys
 - Stubs address search to a synthetic Golden Gate Park hit (no Nominatim)
 
 It does not seed a people-graph, call `api.x.ai`, call Gemini, or write owner contacts.
@@ -44,6 +44,7 @@ Geocode is stubbed in `?demo=1` (and again in Playwright) so the park pin is alw
 5. `e2e/specs/04-merge-proposal.spec.ts` — two synthetic cards with the same email; proposal appears; Accept merges; dismiss leaves both. No silent merge.
 6. `e2e/specs/04-agent-memory.spec.ts` — Latch → Memory lists pending facts; dismiss drops; Accept writes.
 7. `e2e/specs/06-pre-meeting-brief.spec.ts` — local brief from notes/place/pending; dismiss writes nothing; Accept saves a note. No live AI.
+8. `e2e/specs/07-voice-capture.spec.ts` — paste/demo capture proposes people, dates, follow-ups; dismiss writes nothing; Accept writes. Live AI hosts blocked.
 
 Curated clips:
 

@@ -48,6 +48,9 @@ jobs:
       - name: Local pre-meeting brief (offline OKF) tests
         run: npm run test:brief
 
+      - name: Voice capture (propose-only) tests
+        run: npm run test:capture
+
       - name: GitHub update check (offline fixtures)
         run: npm run test:update
 

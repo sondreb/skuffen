@@ -449,7 +449,7 @@ button:disabled {
 
 .facts {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 0.45rem;
   margin: 1.15rem 0 0.7rem;
 }
@@ -833,4 +833,8 @@ label {
 
 .brief-card .prose {
   white-space: pre-wrap;
+}
+
+.capture-sheet textarea {
+  min-height: 7rem;
 }

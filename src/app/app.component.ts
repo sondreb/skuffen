@@ -60,10 +60,40 @@ import {
   type MeetingBrief,
   type MeetingEvent,
 } from "./services/brief";
+import {
+  CAPTURE_NEEDS_PROVIDER,
+  DEMO_CAPTURE_NOTE,
+  captureItemsAsSuggestions,
+  captureLabel,
+  deleteCaptureItem,
+  dismissCaptureProposal,
+  dropCaptureAudio,
+  planAcceptedCapture,
+  proposeCapture as makeCaptureProposal,
+  resolveCaptureNoteSlug,
+  setAllCaptureChecked,
+  setCaptureChecked,
+  showCaptureEmptyState,
+  speechRecognitionAvailable,
+  transcriptFromSpeechResults,
+  type CaptureProposal,
+  type CaptureSource,
+} from "./services/capture";
 import { UPDATE_WHISPER } from "./services/update";
 import { UpdateService } from "./services/update.service";
 
-type Panel = "none" | "create" | "edit" | "providers" | "map" | "propose" | "merge" | "memory" | "brief";
+type Panel = "none" | "create" | "edit" | "providers" | "map" | "propose" | "merge" | "memory" | "brief" | "capture";
+type SpeechSession = {
+  stop: () => void;
+  abort?: () => void;
+  onresult: ((event: { results: ArrayLike<ArrayLike<{ transcript?: string }>> }) => void) | null;
+  onerror: ((event: { error?: string }) => void) | null;
+  onend: (() => void) | null;
+  lang: string;
+  interimResults: boolean;
+  continuous: boolean;
+  start: () => void;
+};
 type FactSurface = "none" | "drop" | "pin" | "note" | "suggest";
 
 @Component({
@@ -115,6 +145,11 @@ export class AppComponent implements OnInit, OnDestroy {
   meetingBrief: MeetingBrief | null = null;
   briefEventPaste = "";
   briefEvent: MeetingEvent = {};
+  captureNote = "";
+  captureProposal: CaptureProposal | null = null;
+  captureRequestedWithoutProvider = false;
+  captureRecording = false;
+  private captureSpeech: SpeechSession | null = null;
   readonly dismissedMerges = signal<string[]>([]);
   checkedSuggestionIds = new Set<string>();
   readonly desktop = isTauri();
@@ -185,6 +220,8 @@ export class AppComponent implements OnInit, OnDestroy {
   readonly followMemoryRows = computed(() => followRows(this.memoryRows()));
   readonly toldMemoryRows = computed(() => toldRows(this.memoryRows()));
   readonly researchNeedsProvider = RESEARCH_NEEDS_PROVIDER;
+  readonly captureNeedsProvider = CAPTURE_NEEDS_PROVIDER;
+  readonly demoCaptureNote = DEMO_CAPTURE_NOTE;
 
   async ngOnInit(): Promise<void> {
     await this.people.bootstrap();
@@ -199,6 +236,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    this.stopCaptureRecording();
     this.follow.stop();
   }
 
@@ -227,6 +265,10 @@ export class AppComponent implements OnInit, OnDestroy {
     }
     if (this.panel === "brief") {
       this.dismissBrief();
+      return;
+    }
+    if (this.panel === "capture") {
+      this.dismissCapture();
       return;
     }
     if (
@@ -1080,6 +1122,180 @@ export class AppComponent implements OnInit, OnDestroy {
     this.briefEvent = {};
     this.panel = "none";
     this.notice = null;
+  }
+
+  canRecordCapture(): boolean {
+    return this.desktop && !this.demoMode && speechRecognitionAvailable();
+  }
+
+  openCapture(slug?: string): void {
+    this.latchOpen = false;
+    this.panel = "capture";
+    this.fact = "none";
+    this.notice = null;
+    this.captureProposal = null;
+    this.captureRequestedWithoutProvider = false;
+    this.stopCaptureRecording();
+    if (slug) {
+      void this.people.select(slug);
+    }
+    if (this.demoMode && !this.captureNote.trim()) {
+      this.captureNote = this.demoCaptureNote;
+    }
+  }
+
+  showCaptureEmpty(): boolean {
+    return showCaptureEmptyState({
+      requested: this.captureRequestedWithoutProvider,
+      demoMode: this.demoMode,
+      hasProvider: Boolean(this.activeProvider()),
+      busy: this.providers.busy(),
+      proposalCount: this.captureProposal?.items.length ?? 0,
+    });
+  }
+
+  async proposeCapture(): Promise<void> {
+    const note = this.captureNote.trim();
+    if (!note) return;
+    this.notice = null;
+    this.captureProposal = null;
+    if (
+      this.gateWithoutProvider(
+        "Connect Grok in Latch → Providers first. There is no Skuffen cloud account.",
+      )
+    ) {
+      this.captureRequestedWithoutProvider = true;
+      return;
+    }
+    this.captureRequestedWithoutProvider = false;
+    const source: CaptureSource = this.captureRecording ? "mic" : "paste";
+    this.stopCaptureRecording();
+    const items = await this.providers.captureNote(note);
+    this.captureProposal = makeCaptureProposal(note, items, source);
+    await this.follow.storeResearch(
+      this.people.selected()?.slug ?? "",
+      captureItemsAsSuggestions(this.captureProposal.items.map((entry) => entry.item)),
+      {
+        source: "capture",
+        query: note.slice(0, 80),
+        prompt: this.providers.lastPrompt() ?? undefined,
+      },
+    );
+  }
+
+  toggleCaptureItem(id: string, checked: boolean): void {
+    if (!this.captureProposal) return;
+    this.captureProposal = setCaptureChecked(this.captureProposal, id, checked);
+  }
+
+  selectAllCaptureItems(checked: boolean): void {
+    if (!this.captureProposal) return;
+    this.captureProposal = setAllCaptureChecked(this.captureProposal, checked);
+  }
+
+  deleteCaptureChoice(id: string): void {
+    if (!this.captureProposal) return;
+    this.captureProposal = deleteCaptureItem(this.captureProposal, id);
+    void this.follow.rejectSuggestion(id);
+  }
+
+  allCaptureChecked(): boolean {
+    return Boolean(
+      this.captureProposal &&
+        this.captureProposal.items.length > 0 &&
+        this.captureProposal.items.every((item) => item.checked),
+    );
+  }
+
+  captureHasChecked(): boolean {
+    return Boolean(this.captureProposal?.items.some((item) => item.checked));
+  }
+
+  captureItemLabel(id: string): string {
+    const item = this.captureProposal?.items.find((entry) => entry.id === id)?.item;
+    return item ? captureLabel(item) : "";
+  }
+
+  async acceptCapture(): Promise<void> {
+    if (!this.captureProposal) return;
+    const plan = planAcceptedCapture(this.captureProposal, this.people.selected()?.title);
+    if (!plan) return;
+    const generatedBy = this.providers.actorForActive();
+    for (const person of plan.people) {
+      const existing = this.people.people().find((item) => item.title.toLowerCase() === person.title.toLowerCase());
+      if (!existing) {
+        await this.people.createPerson({ ...person, generatedBy });
+      }
+    }
+    for (const note of plan.notes) {
+      const slug =
+        resolveCaptureNoteSlug(note.personTitle, this.people.people()) ??
+        this.people.people().find((item) => item.title.toLowerCase() === note.personTitle.toLowerCase())?.slug;
+      if (!slug) continue;
+      await this.people.addNote(slug, note.title, note.body, generatedBy);
+    }
+    for (const entry of this.captureProposal.items) {
+      await this.follow.acceptLocalOnly(entry.id);
+    }
+    this.captureProposal = null;
+    this.captureNote = "";
+    this.captureRequestedWithoutProvider = false;
+    this.panel = "none";
+    this.notice = null;
+    this.stopCaptureRecording();
+  }
+
+  dismissCapture(): void {
+    const pending = this.captureProposal;
+    this.stopCaptureRecording();
+    this.captureProposal = null;
+    this.captureRequestedWithoutProvider = false;
+    this.panel = "none";
+    this.notice = null;
+    void dismissCaptureProposal();
+    if (pending) {
+      for (const entry of pending.items) {
+        void this.follow.rejectSuggestion(entry.id);
+      }
+    }
+  }
+
+  startCaptureRecording(): void {
+    if (!this.canRecordCapture() || this.captureRecording) return;
+    const host = globalThis as typeof globalThis & {
+      SpeechRecognition?: new () => SpeechSession;
+      webkitSpeechRecognition?: new () => SpeechSession;
+    };
+    const Ctor = host.SpeechRecognition || host.webkitSpeechRecognition;
+    if (!Ctor) {
+      this.notice = "Mic needs a desktop WebView that can transcribe locally. Paste a note instead.";
+      return;
+    }
+    this.notice = null;
+    const recognition = new Ctor();
+    recognition.lang = "en-US";
+    recognition.interimResults = true;
+    recognition.continuous = true;
+    recognition.onresult = (event) => {
+      const spoken = transcriptFromSpeechResults(event.results);
+      if (spoken) this.captureNote = spoken;
+    };
+    recognition.onerror = (event) => {
+      this.notice = event.error === "not-allowed" ? "Mic permission denied. Paste a note instead." : "Mic stopped. Paste a note if needed.";
+      this.stopCaptureRecording();
+    };
+    recognition.onend = () => {
+      this.captureRecording = false;
+      this.captureSpeech = dropCaptureAudio(this.captureSpeech);
+    };
+    this.captureSpeech = recognition;
+    this.captureRecording = true;
+    recognition.start();
+  }
+
+  stopCaptureRecording(): void {
+    this.captureRecording = false;
+    this.captureSpeech = dropCaptureAudio(this.captureSpeech);
   }
 
   async acceptMemoryFact(row: PendingMemoryFact): Promise<void> {

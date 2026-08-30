@@ -131,6 +131,7 @@ test("UI lists pending memory: research facts, follow schedules, told log", () =
   assert.equal(trustForSource("research"), "hostile-web");
   assert.equal(trustForSource("follow"), "hostile-web");
   assert.equal(trustForSource("ask"), "local");
+  assert.equal(trustForSource("capture"), "local");
 });
 
 test("deleting the told log leaves OKF untouched and can drop history", () => {
