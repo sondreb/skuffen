@@ -394,6 +394,7 @@ button:disabled {
 .plate,
 .surface,
 .slips article,
+.slips .timeline-row,
 .threads article,
 .prints article,
 .offers article {
@@ -401,6 +402,20 @@ button:disabled {
   border: 1px solid #3a2f24;
   border-radius: 16px;
   padding: 1.15rem 1.2rem;
+}
+
+.slips .timeline-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  width: 100%;
+  text-align: left;
+}
+
+.slips .timeline-row h3,
+.slips .timeline-row p {
+  margin: 0;
 }
 
 .card {
@@ -431,6 +446,7 @@ button:disabled {
 .prose,
 .tile p,
 .slips p,
+.slips .timeline-row p,
 .threads p {
   color: #ddd4c6;
   white-space: pre-wrap;

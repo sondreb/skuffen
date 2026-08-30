@@ -25,7 +25,9 @@ import {
   serializePeopleIndex,
   slugify,
   subjectPaths,
+  verifiedList,
   type OkfDocument,
+  type OkfFrontmatter,
   type PlaceSource,
 } from "../../../packages/okf/src/index";
 import type { PersonLocation, PersonView } from "../models";
@@ -512,13 +514,15 @@ export class PeopleService {
       if (!text) continue;
       const item = parseDocument(file, text);
       if (item.frontmatter.type === "Place") {
-        location = locationFromDocument(item) ?? undefined;
+        const pin = locationFromDocument(item);
+        location = pin ? { ...pin, at: documentDatedAt(item.frontmatter) } : undefined;
       } else if (item.frontmatter.type === "Note") {
         notes.push({
           id: item.id,
           path: item.path,
           title: String(item.frontmatter.title ?? item.id),
           body: item.body,
+          at: documentDatedAt(item.frontmatter),
         });
       } else if (item.frontmatter.type === "SocialProfile") {
         social.push({
@@ -535,6 +539,7 @@ export class PeopleService {
           path: item.path,
           title: String(item.frontmatter.title ?? item.id),
           resource: optionalString(item.frontmatter.resource),
+          at: documentDatedAt(item.frontmatter),
         });
       }
     }
@@ -577,6 +582,7 @@ export class PeopleService {
         kind: optionalString(item.frontmatter.kind),
         note: documentNote(item.body),
         subjects: subjectPaths(item.frontmatter.subjects),
+        at: documentDatedAt(item.frontmatter),
       });
     }
     return documents;
@@ -647,6 +653,14 @@ export class PeopleService {
 
 function optionalString(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+function documentDatedAt(frontmatter: OkfFrontmatter): string | undefined {
+  const stamps = verifiedList(frontmatter.verified);
+  const last = stamps.length ? stamps[stamps.length - 1]?.at : undefined;
+  if (typeof last === "string" && last.trim()) return last.trim();
+  const generated = frontmatter.generated?.at;
+  return typeof generated === "string" && generated.trim() ? generated.trim() : undefined;
 }
 
 function documentNote(body: string): string | undefined {

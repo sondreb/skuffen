@@ -70,6 +70,12 @@ import {
   type ReconnectSuggestion,
 } from "./services/shuffle";
 import {
+  TIMELINE_EMPTY,
+  buildPersonTimeline,
+  timelineOpenWrites,
+  type TimelineEvent,
+} from "./services/timeline";
+import {
   CAPTURE_NEEDS_PROVIDER,
   DEMO_CAPTURE_NOTE,
   captureItemsAsSuggestions,
@@ -114,7 +120,7 @@ type SpeechSession = {
   continuous: boolean;
   start: () => void;
 };
-type FactSurface = "none" | "drop" | "pin" | "note" | "suggest";
+type FactSurface = "none" | "drop" | "pin" | "note" | "suggest" | "timeline";
 
 @Component({
   selector: "app-root",
@@ -246,6 +252,15 @@ export class AppComponent implements OnInit, OnDestroy {
   readonly researchNeedsProvider = RESEARCH_NEEDS_PROVIDER;
   readonly captureNeedsProvider = CAPTURE_NEEDS_PROVIDER;
   readonly demoCaptureNote = DEMO_CAPTURE_NOTE;
+  readonly timelineEmpty = TIMELINE_EMPTY;
+  readonly selectedTimeline = computed(() => {
+    const person = this.people.selected();
+    if (!person) return [];
+    return buildPersonTimeline({
+      person,
+      follow: this.follow.followFor(person.slug),
+    });
+  });
 
   async ngOnInit(): Promise<void> {
     await this.people.bootstrap();
@@ -406,6 +421,25 @@ export class AppComponent implements OnInit, OnDestroy {
     if (this.fact === "pin") {
       this.resetLocationDraft(this.people.selected());
     }
+  }
+
+  /** View only. Accept remains the only OKF write for new facts. */
+  openTimeline(): void {
+    timelineOpenWrites();
+    this.fact = this.fact === "timeline" ? "none" : "timeline";
+    this.notice = null;
+  }
+
+  openTimelineEvent(row: TimelineEvent): void {
+    if (row.kind === "place") this.setFact("pin");
+    else if (row.kind === "follow") this.setFact("suggest");
+    else this.fact = "none";
+    const path = row.path;
+    if (!path || typeof document === "undefined") return;
+    queueMicrotask(() => {
+      const target = document.querySelector(`[data-okf-path="${cssAttr(path)}"]`);
+      target?.scrollIntoView({ block: "nearest" });
+    });
   }
 
   async addNote(): Promise<void> {
@@ -1589,4 +1623,8 @@ function blankDraft() {
 
 function stem(fileName: string): string {
   return fileName.replace(/\.[^.]+$/, "") || fileName;
+}
+
+function cssAttr(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 }

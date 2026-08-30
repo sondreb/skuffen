@@ -1182,6 +1182,14 @@
               </button>
               <button
                 type="button"
+                [class.on]="fact === 'timeline'"
+                (click)="openTimeline()"
+                [attr.data-demo]="demoMode ? 'timeline' : null"
+              >
+                Timeline
+              </button>
+              <button
+                type="button"
                 (click)="openBrief(person.slug)"
                 [attr.data-demo]="demoMode ? 'brief' : null"
               >
@@ -1245,7 +1253,7 @@
                   on this machine. Tiles and geocode may use the network.
                 </p>
                 @if (person.location; as location) {
-                  <p class="lede">
+                  <p class="lede" [attr.data-okf-path]="location.path">
                     {{ location.address || location.title }}
                     <small>({{ location.latitude.toFixed(5) }}, {{ location.longitude.toFixed(5) }})</small>
                   </p>
@@ -1425,12 +1433,38 @@
                   <p class="whisper">No proposals yet.</p>
                 }
               </div>
+            } @else if (fact === "timeline") {
+              <div class="surface" data-timeline-surface>
+                <p class="whisper">
+                  A view of this card on disk. File path stays identity. Nothing is written by
+                  opening Timeline.
+                </p>
+              </div>
             }
+
+            <section class="slips" id="person-timeline" data-timeline>
+              <h2>Timeline</h2>
+              @for (row of selectedTimeline(); track row.id) {
+                <button
+                  type="button"
+                  class="timeline-row"
+                  (click)="openTimelineEvent(row)"
+                  [attr.data-timeline-kind]="row.kind"
+                  [attr.data-timeline-path]="row.path || row.id"
+                >
+                  <h3>{{ row.label }}</h3>
+                  <p>{{ row.dateLabel }}</p>
+                </button>
+              }
+              @if (!selectedTimeline().length) {
+                <p class="whisper">{{ timelineEmpty }}</p>
+              }
+            </section>
 
             <section class="slips">
               <h2>Notes</h2>
               @for (note of person.notes; track note.id) {
-                <article>
+                <article [attr.data-okf-path]="note.path">
                   <h3>{{ note.title }}</h3>
                   <p>{{ note.body }}</p>
                 </article>
@@ -1443,7 +1477,7 @@
             <section class="threads">
               <h2>Threads</h2>
               @for (item of person.social; track item.id) {
-                <article>
+                <article [attr.data-okf-path]="item.path">
                   <h3>{{ item.title }}</h3>
                   <p>{{ item.network }} {{ item.handle }}</p>
                   @if (item.url) {
@@ -1473,7 +1507,7 @@
             <section class="prints">
               <h2>Photos</h2>
               @for (photo of person.photos; track photo.id) {
-                <article>
+                <article [attr.data-okf-path]="photo.path">
                   <h3>{{ photo.title }}</h3>
                   <code>{{ photo.resource }}</code>
                   <button class="ghost" type="button" (click)="removePhoto(photo)">Delete</button>
@@ -1487,7 +1521,7 @@
             <section class="prints">
               <h2>Documents</h2>
               @for (doc of person.documents; track doc.id) {
-                <article>
+                <article [attr.data-okf-path]="doc.path">
                   <h3>{{ doc.title }}</h3>
                   <small>{{ kindLabel(doc.kind) }}</small>
                   @if (doc.note) {
