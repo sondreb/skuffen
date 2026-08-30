@@ -26,7 +26,7 @@
     "test:update": "tsx --test src/app/services/update.test.ts",
     "test:version": "tsx --test scripts/bump-version.test.ts",
     "test:e2e": "playwright test --config e2e/playwright.config.ts",
-    "demo:record": "DEMO_RECORD=1 playwright test --config e2e/playwright.config.ts --workers=1",
+    "demo:record": "DEMO_RECORD=1 playwright test --config e2e/playwright.config.ts --workers=1 && node scripts/curate-demo-media.mjs",
     "version:lockstep": "node scripts/bump-version.mjs"
   },
   "dependencies": {

@@ -1,7 +1,7 @@
 import { Injectable, signal } from "@angular/core";
 import { GoogleGenAI } from "@google/genai";
 import { actorAgent } from "../../../packages/okf/src/index";
-import { demoResearchSuggestions } from "../demo-mode";
+import { demoResearchSuggestions, isDemoMode } from "../demo-mode";
 import type { FactSuggestion, PersonView, ProviderId, ProviderStatus, SuggestionSource } from "../models";
 import type { GrokDevicePending } from "./grok-oauth";
 import { GROK_API_KEY_SECRET_KEY, GROK_OAUTH_SECRET_KEY } from "./grok-oauth";
@@ -120,24 +120,37 @@ export class ProvidersService {
   }
 
   async suggest(person: PersonView): Promise<void> {
+    if (isDemoMode()) {
+      await this.applyDemoResearch("ask");
+      return;
+    }
     await this.runPrompt(person, "ask", false);
   }
 
   async research(person: PersonView): Promise<void> {
+    if (isDemoMode()) {
+      await this.applyDemoResearch("research");
+      return;
+    }
     await this.runPrompt(person, "research", true);
   }
 
   /** `?demo=1` only — paints a fake proposal panel. No keys, no network. */
-  async applyDemoResearch(): Promise<void> {
+  async applyDemoResearch(source: SuggestionSource = "research"): Promise<FactSuggestion[]> {
     this.busy.set(true);
     this.error.set(null);
     this.suggestions.set([]);
     await new Promise((resolve) => setTimeout(resolve, 400));
-    this.suggestions.set(demoResearchSuggestions());
+    const items = demoResearchSuggestions(source);
+    this.suggestions.set(items);
     this.busy.set(false);
+    return items;
   }
 
   async researchPerson(person: PersonView, source: SuggestionSource = "follow"): Promise<FactSuggestion[]> {
+    if (isDemoMode()) {
+      return demoResearchSuggestions(source);
+    }
     const provider = this.activeProvider();
     if (!provider) {
       throw new Error("Connect Grok or Gemini first.");
@@ -151,6 +164,9 @@ export class ProvidersService {
   }
 
   async researchName(name: string): Promise<FactSuggestion[]> {
+    if (isDemoMode()) {
+      return this.applyDemoResearch("research");
+    }
     const provider = this.activeProvider();
     if (!provider) {
       this.error.set("Connect Grok or Gemini first.");

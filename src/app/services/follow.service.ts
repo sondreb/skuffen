@@ -1,4 +1,5 @@
 import { Injectable, computed, inject, signal } from "@angular/core";
+import { demoResearchSuggestions, isDemoMode } from "../demo-mode";
 import type { FactSuggestion, FollowInterval, FollowRecord, StoredProposal } from "../models";
 import { IoService } from "./io.service";
 import { PeopleService } from "./people.service";
@@ -83,6 +84,18 @@ export class FollowService {
     if (!known.has(slug)) return;
     const next = enabled ? mergeFollow(this.follows(), slug, interval, new Date()) : dropFollow(this.follows(), slug);
     this.follows.set(next);
+    if (enabled && isDemoMode()) {
+      const now = new Date();
+      this.proposals.set(
+        upsertProposal(this.proposals(), {
+          id: `follow-${slug}-demo`,
+          slug,
+          source: "follow",
+          createdAt: now.toISOString(),
+          suggestions: demoResearchSuggestions("follow"),
+        }),
+      );
+    }
     await this.persist();
   }
 
@@ -98,7 +111,7 @@ export class FollowService {
   async tick(): Promise<void> {
     if (this.ticking() || this.people.locked()) return;
     const provider = this.providers.activeProvider();
-    if (!provider) return;
+    if (!provider && !isDemoMode()) return;
     const known = new Set(this.people.people().map((person) => person.slug));
     const due = dueFollows(this.follows(), new Date(), known);
     if (due.length === 0) return;

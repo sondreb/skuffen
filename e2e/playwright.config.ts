@@ -24,7 +24,7 @@ export default defineConfig({
     trace: "off",
     screenshot: "off",
     video: demoRecord ? { mode: "on", size: { width: 1280, height: 720 } } : "off",
-    launchOptions: headed ? { slowMo: 180 } : undefined,
+    launchOptions: demoRecord ? { slowMo: headed ? 180 : 90 } : undefined,
   },
   projects: [
     {
