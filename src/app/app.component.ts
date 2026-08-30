@@ -37,6 +37,7 @@ import { DOCUMENT_KIND } from "../../packages/okf/src/index";
 import { FollowService } from "./services/follow.service";
 import { grokConnectionLabel } from "./services/grok-oauth";
 import { IoService, isTauri } from "./services/io.service";
+import { PeoplePaneService } from "./services/people-pane.service";
 import { SelfService } from "./services/self.service";
 import { ThemeService } from "./services/theme.service";
 import { PeopleService } from "./services/people.service";
@@ -186,6 +187,7 @@ export class AppComponent implements OnInit, OnDestroy {
   readonly follow = inject(FollowService);
   readonly self = inject(SelfService);
   readonly theme = inject(ThemeService);
+  readonly peoplePane = inject(PeoplePaneService);
   private readonly io = inject(IoService);
   private readonly cdr = inject(ChangeDetectorRef);
   readonly updates = inject(UpdateService);
@@ -360,6 +362,7 @@ export class AppComponent implements OnInit, OnDestroy {
     await this.follow.load();
     await this.self.load();
     await this.theme.load();
+    await this.peoplePane.load();
     const settings = await this.io.getSettings();
     this.dismissedMerges.set(settings.dismissedMerges ?? []);
     this.droppedCommitments.set(settings.droppedCommitments ?? []);
@@ -393,6 +396,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   focusFind(): void {
+    this.peoplePane.openFilter();
     this.focusSoon(() => {
       const input = this.findInput()?.nativeElement;
       input?.select();
@@ -487,6 +491,11 @@ export class AppComponent implements OnInit, OnDestroy {
     if (this.personMenu) {
       if (target instanceof Element && target.closest("[data-person-menu]")) return;
       this.closePersonMenu();
+    }
+    if (this.peoplePane.filterOpen() && this.peoplePane.collapsed()) {
+      if (!(target instanceof Element) || !target.closest("[data-people-filter-wrap]")) {
+        this.peoplePane.closeFilter();
+      }
     }
     if (!this.menuOpen) return;
     if (!(target instanceof Node)) return;

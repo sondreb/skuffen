@@ -221,22 +221,90 @@
     </header>
 
   <div class="workspace">
-    <aside class="sidebar" aria-label="People">
-        <div class="sidebar-head">
-          <h2>People</h2>
-        </div>
-        <div class="find-row">
-          <label class="find">
-            <span class="sr">Find person</span>
-            <input
-              #findInput
-              data-people-filter
-              [ngModel]="query()"
-              (ngModelChange)="query.set($event)"
-              placeholder="Find person"
-              autocomplete="off"
-            />
-          </label>
+    <aside
+      class="sidebar"
+      [class.collapsed]="peoplePane.collapsed()"
+      aria-label="People"
+      data-people-pane
+      [attr.data-people-pane-collapsed]="peoplePane.collapsed() ? 'true' : 'false'"
+    >
+        <div class="sidebar-tools">
+          <button
+            type="button"
+            class="pane-toggle"
+            data-people-pane-toggle
+            [attr.aria-expanded]="!peoplePane.collapsed()"
+            [attr.aria-label]="peoplePane.collapsed() ? 'Expand people list' : 'Collapse people list'"
+            (click)="peoplePane.toggle()"
+          >
+            <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+              @if (peoplePane.collapsed()) {
+                <path
+                  d="M6 3.5 L11 8 L6 12.5"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              } @else {
+                <path
+                  d="M10 3.5 L5 8 L10 12.5"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              }
+            </svg>
+          </button>
+          <div
+            class="find-row"
+            data-people-filter-wrap
+            [class.open]="peoplePane.filterOpen() || !peoplePane.collapsed()"
+          >
+            @if (peoplePane.collapsed()) {
+              <button
+                type="button"
+                class="find-icon"
+                data-people-filter-toggle
+                aria-label="Find person"
+                [attr.aria-expanded]="peoplePane.filterOpen()"
+                (click)="peoplePane.toggleFilter()"
+              >
+                <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+                  <circle
+                    cx="6.5"
+                    cy="6.5"
+                    r="4"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                  />
+                  <path
+                    d="M9.5 9.5 L13 13"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              </button>
+            }
+            <label class="find">
+              <span class="sr">Find person</span>
+              <input
+                #findInput
+                data-people-filter
+                [ngModel]="query()"
+                (ngModelChange)="query.set($event)"
+                placeholder="Find person"
+                autocomplete="off"
+                (focus)="peoplePane.openFilter()"
+              />
+            </label>
+          </div>
         </div>
         <nav class="people-list" aria-label="Everyone">
           @if (query().trim() && filtered().length === 0) {
@@ -253,6 +321,8 @@
               [attr.data-person-row]="person.slug"
               [attr.data-self-card]="self.isSelf(person.slug) ? person.slug : null"
               [attr.data-person-slug]="person.slug"
+              [attr.aria-label]="person.title"
+              [attr.title]="peoplePane.collapsed() ? person.title : null"
               (click)="open(person)"
               (contextmenu)="openPersonMenu($event, person)"
               (dragover)="onCardDragOver($event)"

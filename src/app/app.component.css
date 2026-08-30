@@ -242,22 +242,52 @@ button:disabled {
   background: var(--sidebar);
 }
 
-.sidebar-head {
-  display: flex;
-  align-items: center;
-  padding: 0.75rem 0.85rem 0.35rem;
+.sidebar.collapsed {
+  width: 3.6rem;
 }
 
-.sidebar-head h2 {
-  margin: 0;
-  font-size: 0.78rem;
+.sidebar-tools {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.65rem 0.4rem;
+}
+
+.sidebar.collapsed .sidebar-tools {
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0.4rem 0.35rem 0.3rem;
+}
+
+.pane-toggle,
+.find-icon {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  padding: 0;
+  background: transparent;
+  border-color: transparent;
+  color: var(--mute);
+}
+
+.pane-toggle:hover,
+.pane-toggle:focus-visible,
+.find-icon:hover,
+.find-icon:focus-visible {
+  color: var(--paper);
+  border-color: var(--line);
+  background: var(--hover);
 }
 
 .find-row {
+  position: relative;
+  flex: 1;
   display: flex;
   gap: 0.4rem;
   align-items: center;
-  padding: 0.35rem 0.75rem 0.65rem;
+  min-width: 0;
 }
 
 .find {
@@ -267,6 +297,28 @@ button:disabled {
 
 .find input {
   background: var(--input);
+}
+
+.sidebar.collapsed .find {
+  position: absolute;
+  left: calc(100% + 0.35rem);
+  top: 0;
+  z-index: 4;
+  width: 16rem;
+  padding: 0.35rem;
+  background: var(--chrome);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sidebar.collapsed .find-row:hover .find,
+.sidebar.collapsed .find-row.open .find,
+.sidebar.collapsed .find-row:focus-within .find {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .people-list {
@@ -279,6 +331,7 @@ button:disabled {
 }
 
 .person-card {
+  position: relative;
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -348,6 +401,26 @@ button:disabled {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.sidebar.collapsed .person-card {
+  justify-content: center;
+  padding: 0.45rem 0.35rem;
+}
+
+.sidebar.collapsed .person-meta {
+  display: none;
+}
+
+.sidebar.collapsed .invite-line {
+  padding: 0.45rem 0.3rem;
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+.sidebar.collapsed .demo-quiet {
+  margin: 0.35rem 0.2rem 0.55rem;
+  font-size: 0.68rem;
 }
 
 .main,
@@ -1095,7 +1168,7 @@ label {
 }
 
 @media (min-width: 1400px) {
-  .sidebar {
+  .sidebar:not(.collapsed) {
     width: 320px;
   }
 }

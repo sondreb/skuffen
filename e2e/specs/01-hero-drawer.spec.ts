@@ -7,7 +7,8 @@ test("what is Skuffen / open the people list", async ({ demoPage: page }) => {
 
   await expect(page.getByText("Skuffen").first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "No people yet" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "People", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "People", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("complementary", { name: "People" })).toBeVisible();
   await expect(page.getByText(/Preview people-graph stays in this tab/)).toBeVisible();
   await expect(page.locator("[data-demo-label]")).toHaveText("1. Open Skuffen");
   await captureReadmeStill(page, "screenshot-drawer.png");

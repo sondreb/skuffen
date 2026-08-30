@@ -56,6 +56,7 @@ Geocode is stubbed in `?demo=1` (and again in Playwright) so the park pin is alw
 17. `e2e/specs/17-people-filter-add-research.spec.ts` — left pane filters people already in the graph; no research submit there; Add person **AI Powered Search** starts research; More has spacing before the primary actions.
 18. `e2e/specs/18-image-preview.spec.ts` — no profile photo hides diorama; people-list context menu has Delete only; click profile or gallery photo opens a local preview; close / Escape writes nothing.
 19. `e2e/specs/19-theme.spec.ts` — Menu Appearance switches Light / Dark / Auto; Auto follows `prefers-color-scheme`; the choice survives reload in app settings, not OKF or tokens.
+20. `e2e/specs/20-people-pane.spec.ts` — People heading is gone; collapse shows a photo strip; expand restores names; the choice survives reload in app settings, not OKF or tokens.
 
 Curated clips:
 
