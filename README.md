@@ -138,6 +138,11 @@ stdio (optional loopback HTTP) against the same OKF bundle. Setup for Cursor and
 npm run mcp
 ```
 
+## Docs
+
+- [Software factory (Grok Bot)](docs/software-factory.md) — stand up a similar factory
+- [Local MCP](docs/mcp.md)
+
 ## License
 
 MIT © 2026 SondreB
