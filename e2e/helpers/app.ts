@@ -62,6 +62,7 @@ export async function stubNetwork(page: Page): Promise<void> {
 
   await page.route("https://api.x.ai/**", (route) => route.abort());
   await page.route("https://generativelanguage.googleapis.com/**", (route) => route.abort());
+  await page.route("https://api.github.com/**", (route) => route.abort());
 }
 
 export async function openDemo(page: Page): Promise<void> {

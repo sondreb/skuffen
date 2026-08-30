@@ -22,6 +22,8 @@ import {
   setFactChecked,
   writesForAcceptedSuggestion,
 } from "./services/research";
+import { UPDATE_WHISPER } from "./services/update";
+import { UpdateService } from "./services/update.service";
 
 type Panel = "none" | "create" | "edit" | "providers" | "map" | "propose";
 type FactSurface = "none" | "drop" | "pin" | "note" | "suggest";
@@ -38,6 +40,8 @@ export class AppComponent implements OnInit, OnDestroy {
   readonly geocode = inject(GeocodeService);
   readonly follow = inject(FollowService);
   private readonly io = inject(IoService);
+  readonly updates = inject(UpdateService);
+  readonly updateWhisper = UPDATE_WHISPER;
 
   readonly query = signal("");
   panel: Panel = "none";
@@ -737,6 +741,14 @@ export class AppComponent implements OnInit, OnDestroy {
 
   async exportPlain(): Promise<void> {
     await this.people.exportPlain();
+  }
+
+  async checkForUpdate(): Promise<void> {
+    await this.updates.check();
+  }
+
+  async installUpdate(): Promise<void> {
+    await this.updates.install();
   }
 
   async chooseProvider(provider: ProviderId): Promise<void> {

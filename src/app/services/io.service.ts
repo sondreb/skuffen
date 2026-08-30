@@ -7,6 +7,7 @@ import {
   publicDevicePending,
   publicOauthStatus,
 } from "./grok-oauth";
+import type { DesktopRuntime, GithubRelease } from "./update";
 import { purgeDurableBrowserSecrets, webSecretDelete, webSecretGet, webSecretSet } from "./web-secrets";
 
 export const BROWSER_VAULT_MESSAGE =
@@ -229,6 +230,27 @@ export class IoService {
   async lockVault(): Promise<VaultStatus> {
     if (isTauri()) return this.invoke<VaultStatus>("lock_vault");
     return this.browserVaultStatus();
+  }
+
+  async desktopRuntimeInfo(): Promise<DesktopRuntime> {
+    if (!isTauri()) {
+      throw new Error("Desktop runtime info needs the Skuffen desktop shell.");
+    }
+    return this.invoke<DesktopRuntime>("desktop_runtime_info");
+  }
+
+  async githubPublishedRelease(): Promise<GithubRelease | null> {
+    if (!isTauri()) {
+      throw new Error("GitHub release checks need the Skuffen desktop shell.");
+    }
+    return this.invoke<GithubRelease | null>("github_published_release");
+  }
+
+  async downloadAndRunInstaller(url: string, fileName: string): Promise<void> {
+    if (!isTauri()) {
+      throw new Error("Installing an update needs the Skuffen desktop shell.");
+    }
+    await this.invoke("download_and_run_installer", { url, fileName });
   }
 
   async exportPlainOkf(root: string): Promise<string | null> {
