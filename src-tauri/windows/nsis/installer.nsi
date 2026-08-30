@@ -3,7 +3,8 @@
 ; Changes: default PassiveMode (progress page only; no language / directory /
 ; start-menu / welcome / finish / reinstall radios). Do not GetOptions into
 ; $PassiveMode (FileFunc clears dest when /P is absent). Passive upgrades
-; overwrite in place. People-graph lives in app data (me.grok.skuffen), not next to the exe.
+; overwrite in place. After a successful one-click install, launch the app
+; unless /UPDATE. People-graph lives in app data (me.grok.skuffen), not next to the exe.
 ; Identifier stays me.grok.skuffen. Keep handlebars placeholders in sync with Tauri 2.11.
 
 Unicode true
@@ -763,15 +764,27 @@ Section Install
 SectionEnd
 
 Function .onInstSuccess
- ; Check for `/R` flag only in silent and passive installers because
- ; GUI installer has a toggle for the user to (re)start the app
- ${If} $PassiveMode = 1
- ${OrIf} ${Silent}
+ ; One-click always sets PassiveMode, so SkipIfPassive hides the finish page
+ ; and MUI_FINISHPAGE_RUN never runs. Stock Tauri only launches here when /R
+ ; is on the command line (hypothesis: that is why a double-click never
+ ; started Skuffen). For PassiveMode, always RunAsUser the main binary after
+ ; a successful install. Double-click and overwrite-in-place should launch.
+ ;
+ ; /UPDATE: in-app updater; the running app is already open — do not relaunch.
+ ; Silent /S without /R stays off (Tauri convention). /R still launches silent.
+ ${If} $UpdateMode = 1
+ Return
+ ${EndIf}
+
+ ${If} ${Silent}
  ${GetOptions} $CMDLINE "/R" $R0
  ${IfNot} ${Errors}
  ${GetOptions} $CMDLINE "/ARGS" $R0
  nsis_tauri_utils::RunAsUser "$INSTDIR\${MAINBINARYNAME}.exe" "$R0"
  ${EndIf}
+ ${ElseIf} $PassiveMode = 1
+ ${GetOptions} $CMDLINE "/ARGS" $R0
+ nsis_tauri_utils::RunAsUser "$INSTDIR\${MAINBINARYNAME}.exe" "$R0"
  ${EndIf}
 FunctionEnd
 
