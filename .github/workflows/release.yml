@@ -10,7 +10,8 @@
 # (github-actions[bot] / "chore: bump version to X.Y.Z"), do not bump again and
 # do not start a second matrix. The first run's build job checkouts
 # needs.version.outputs.sha. Keep job `if` in sync with shouldSkipReleaseReentry()
-# in scripts/bump-version.mjs (npm run test:version).
+# in scripts/bump-version.mjs (npm run test:version). Quote those if scalars:
+# 'chore: bump' contains colon-space and is illegal unquoted YAML.
 
 name: Draft desktop release
 
