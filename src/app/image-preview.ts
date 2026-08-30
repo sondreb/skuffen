@@ -14,6 +14,14 @@ export type PreviewTransform = {
   y: number;
 };
 
+/** Photo box in viewport pixels (`getBoundingClientRect`). */
+export type PreviewRect = {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+};
+
 export type ImagePreview = {
   src: string;
   title?: string;
@@ -30,6 +38,46 @@ export function previewImageSrc(src?: string | null): string | null {
 export function clampPreviewScale(scale: number): number {
   if (!Number.isFinite(scale)) return PREVIEW_MIN_SCALE;
   return Math.min(PREVIEW_MAX_SCALE, Math.max(PREVIEW_MIN_SCALE, scale));
+}
+
+/**
+ * Viewport pointer → same space as `PreviewTransform.x/y`.
+ * The overlay scales around the photo center (`transform-origin: center`).
+ * Raw `clientX`/`clientY` would zoom as if the origin were the viewport corner.
+ */
+export function previewOriginFromPointer(
+  clientX: number,
+  clientY: number,
+  current: PreviewTransform,
+  rect: PreviewRect,
+): { x: number; y: number } {
+  return {
+    x: clientX - (rect.left + rect.width / 2) + current.x,
+    y: clientY - (rect.top + rect.height / 2) + current.y,
+  };
+}
+
+/** Viewport position of a center-relative local point after the transform. */
+export function previewScreenPoint(
+  transform: PreviewTransform,
+  localX: number,
+  localY: number,
+  layoutCenter: { x: number; y: number },
+): { x: number; y: number } {
+  return {
+    x: layoutCenter.x + transform.x + localX * transform.scale,
+    y: layoutCenter.y + transform.y + localY * transform.scale,
+  };
+}
+
+export function previewLayoutCenter(
+  current: PreviewTransform,
+  rect: PreviewRect,
+): { x: number; y: number } {
+  return {
+    x: rect.left + rect.width / 2 - current.x,
+    y: rect.top + rect.height / 2 - current.y,
+  };
 }
 
 export function zoomPreview(
@@ -72,6 +120,17 @@ export function wheelPreviewZoom(
 ): PreviewTransform {
   const factor = deltaY < 0 ? PREVIEW_WHEEL_FACTOR : 1 / PREVIEW_WHEEL_FACTOR;
   return zoomPreview(current, current.scale * factor, originX, originY);
+}
+
+export function wheelPreviewZoomAtPointer(
+  current: PreviewTransform,
+  deltaY: number,
+  clientX: number,
+  clientY: number,
+  rect: PreviewRect,
+): PreviewTransform {
+  const origin = previewOriginFromPointer(clientX, clientY, current, rect);
+  return wheelPreviewZoom(current, deltaY, origin.x, origin.y);
 }
 
 export function pointerDistance(

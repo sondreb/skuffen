@@ -14,13 +14,15 @@ import { DIORAMA_MENU_LABEL } from "./services/imagine";
 import {
   IDENTITY_TRANSFORM,
   type ImagePreview,
+  type PreviewRect,
   type PreviewTransform,
   panPreview,
   pointerDistance,
   pointerMidpoint,
   previewImageSrc,
+  previewOriginFromPointer,
   stepPreviewZoom,
-  wheelPreviewZoom,
+  wheelPreviewZoomAtPointer,
   zoomPreview,
 } from "./image-preview";
 
@@ -87,10 +89,7 @@ export class ImagePreviewComponent implements AfterViewInit, OnChanges, OnDestro
   }
 
   zoomBy(direction: 1 | -1): void {
-    const host = this.stage?.nativeElement;
-    const originX = (host?.clientWidth ?? 0) / 2;
-    const originY = (host?.clientHeight ?? 0) / 2;
-    this.transform = stepPreviewZoom(this.transform, direction, originX, originY);
+    this.transform = stepPreviewZoom(this.transform, direction, 0, 0);
   }
 
   onDblClick(event: MouseEvent): void {
@@ -99,7 +98,8 @@ export class ImagePreviewComponent implements AfterViewInit, OnChanges, OnDestro
       this.transform = IDENTITY_TRANSFORM;
       return;
     }
-    this.transform = zoomPreview(this.transform, 2.5, event.clientX, event.clientY);
+    const origin = this.originAt(event.clientX, event.clientY);
+    this.transform = zoomPreview(this.transform, 2.5, origin.x, origin.y);
   }
 
   onPointerDown(event: PointerEvent): void {
@@ -107,10 +107,11 @@ export class ImagePreviewComponent implements AfterViewInit, OnChanges, OnDestro
     this.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
     if (this.pointers.size >= 2) {
       const [a, b] = [...this.pointers.values()];
+      const mid = pointerMidpoint(a, b);
       this.pinch = {
         distance: pointerDistance(a, b),
         start: { ...this.transform },
-        mid: pointerMidpoint(a, b),
+        mid: this.originAt(mid.x, mid.y),
       };
       this.lastPan = null;
       return;
@@ -159,8 +160,29 @@ export class ImagePreviewComponent implements AfterViewInit, OnChanges, OnDestro
     return `translate(${x}px, ${y}px) scale(${scale})`;
   }
 
+  private photoRect(): PreviewRect | null {
+    const img = this.stage?.nativeElement.querySelector("[data-image-preview-photo]");
+    if (!(img instanceof HTMLElement)) return null;
+    const rect = img.getBoundingClientRect();
+    return { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+  }
+
+  private originAt(clientX: number, clientY: number): { x: number; y: number } {
+    const rect = this.photoRect();
+    if (!rect) return { x: 0, y: 0 };
+    return previewOriginFromPointer(clientX, clientY, this.transform, rect);
+  }
+
   private readonly onWheel = (event: WheelEvent): void => {
     event.preventDefault();
-    this.transform = wheelPreviewZoom(this.transform, event.deltaY, event.clientX, event.clientY);
+    const rect = this.photoRect();
+    if (!rect) return;
+    this.transform = wheelPreviewZoomAtPointer(
+      this.transform,
+      event.deltaY,
+      event.clientX,
+      event.clientY,
+      rect,
+    );
   };
 }
