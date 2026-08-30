@@ -1003,6 +1003,12 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   async dismissMemoryGroup(group: PendingMemoryGroup): Promise<void> {
+    for (const fact of group.facts) {
+      this.providers.reject(fact.id);
+      const next = new Set(this.checkedSuggestionIds);
+      next.delete(fact.id);
+      this.checkedSuggestionIds = next;
+    }
     await this.follow.dismissProposal(group.proposalId);
     if (this.nameProposal?.query && this.nameProposal.query === group.query) {
       this.nameProposal = null;
