@@ -12,7 +12,7 @@ test("add a person and pin a place on the map", async ({ demoPage: page }) => {
   await captureReadmeStill(page, "screenshot-person.png");
   await page.locator("[data-demo='save-person']").click();
   await expect(page.getByRole("heading", { name: "Ada Demo" })).toBeVisible();
-  await expect(page.getByText(DEMO.person.description)).toBeVisible();
+  await expect(page.locator(".file .lede")).toHaveText(DEMO.person.description);
 
   await showDemoLabel(page, "Pin a public park (demo)");
   await page.locator("[data-demo='pin']").click();
