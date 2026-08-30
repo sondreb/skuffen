@@ -128,6 +128,25 @@ export async function createAdaDemo(page: Page): Promise<void> {
   await expect(page.getByRole("heading", { name: "Ada Demo" })).toBeVisible();
 }
 
+export async function pinNote(page: Page, body: string, title?: string): Promise<void> {
+  await page.getByRole("button", { name: "Note" }).click();
+  await page.getByPlaceholder("A line about them").fill(body);
+  if (title) await page.getByPlaceholder("Title (optional)").fill(title);
+  await page.getByRole("button", { name: "Pin note" }).click();
+  await expect(page.getByRole("heading", { name: title || body.split(/\n/)[0].slice(0, 48) })).toBeVisible();
+}
+
+export async function createBeaDemo(page: Page): Promise<void> {
+  await page.locator("[data-demo='put-someone-in']").first().click();
+  await expect(page.getByRole("heading", { name: "Who?" })).toBeVisible();
+  await page.locator('input[name="person-name"]').fill(DEMO.bea.title);
+  await page.getByRole("button", { name: "More" }).click();
+  await page.getByLabel("How you know them").fill(DEMO.bea.description);
+  await page.getByLabel("Email").fill(DEMO.bea.email);
+  await page.locator("[data-demo='save-person']").click();
+  await expect(page.getByRole("heading", { name: DEMO.bea.title })).toBeVisible();
+}
+
 export async function seedDemoMergePair(page: Page): Promise<void> {
   await page.locator("[data-demo='put-matching-card']").first().click();
   await expect(page.locator("[data-merge-proposal]")).toBeVisible();

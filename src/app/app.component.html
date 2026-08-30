@@ -58,6 +58,14 @@
             Put someone in
           </button>
           <button type="button" [class.on]="panel === 'map'" (click)="openMap()">Map</button>
+          <button
+            type="button"
+            [class.on]="panel === 'shuffle'"
+            (click)="openShuffle()"
+            [attr.data-demo]="demoMode ? 'shuffle' : null"
+          >
+            Shuffle
+          </button>
         }
 
         <button class="latch-btn" type="button" [class.on]="latchOpen" (click)="toggleLatch()">
@@ -107,6 +115,14 @@
             [attr.data-demo]="demoMode ? 'open-capture' : null"
           >
             Capture
+          </button>
+          <button
+            type="button"
+            (click)="openShuffle()"
+            [disabled]="people.locked()"
+            [attr.data-demo]="demoMode ? 'open-shuffle' : null"
+          >
+            Reconnect Shuffle
           </button>
           <button type="button" (click)="people.chooseFolder(); latchOpen = false" [disabled]="people.locked()">
             Bundle folder
@@ -608,6 +624,154 @@
             <p class="whisper">Put someone in first. A brief is assembled from a card already on disk.</p>
           }
         </section>
+      } @else if (panel === "shuffle") {
+        <section class="sheet shuffle-sheet" data-demo="shuffle-panel">
+          <header class="sheet-head">
+            <div>
+              <p class="kicker">From this machine — nothing is sent</p>
+              <h1>Reconnect Shuffle</h1>
+            </div>
+            <button
+              class="ghost"
+              type="button"
+              (click)="dismissShuffle()"
+              [attr.data-demo]="demoMode ? 'shuffle-back' : null"
+            >
+              Back
+            </button>
+          </header>
+          <p class="whisper">
+            Two local suggestions a day from last notes, last accept, follow, and recency on each card.
+            No cloud scoring of who matters. Pick one for an optional draft. Never auto-sends.
+            Skip and Dismiss write nothing. Accept saves the draft as a note.
+          </p>
+          @if (notice) {
+            <p class="notice">{{ notice }}</p>
+          }
+          @if (providers.error()) {
+            <p class="error">{{ providers.error() }}</p>
+          }
+          @if (pickedShuffle && reconnectDraft; as draft) {
+            <article class="brief-card" data-demo="shuffle-draft">
+              <header>
+                <strong>{{ pickedShuffle.title }}</strong>
+                <small>{{ draft.source === "local" ? "Local draft — not sent" : "Polished draft — not sent" }}</small>
+              </header>
+              <ul>
+                @for (reason of pickedShuffle.reasons; track reason.id) {
+                  <li>
+                    <strong>{{ reason.title }}:</strong>
+                    {{ reason.body }}
+                  </li>
+                }
+              </ul>
+              <label>
+                Optional reconnect draft
+                <textarea
+                  [ngModel]="draft.body"
+                  (ngModelChange)="onReconnectDraftChange($event)"
+                  name="shuffle-draft"
+                  rows="8"
+                  [attr.data-demo]="demoMode ? 'shuffle-draft-text' : null"
+                ></textarea>
+              </label>
+            </article>
+            <div class="row">
+              <button
+                type="button"
+                (click)="polishShuffleDraft()"
+                [disabled]="providers.busy()"
+                [attr.data-demo]="demoMode ? 'shuffle-polish' : null"
+              >
+                {{ providers.busy() ? "Polishing…" : "Polish with " + providerLabel() }}
+              </button>
+              <button
+                class="brass"
+                type="button"
+                (click)="acceptShuffle()"
+                [disabled]="!draft.body.trim()"
+                [attr.data-demo]="demoMode ? 'shuffle-accept' : null"
+              >
+                Accept — save draft
+              </button>
+              <button
+                type="button"
+                (click)="skipShuffle(pickedShuffle.slug)"
+                [attr.data-demo]="demoMode ? 'shuffle-skip' : null"
+              >
+                Skip
+              </button>
+              <button
+                class="ghost"
+                type="button"
+                (click)="dismissShuffle()"
+                [attr.data-demo]="demoMode ? 'shuffle-dismiss' : null"
+              >
+                Dismiss
+              </button>
+            </div>
+            <p class="whisper">Accept writes a note on this card. Skip and Dismiss write nothing. Never auto-sends.</p>
+          } @else if (shuffleSuggestions.length) {
+            <div class="offers" data-demo="shuffle-deck">
+              @for (item of shuffleSuggestions; track item.id) {
+                <article class="fact-offer">
+                  <span>
+                    <strong>{{ item.title }}</strong>
+                    <small>{{ item.recencyLabel }}</small>
+                    <p>
+                      @for (reason of item.reasons; track reason.id) {
+                        {{ reason.title }}: {{ reason.body }}
+                      }
+                    </p>
+                  </span>
+                  <div class="row">
+                    <button
+                      class="brass"
+                      type="button"
+                      (click)="pickShuffle(item.slug)"
+                      [attr.data-demo]="demoMode ? 'shuffle-pick-' + item.slug : null"
+                    >
+                      Pick
+                    </button>
+                    <button
+                      class="ghost"
+                      type="button"
+                      (click)="skipShuffle(item.slug)"
+                      [attr.data-demo]="demoMode ? 'shuffle-skip-' + item.slug : null"
+                    >
+                      Skip
+                    </button>
+                  </div>
+                </article>
+              }
+            </div>
+            <p class="whisper">Pick one person. The people-graph stays on this machine.</p>
+          } @else if (people.people().length === 0) {
+            <p class="whisper">Put someone in first. Suggestions come from notes already on disk.</p>
+            @if (demoMode) {
+              <button
+                class="brass"
+                type="button"
+                (click)="seedDemoShuffle()"
+                data-demo="shuffle-seed"
+              >
+                Put two reconnect demo cards in
+              </button>
+            }
+          } @else {
+            <p class="whisper">No more local reconnects in this deck. Skip wrote nothing.</p>
+            @if (demoMode && people.people().length < 2) {
+              <button
+                class="brass"
+                type="button"
+                (click)="seedDemoShuffle()"
+                data-demo="shuffle-seed"
+              >
+                Put two reconnect demo cards in
+              </button>
+            }
+          }
+        </section>
       } @else if (panel === "capture") {
         <section class="sheet capture-sheet" data-demo="capture-panel">
           <header class="sheet-head">
@@ -1030,6 +1194,13 @@
               >
                 Capture
               </button>
+              <button
+                type="button"
+                (click)="openShuffle(person.slug)"
+                [attr.data-demo]="demoMode ? 'shuffle-card' : null"
+              >
+                Reconnect
+              </button>
             </div>
 
             @if (notice) {
@@ -1364,6 +1535,19 @@
                 [attr.data-demo]="demoMode ? 'merge-review' : null"
               >
                 Review merge
+              </button>
+            </p>
+          }
+          @if (people.people().length) {
+            <p class="notice invite-line" data-demo="shuffle-banner">
+              Daily reconnects from notes on this machine. Nothing is sent.
+              <button
+                class="brass"
+                type="button"
+                (click)="openShuffle()"
+                [attr.data-demo]="demoMode ? 'shuffle-banner' : null"
+              >
+                Reconnect Shuffle
               </button>
             </p>
           }

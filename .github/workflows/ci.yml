@@ -51,6 +51,9 @@ jobs:
       - name: Voice capture (propose-only) tests
         run: npm run test:capture
 
+      - name: Reconnect Shuffle (local, never auto-send) tests
+        run: npm run test:shuffle
+
       - name: GitHub update check (offline fixtures)
         run: npm run test:update
 

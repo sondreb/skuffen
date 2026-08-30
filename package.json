@@ -26,6 +26,7 @@
     "test:merge": "tsx --test src/app/services/merge.test.ts",
     "test:brief": "tsx --test src/app/services/brief.test.ts",
     "test:capture": "tsx --test src/app/services/capture.test.ts",
+    "test:shuffle": "tsx --test src/app/services/shuffle.test.ts",
     "test:update": "tsx --test src/app/services/update.test.ts",
     "test:version": "tsx --test scripts/bump-version.test.ts",
     "test:e2e": "playwright test --config e2e/playwright.config.ts",

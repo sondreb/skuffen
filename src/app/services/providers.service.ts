@@ -15,6 +15,15 @@ import {
   type MeetingBrief,
 } from "./brief";
 import {
+  applyPolishedReconnectDraft,
+  buildReconnectDraftPrompt,
+  demoPolishReconnectDraft,
+  liveReconnectDraftRequests,
+  parseReconnectDraft,
+  type ReconnectDraft,
+  type ReconnectSuggestion,
+} from "./shuffle";
+import {
   buildCapturePrompt,
   demoCaptureItems,
   demoCapturePrompt,
@@ -321,6 +330,41 @@ export class ProvidersService {
     } catch (error) {
       this.error.set(error instanceof Error ? error.message : String(error));
       return brief;
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  /**
+   * Optional reconnect draft polish. Demo and the no-provider path stay offline.
+   * Prompt includes only the one picked person. Never askGrok. Never send.
+   */
+  async polishReconnectDraft(
+    suggestion: ReconnectSuggestion,
+    draft: ReconnectDraft,
+  ): Promise<ReconnectDraft | null> {
+    if (isDemoMode()) {
+      return applyPolishedReconnectDraft(draft, demoPolishReconnectDraft(draft), false);
+    }
+    const provider = this.activeProvider();
+    if (!provider) {
+      this.error.set("Connect Grok or Gemini first. The local draft already works offline.");
+      return null;
+    }
+    this.busy.set(true);
+    this.error.set(null);
+    try {
+      const prompt = buildReconnectDraftPrompt(suggestion);
+      this.lastPrompt.set(prompt);
+      const live = liveReconnectDraftRequests({ grokModel: GROK_MODEL, prompt });
+      const text =
+        provider === "grok" ? await this.askGrokPolish(live.grok) : await this.askGeminiPolish(live.gemini);
+      const polished = parseReconnectDraft(text);
+      if (!polished) return draft;
+      return applyPolishedReconnectDraft(draft, polished, true);
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : String(error));
+      return draft;
     } finally {
       this.busy.set(false);
     }
