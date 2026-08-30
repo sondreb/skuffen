@@ -304,24 +304,6 @@ button:disabled {
   box-shadow: inset 3px 0 0 var(--teal);
 }
 
-.person-menu {
-  position: fixed;
-  z-index: 6;
-  min-width: 11rem;
-  display: flex;
-  flex-direction: column;
-  padding: 0.35rem;
-  background: #121c1e;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
-}
-
-.person-menu button {
-  width: 100%;
-  text-align: left;
-}
-
 .person-meta {
   min-width: 0;
   display: grid;
