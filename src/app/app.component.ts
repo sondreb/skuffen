@@ -742,7 +742,7 @@ export class AppComponent implements OnInit, OnDestroy {
         description: drafts.keeper.description,
         email: drafts.keeper.email,
       });
-      await this.people.addNote(created.slug, "Ada Demo card (demo)", "Synthetic keeper card. Not a real person.");
+      await this.people.addNote(created.slug, "Keeper slip (demo)", "Synthetic keeper card. Not a real person.");
     }
     const afterKeeper = this.people.people();
     if (afterKeeper.some((item) => item.title === drafts.incoming.title)) {

@@ -40,7 +40,7 @@ test("Accept merges into one OKF person", async ({ demoPage: page }) => {
   await page.locator("[data-demo='merge-accept']").click();
 
   await expect(page.locator("[data-merge-proposal]")).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: DEMO.person.title })).toBeVisible();
+  await expect(page.getByRole("heading", { name: DEMO.person.title, exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: DEMO.twin.noteTitle })).toBeVisible();
   await expect(page.getByText(DEMO.twin.noteBody)).toBeVisible();
   await page.getByRole("button", { name: "Drawer" }).click();
