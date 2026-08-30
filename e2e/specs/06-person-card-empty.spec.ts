@@ -1,6 +1,6 @@
 import { createAdaDemo, expect, openDemo, test } from "../helpers/app";
 
-test("new Ada Demo card shows empty Notes, Photos, Documents, and Suggest copy", async ({
+test("new Ada Demo card shows empty Notes, Photos, Files, and Suggest copy", async ({
   demoPage: page,
 }) => {
   await openDemo(page);
@@ -16,8 +16,12 @@ test("new Ada Demo card shows empty Notes, Photos, Documents, and Suggest copy",
   await expect(page.getByRole("button", { name: "Add a thread" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Photos" })).toBeVisible();
   await expect(page.getByText("No photos yet.")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Documents" })).toBeVisible();
-  await expect(page.getByText("No documents yet.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Set profile image" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Add photo" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Files" })).toBeVisible();
+  await expect(page.getByText("No files yet.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Add file" }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Add land-plot document" })).toHaveCount(0);
 
   await page.locator("[data-demo='suggest']").click();
   await expect(page.getByText("No proposals yet.")).toBeVisible();

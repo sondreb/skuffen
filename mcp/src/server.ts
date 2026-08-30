@@ -96,14 +96,14 @@ const tools = [
   {
     name: "add_document",
     description:
-      "Attach a local file as a Document concept (file bytes + markdown). Land plots use kind land-plot. Never uploads the file.",
+      "Attach a local file as a Document concept (file bytes + markdown). Kind is document. Never uploads the file.",
     inputSchema: {
       type: "object",
       properties: {
         slug: { type: "string" },
         title: { type: "string" },
         filePath: { type: "string" },
-        kind: { type: "string", description: "document or land-plot" },
+        kind: { type: "string", description: "document (default)" },
         note: { type: "string" },
       },
       required: ["slug", "title", "filePath"],

@@ -80,6 +80,10 @@ export interface PersonView {
     handle?: string;
     url?: string;
   }>;
+  /** Local bundle path for the list avatar. Never http(s). */
+  image?: string;
+  /** Local data/blob for the list avatar. Never http(s). */
+  imageSrc?: string;
   photos: Array<{
     id: string;
     path: string;

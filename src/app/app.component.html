@@ -1385,7 +1385,23 @@
               </p>
             }
             <header class="nameplate">
-              <div>
+              <div class="portrait" data-profile-image>
+                <span class="portrait-frame">
+                  @if (personPhotoUrl(person); as src) {
+                    <img [src]="src" alt="" />
+                  } @else {
+                    {{ initials(person.title) }}
+                  }
+                </span>
+                <button
+                  type="button"
+                  (click)="pickProfileImage()"
+                  [attr.data-demo]="demoMode ? 'set-profile-image' : null"
+                >
+                  {{ person.image ? "Change profile image" : "Set profile image" }}
+                </button>
+              </div>
+              <div class="nameplate-copy">
                 <p class="kicker">{{ person.path }}</p>
                 <h1>{{ person.title }}</h1>
                 @if (self.isSelf(person.slug)) {
@@ -1496,33 +1512,17 @@
 
             @if (fact === "drop") {
               <div class="surface drop" [class.hot]="dragging">
-                <p>Drop a photo or a document on this card. Files stay in the local OKF bundle.</p>
-                <button class="brass" type="button" (click)="addPhoto()" [disabled]="!desktop">Pick a photo</button>
-                @if (!desktop) {
-                  <p class="whisper">Photos need the desktop shell. Documents can drop here in this preview.</p>
-                }
-                <label>Title <input [(ngModel)]="docTitle" name="doc-title" placeholder="Plot title or file title" /></label>
-                <label>
-                  Kind
-                  <select [(ngModel)]="docKind" name="doc-kind">
-                    <option value="document">Document</option>
-                    <option [value]="landPlotKind">Land plot</option>
-                  </select>
-                </label>
-                <label>Note (optional) <textarea [(ngModel)]="docNote" name="doc-note" rows="2"></textarea></label>
+                <p>Drop a photo or a file on this card. Files stay in the local OKF bundle.</p>
                 <div class="row">
-                  <button type="button" (click)="pickAndAddDocument()">Add document</button>
-                  <button class="brass" type="button" (click)="pickAndAddDocument(landPlotKind)">
-                    Add land-plot document
+                  <button class="brass" type="button" (click)="addPhoto()" [attr.data-demo]="demoMode ? 'drop-add-photo' : null">
+                    Pick a photo
+                  </button>
+                  <button type="button" (click)="pickAndAddDocument()" [attr.data-demo]="demoMode ? 'drop-add-file' : null">
+                    Add file
                   </button>
                 </div>
-                <input
-                  id="skuffen-document-file"
-                  type="file"
-                  hidden
-                  multiple
-                  (change)="onDocumentFileChosen($event)"
-                />
+                <label>Title <input [(ngModel)]="docTitle" name="doc-title" placeholder="File title" /></label>
+                <label>Note (optional) <textarea [(ngModel)]="docNote" name="doc-note" rows="2"></textarea></label>
               </div>
             } @else if (fact === "pin") {
               <div class="surface pin-scrap">
@@ -1825,13 +1825,33 @@
               }
             </section>
 
-            <section class="prints">
+            <section class="prints" data-photos>
               <h2>Photos</h2>
+              <div class="row">
+                <button
+                  type="button"
+                  (click)="addPhoto()"
+                  [attr.data-demo]="demoMode ? 'add-photo' : null"
+                >
+                  Add photo
+                </button>
+              </div>
               @for (photo of person.photos; track photo.id) {
-                <article [attr.data-okf-path]="photo.path">
+                <article [attr.data-okf-path]="photo.path" class="photo-slip">
+                  @if (photo.listSrc; as src) {
+                    <img class="photo-thumb" [src]="src" alt="" />
+                  }
                   <h3>{{ photo.title }}</h3>
+                  @if (isProfilePhoto(person, photo)) {
+                    <small>Profile image</small>
+                  }
                   <code>{{ photo.resource }}</code>
-                  <button class="ghost" type="button" (click)="removePhoto(photo)">Delete</button>
+                  <div class="row">
+                    @if (!isProfilePhoto(person, photo)) {
+                      <button type="button" (click)="usePhotoAsProfile(photo)">Use as profile</button>
+                    }
+                    <button class="ghost" type="button" (click)="removePhoto(photo)">Remove</button>
+                  </div>
                 </article>
               }
               @if (!person.photos.length) {
@@ -1839,8 +1859,17 @@
               }
             </section>
 
-            <section class="prints">
-              <h2>Documents</h2>
+            <section class="prints" data-files>
+              <h2>Files</h2>
+              <div class="row">
+                <button
+                  type="button"
+                  (click)="pickAndAddDocument()"
+                  [attr.data-demo]="demoMode ? 'add-file' : null"
+                >
+                  Add file
+                </button>
+              </div>
               @for (doc of person.documents; track doc.id) {
                 <article [attr.data-okf-path]="doc.path">
                   <h3>{{ doc.title }}</h3>
@@ -1869,9 +1898,31 @@
                 </article>
               }
               @if (!person.documents.length) {
-                <p class="whisper">No documents yet.</p>
+                <p class="whisper">No files yet.</p>
               }
             </section>
+            <input
+              id="skuffen-profile-file"
+              type="file"
+              accept="image/*"
+              hidden
+              (change)="onProfileFileChosen($event)"
+            />
+            <input
+              id="skuffen-photo-file"
+              type="file"
+              accept="image/*"
+              hidden
+              multiple
+              (change)="onPhotoFileChosen($event)"
+            />
+            <input
+              id="skuffen-document-file"
+              type="file"
+              hidden
+              multiple
+              (change)="onDocumentFileChosen($event)"
+            />
           </article>
         </section>
       } @else if (browsing()) {
