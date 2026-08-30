@@ -52,6 +52,9 @@
 
         <button class="latch-btn" type="button" [class.on]="latchOpen" (click)="toggleLatch()">
           Latch
+          @if (follow.pendingCount()) {
+            <span class="memory-count">{{ follow.pendingCount() }}</span>
+          }
         </button>
       </div>
 
@@ -69,6 +72,16 @@
             Grok · {{ grokLabel() }}
           </p>
           <button type="button" (click)="openProviders()">Providers</button>
+          <button
+            type="button"
+            (click)="openMemory()"
+            [attr.data-demo]="demoMode ? 'open-memory' : null"
+          >
+            Memory
+            @if (follow.pendingCount()) {
+              ({{ follow.pendingCount() }} pending)
+            }
+          </button>
           <button type="button" (click)="people.chooseFolder(); latchOpen = false" [disabled]="people.locked()">
             Bundle folder
           </button>
@@ -305,6 +318,123 @@
           </div>
           @if (mapPins().length === 0 && !pendingPin) {
             <p class="whisper">No pins yet. Search an address or click the map, then save to a card.</p>
+          }
+        </section>
+      } @else if (panel === "memory") {
+        <section class="sheet memory-sheet" data-demo="memory-panel">
+          <header class="sheet-head">
+            <div>
+              <p class="kicker">Inspectable — not a hidden store</p>
+              <h1>Memory</h1>
+            </div>
+            <button class="ghost" type="button" (click)="panel = 'none'">Back</button>
+          </header>
+          <p class="whisper">
+            What the model was told and what it wanted to write. Pending facts live in local app
+            settings, not the OKF bundle, until you Accept. Public web is hostile until you accept.
+            Nothing is written unattended.
+          </p>
+
+          <h2>Pending facts</h2>
+          @if (pendingMemoryGroups().length === 0) {
+            <p class="whisper">Nothing pending. Research or Follow only proposes.</p>
+          } @else {
+            @for (group of pendingMemoryGroups(); track group.proposalId) {
+              <article class="memory-group">
+                <header>
+                  <strong>{{ group.personLabel }}</strong>
+                  <small>{{ group.source }} · {{ trustLabel(group.trust) }}</small>
+                </header>
+                @if (group.prompt) {
+                  <details class="told">
+                    <summary>What the model was told</summary>
+                    <pre>{{ group.prompt }}</pre>
+                  </details>
+                }
+                <div class="offers">
+                  @for (fact of group.facts; track fact.id) {
+                    <article class="fact-offer">
+                      <label class="follow-line">
+                        <input
+                          type="checkbox"
+                          [ngModel]="checkedSuggestionIds.has(fact.id)"
+                          (ngModelChange)="toggleSuggestionCheck(fact.id, $event)"
+                        />
+                        <span>
+                          <strong>{{ fact.suggestion.title }}</strong>
+                          <small>wanted · {{ fact.suggestion.kind }}</small>
+                          <p>{{ fact.wantedSummary }}</p>
+                        </span>
+                      </label>
+                      <button class="ghost" type="button" (click)="reject(fact.suggestion)">Dismiss</button>
+                    </article>
+                  }
+                </div>
+                <div class="row">
+                  <button
+                    class="brass"
+                    type="button"
+                    (click)="acceptMemoryGroup(group)"
+                    [disabled]="!group.facts.some((fact) => checkedSuggestionIds.has(fact.id))"
+                    [attr.data-demo]="demoMode ? 'memory-accept' : null"
+                  >
+                    Accept selected
+                  </button>
+                  <button
+                    class="ghost"
+                    type="button"
+                    (click)="dismissMemoryGroup(group)"
+                    [attr.data-demo]="demoMode ? 'memory-dismiss' : null"
+                  >
+                    Dismiss remaining
+                  </button>
+                </div>
+              </article>
+            }
+          }
+
+          <h2>Follow schedules</h2>
+          @if (followMemoryRows().length === 0) {
+            <p class="whisper">No one is followed. Follow only re-proposes; it never auto-writes.</p>
+          } @else {
+            <ul class="memory-follows">
+              @for (watched of followMemoryRows(); track watched.id) {
+                <li>
+                  <div>
+                    <strong>{{ watched.personLabel }}</strong>
+                    <small>
+                      {{ watched.interval }}
+                      · Next {{ watched.nextRunAt || "pending" }}
+                    </small>
+                  </div>
+                  <button class="ghost" type="button" (click)="unfollowFromMemory(watched.slug)">
+                    Unfollow
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+
+          <h2>What the model was told</h2>
+          @if (toldMemoryRows().length === 0) {
+            <p class="whisper">No prompt log yet. You can delete this log anytime — it is not OKF.</p>
+          } @else {
+            <div class="row">
+              <button class="ghost" type="button" (click)="follow.clearTold()">Clear log</button>
+            </div>
+            @for (turn of toldMemoryRows(); track turn.id) {
+              <article class="memory-told">
+                <header>
+                  <strong>{{ turn.personLabel }}</strong>
+                  <small>{{ turn.source }} · {{ trustLabel(turn.trust) }} · {{ turn.createdAt }}</small>
+                </header>
+                <pre>{{ turn.prompt }}</pre>
+                @if (turn.wantedSummaries.length) {
+                  <p class="whisper">Wanted to write: {{ turn.wantedSummaries.join(" · ") }}</p>
+                }
+                <button class="ghost" type="button" (click)="follow.deleteTold(turn.id)">Delete</button>
+              </article>
+            }
           }
         </section>
       } @else if (panel === "create" || panel === "edit") {
@@ -731,6 +861,7 @@
                 <p class="whisper">
                   Research searches public web info. Follow re-runs that search on a local schedule.
                   Propose only — never auto-write, never auto-send, never upload the graph.
+                  Latch → Memory lists every pending fact and what the model was told.
                 </p>
                 <label class="follow-line">
                   <input

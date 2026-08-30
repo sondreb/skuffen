@@ -156,6 +156,18 @@ button:disabled {
   margin-left: auto;
   position: relative;
   z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.memory-count {
+  min-width: 1.25rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: var(--teal-deep);
+  color: var(--teal-glow);
+  font-size: 0.78rem;
 }
 
 .scrim {
@@ -701,4 +713,73 @@ label {
 
 .merge-banner button {
   width: auto;
+}
+
+.memory-sheet h2 {
+  margin: 1.25rem 0 0.45rem;
+  font-size: 1.05rem;
+}
+
+.memory-group,
+.memory-told {
+  margin: 0.7rem 0 1rem;
+  padding: 0.85rem;
+  border: 1px solid #4a3a28;
+  border-radius: 12px;
+  background: rgba(26, 22, 18, 0.65);
+}
+
+.memory-group header,
+.memory-told header {
+  display: grid;
+  gap: 0.15rem;
+  margin-bottom: 0.45rem;
+}
+
+.memory-group header small,
+.memory-told header small {
+  color: var(--mute);
+}
+
+.told {
+  margin: 0.4rem 0 0.7rem;
+}
+
+.told summary {
+  cursor: pointer;
+  color: var(--brass-bright);
+}
+
+.told pre,
+.memory-told pre {
+  margin: 0.45rem 0 0;
+  padding: 0.65rem;
+  max-height: 12rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  border-radius: 8px;
+  background: #100e0c;
+  color: var(--paper);
+}
+
+.memory-follows {
+  list-style: none;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.memory-follows li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.memory-follows small {
+  display: block;
 }

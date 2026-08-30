@@ -34,6 +34,8 @@ Default bundle locations (override with `SKUFFEN_BUNDLE`):
 
 Default tool output never dumps raw phone numbers or email addresses.
 
+Tools run only when the host invokes them. There is no background research loop, no unattended tool use, and no silent write to the people-graph from MCP.
+
 ## Cursor
 
 Add to `.cursor/mcp.json` (or Cursor Settings → MCP):

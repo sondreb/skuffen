@@ -162,7 +162,7 @@ From a person, **Research with Grok** (or Gemini if you chose it) searches publi
 
 **Follow** is a local scheduler in the desktop app. Pick a per-person interval (daily, weekly, monthly). While Skuffen is open it re-runs that person’s public search and proposes new facts. It never auto-writes, never auto-sends messages, and never uploads the people-graph. The prompt includes only that person.
 
-Follow schedules and pending proposals live in local app settings, not in the OKF bundle. Tokens stay in the OS credential store — never `localStorage`, never OKF.
+Follow schedules and pending proposals live in local app settings, not in the OKF bundle. Latch → **Memory** lists that inspectable store: research suggestions, follow schedules, pending facts, and a deletable log of what the model was told. Public web is treated as hostile until you Accept. Nothing durable is written to the OKF bundle without Accept. Tokens stay in the OS credential store — never `localStorage`, never OKF.
 
 ```bash
 npm run test:research

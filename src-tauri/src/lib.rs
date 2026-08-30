@@ -33,6 +33,11 @@ pub struct Settings {
     pub follows: Option<Vec<FollowRecord>>,
     #[serde(default)]
     pub proposals: Option<Vec<serde_json::Value>>,
+    #[serde(default)]
+    pub dismissed_merges: Option<Vec<String>>,
+    /// Inspectable log of what the model was told. Not OKF. Never stores tokens.
+    #[serde(default)]
+    pub memory_log: Option<Vec<serde_json::Value>>,
 }
 
 #[tauri::command]

@@ -10,6 +10,15 @@ import type {
   PersonView,
   ProviderId,
 } from "./models";
+import {
+  followRows,
+  groupPendingFacts,
+  inspectableMemory,
+  pendingFacts,
+  toldRows,
+  type PendingMemoryFact,
+  type PendingMemoryGroup,
+} from "./services/memory";
 import { GeocodeService, type GeocodeHit } from "./services/geocode.service";
 import { LAND_PLOT_KIND } from "../../packages/okf/src/index";
 import { FollowService } from "./services/follow.service";
@@ -43,7 +52,7 @@ import {
 import { UPDATE_WHISPER } from "./services/update";
 import { UpdateService } from "./services/update.service";
 
-type Panel = "none" | "create" | "edit" | "providers" | "map" | "propose" | "merge";
+type Panel = "none" | "create" | "edit" | "providers" | "map" | "propose" | "merge" | "memory";
 type FactSurface = "none" | "drop" | "pin" | "note" | "suggest";
 
 @Component({
@@ -149,6 +158,17 @@ export class AppComponent implements OnInit, OnDestroy {
       ) ?? null
     );
   });
+  readonly memoryRows = computed(() =>
+    inspectableMemory({
+      proposals: this.follow.proposals(),
+      follows: this.follow.follows(),
+      people: this.people.people().map((person) => ({ slug: person.slug, title: person.title })),
+      memoryLog: this.follow.memoryLog(),
+    }),
+  );
+  readonly pendingMemoryGroups = computed(() => groupPendingFacts(pendingFacts(this.memoryRows())));
+  readonly followMemoryRows = computed(() => followRows(this.memoryRows()));
+  readonly toldMemoryRows = computed(() => toldRows(this.memoryRows()));
 
   async ngOnInit(): Promise<void> {
     await this.people.bootstrap();
@@ -189,7 +209,13 @@ export class AppComponent implements OnInit, OnDestroy {
       this.closeMergeSheet();
       return;
     }
-    if (this.panel === "providers" || this.panel === "create" || this.panel === "edit" || this.panel === "map") {
+    if (
+      this.panel === "providers" ||
+      this.panel === "create" ||
+      this.panel === "edit" ||
+      this.panel === "map" ||
+      this.panel === "memory"
+    ) {
       this.panel = "none";
     }
   }
@@ -554,6 +580,10 @@ export class AppComponent implements OnInit, OnDestroy {
     }
     if (person) {
       await this.providers.suggest(person);
+      await this.follow.storeResearch(person.slug, this.providers.suggestions(), {
+        source: "ask",
+        prompt: this.providers.lastPrompt() ?? undefined,
+      });
       this.checkAllVisibleSuggestions();
     }
   }
@@ -569,7 +599,10 @@ export class AppComponent implements OnInit, OnDestroy {
     }
     if (!person) return;
     await this.providers.research(person);
-    await this.follow.storeResearch(person.slug, this.providers.suggestions());
+    await this.follow.storeResearch(person.slug, this.providers.suggestions(), {
+      source: "research",
+      prompt: this.providers.lastPrompt() ?? undefined,
+    });
     this.checkAllVisibleSuggestions();
   }
 
@@ -595,6 +628,15 @@ export class AppComponent implements OnInit, OnDestroy {
     this.nameProposal = null;
     const suggestions = await this.providers.researchName(name);
     this.nameProposal = proposeNameResearch(name, suggestions);
+    await this.follow.storeResearch(
+      "",
+      this.nameProposal.facts.map((fact) => fact.suggestion),
+      {
+        source: "research",
+        query: name,
+        prompt: this.providers.lastPrompt() ?? undefined,
+      },
+    );
   }
 
   toggleProposalFact(id: string, checked: boolean): void {
@@ -613,10 +655,16 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   dismissProposal(): void {
+    const pending = this.nameProposal;
     this.nameProposal = null;
     this.panel = "none";
     this.notice = null;
     void dismissNameProposal();
+    if (pending) {
+      for (const fact of pending.facts) {
+        void this.follow.rejectSuggestion(fact.id);
+      }
+    }
   }
 
   async acceptNameProposal(): Promise<void> {
@@ -626,6 +674,9 @@ export class AppComponent implements OnInit, OnDestroy {
     const generatedBy = this.providers.actorForActive();
     const created = await this.people.createPerson({ ...plan.person, generatedBy });
     const skippedPhotos = await this.applyExtras(created.slug, plan.extras, generatedBy);
+    for (const fact of this.nameProposal.facts) {
+      await this.follow.acceptLocalOnly(fact.id);
+    }
     this.nameProposal = null;
     this.panel = "none";
     this.query.set("");
@@ -901,6 +952,75 @@ export class AppComponent implements OnInit, OnDestroy {
     this.panel = "providers";
     this.people.selected.set(null);
     void this.providers.refresh();
+  }
+
+  openMemory(): void {
+    this.latchOpen = false;
+    this.panel = "memory";
+    this.fact = "none";
+    this.checkedSuggestionIds = new Set(pendingFacts(this.memoryRows()).map((item) => item.id));
+  }
+
+  async acceptMemoryFact(row: PendingMemoryFact): Promise<void> {
+    if (row.slug) {
+      await this.people.select(row.slug);
+      await this.accept(row.suggestion);
+      return;
+    }
+    if (!row.query) return;
+    const proposal = proposeNameResearch(row.query, [row.suggestion]);
+    const plan = planAcceptedNameProposal(proposal);
+    if (!plan) return;
+    const generatedBy = this.providers.actorForActive();
+    const created = await this.people.createPerson({ ...plan.person, generatedBy });
+    await this.applyExtras(created.slug, plan.extras, generatedBy);
+    await this.follow.acceptLocalOnly(row.suggestion.id);
+  }
+
+  async acceptMemoryGroup(group: PendingMemoryGroup): Promise<void> {
+    const selected = group.facts.filter((fact) => this.checkedSuggestionIds.has(fact.id));
+    if (group.slug) {
+      for (const fact of selected) {
+        await this.acceptMemoryFact(fact);
+      }
+      this.panel = "none";
+      return;
+    }
+    if (!group.query || selected.length === 0) return;
+    const proposal = proposeNameResearch(
+      group.query,
+      selected.map((fact) => fact.suggestion),
+    );
+    const plan = planAcceptedNameProposal(proposal);
+    if (!plan) return;
+    const generatedBy = this.providers.actorForActive();
+    const created = await this.people.createPerson({ ...plan.person, generatedBy });
+    await this.applyExtras(created.slug, plan.extras, generatedBy);
+    for (const fact of selected) {
+      await this.follow.acceptLocalOnly(fact.id);
+    }
+    this.panel = "none";
+  }
+
+  async dismissMemoryGroup(group: PendingMemoryGroup): Promise<void> {
+    for (const fact of group.facts) {
+      this.providers.reject(fact.id);
+      const next = new Set(this.checkedSuggestionIds);
+      next.delete(fact.id);
+      this.checkedSuggestionIds = next;
+    }
+    await this.follow.dismissProposal(group.proposalId);
+    if (this.nameProposal?.query && this.nameProposal.query === group.query) {
+      this.nameProposal = null;
+    }
+  }
+
+  async unfollowFromMemory(slug: string): Promise<void> {
+    await this.follow.setFollow(slug, false);
+  }
+
+  trustLabel(trust: string): string {
+    return trust === "hostile-web" ? "Public web — hostile until Accept" : "Local ask";
   }
 
   async unlock(): Promise<void> {

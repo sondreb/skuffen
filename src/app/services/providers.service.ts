@@ -1,7 +1,7 @@
 import { Injectable, signal } from "@angular/core";
 import { GoogleGenAI } from "@google/genai";
 import { actorAgent } from "../../../packages/okf/src/index";
-import { demoResearchSuggestions, isDemoMode } from "../demo-mode";
+import { demoResearchPrompt, demoResearchSuggestions, isDemoMode } from "../demo-mode";
 import type { FactSuggestion, PersonView, ProviderId, ProviderStatus, SuggestionSource } from "../models";
 import type { GrokDevicePending, GrokOAuthStatus } from "./grok-oauth";
 import { GROK_API_KEY_SECRET_KEY, GROK_OAUTH_SECRET_KEY, publicOauthStatus } from "./grok-oauth";
@@ -35,6 +35,7 @@ export class ProvidersService {
   readonly devicePending = signal<GrokDevicePending | null>(null);
   readonly error = signal<string | null>(null);
   readonly suggestions = signal<FactSuggestion[]>([]);
+  readonly lastPrompt = signal<string | null>(null);
 
   constructor(private readonly io: IoService) {}
 
@@ -122,7 +123,7 @@ export class ProvidersService {
 
   async suggest(person: PersonView): Promise<void> {
     if (isDemoMode()) {
-      await this.applyDemoResearch("ask");
+      await this.applyDemoResearch("ask", person.title);
       return;
     }
     await this.runPrompt(person, "ask", false);
@@ -130,18 +131,23 @@ export class ProvidersService {
 
   async research(person: PersonView): Promise<void> {
     if (isDemoMode()) {
-      await this.applyDemoResearch("research");
+      await this.applyDemoResearch("research", person.title);
       return;
     }
     await this.runPrompt(person, "research", true);
   }
 
   /** `?demo=1` only — paints a fake proposal panel. No keys, no network. */
-  async applyDemoResearch(source: SuggestionSource = "research"): Promise<FactSuggestion[]> {
+  async applyDemoResearch(
+    source: SuggestionSource = "research",
+    personTitle = "Ada Demo",
+  ): Promise<FactSuggestion[]> {
     this.busy.set(true);
     this.error.set(null);
     this.suggestions.set([]);
+    this.lastPrompt.set(null);
     await new Promise((resolve) => setTimeout(resolve, 400));
+    this.lastPrompt.set(demoResearchPrompt(personTitle));
     const items = demoResearchSuggestions(source);
     this.suggestions.set(items);
     this.busy.set(false);
@@ -157,6 +163,7 @@ export class ProvidersService {
       throw new Error("Connect Grok or Gemini first.");
     }
     const prompt = buildResearchPrompt(person);
+    this.lastPrompt.set(prompt);
     const text =
       provider === "grok"
         ? await this.askGrok(prompt, true)
@@ -166,7 +173,7 @@ export class ProvidersService {
 
   async researchName(name: string): Promise<FactSuggestion[]> {
     if (isDemoMode()) {
-      return this.applyDemoResearch("research");
+      return this.applyDemoResearch("research", name);
     }
     const provider = this.activeProvider();
     if (!provider) {
@@ -176,8 +183,10 @@ export class ProvidersService {
     this.busy.set(true);
     this.error.set(null);
     this.suggestions.set([]);
+    this.lastPrompt.set(null);
     try {
       const prompt = buildNameResearchPrompt(name);
+      this.lastPrompt.set(prompt);
       const text =
         provider === "grok" ? await this.askGrok(prompt, true) : await this.askGemini(prompt, true);
       const parsed = parseSuggestions(text, "research");
@@ -200,8 +209,10 @@ export class ProvidersService {
     this.busy.set(true);
     this.error.set(null);
     this.suggestions.set([]);
+    this.lastPrompt.set(null);
     try {
       const prompt = webSearch ? buildResearchPrompt(person) : this.promptFor(person);
+      this.lastPrompt.set(prompt);
       const text =
         provider === "grok"
           ? await this.askGrok(prompt, webSearch)

@@ -1,6 +1,7 @@
 export type ProviderId = "grok" | "gemini";
 export type FollowInterval = "daily" | "weekly" | "monthly";
 export type SuggestionSource = "ask" | "research" | "follow";
+export type MemoryTrust = "hostile-web" | "local";
 
 export interface FollowRecord {
   slug: string;
@@ -14,8 +15,11 @@ export interface FollowRecord {
 export interface StoredProposal {
   id: string;
   slug: string;
-  source: "research" | "follow";
+  query?: string;
+  source: SuggestionSource;
   createdAt: string;
+  prompt?: string;
+  trust?: MemoryTrust;
   suggestions: FactSuggestion[];
 }
 
@@ -26,6 +30,19 @@ export interface Settings {
   proposals?: StoredProposal[];
   /** Sorted `slug-a|slug-b` pairs the user dismissed or kept both. */
   dismissedMerges?: string[];
+  /** Inspectable log of what the model was told. Not OKF. Never stores tokens. */
+  memoryLog?: AgentMemoryTurn[];
+}
+
+export interface AgentMemoryTurn {
+  id: string;
+  createdAt: string;
+  slug?: string;
+  query?: string;
+  source: SuggestionSource;
+  prompt: string;
+  wanted: Array<{ id: string; title: string; kind: string; summary: string }>;
+  trust: MemoryTrust;
 }
 
 export interface VaultStatus {
