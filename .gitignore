@@ -49,3 +49,9 @@ src-tauri/icons/ios/
 
 # Local people-graph fixtures
 /tmp-bundle/
+
+# E2E / demo recordings (never commit videos or people-graph)
+/artifacts/
+/test-results/
+/playwright-report/
+/blob-report/

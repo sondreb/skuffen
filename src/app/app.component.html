@@ -27,7 +27,9 @@
             <span class="sr">Find someone</span>
             <input [ngModel]="query()" (ngModelChange)="query.set($event)" placeholder="Find someone" />
           </label>
-          <button class="brass" type="button" (click)="startCreate()">Put someone in</button>
+          <button class="brass" type="button" (click)="startCreate()" [attr.data-demo]="demoMode ? 'put-someone-in' : null">
+            Put someone in
+          </button>
           <button type="button" [class.on]="panel === 'map'" (click)="openMap()">Map</button>
         }
 
@@ -261,7 +263,13 @@
             <button class="ghost" type="button" (click)="showMore = true">More</button>
           }
           <div class="row">
-            <button class="brass" type="button" (click)="saveDraft()" [disabled]="!draft.title.trim()">
+            <button
+              class="brass"
+              type="button"
+              (click)="saveDraft()"
+              [disabled]="!draft.title.trim()"
+              [attr.data-demo]="demoMode ? 'save-person' : null"
+            >
               {{ panel === "create" ? "Put in the drawer" : "Save" }}
             </button>
             <button class="ghost" type="button" (click)="panel = 'none'">Cancel</button>
@@ -271,7 +279,9 @@
         <section class="invite">
           <img src="assets/skuffen-icon.png" alt="Open wooden drawer" />
           <h1>The drawer is empty</h1>
-          <button class="brass" type="button" (click)="startCreate()">Put someone in</button>
+          <button class="brass" type="button" (click)="startCreate()" [attr.data-demo]="demoMode ? 'put-someone-in' : null">
+            Put someone in
+          </button>
         </section>
       } @else if (people.selected(); as person) {
         <section class="file">
@@ -316,9 +326,18 @@
 
             <div class="facts" role="tablist">
               <button type="button" [class.on]="fact === 'drop'" (click)="setFact('drop')">Drop</button>
-              <button type="button" [class.on]="fact === 'pin'" (click)="setFact('pin')">Pin</button>
+              <button type="button" [class.on]="fact === 'pin'" (click)="setFact('pin')" [attr.data-demo]="demoMode ? 'pin' : null">
+                Pin
+              </button>
               <button type="button" [class.on]="fact === 'note'" (click)="setFact('note')">Note</button>
-              <button type="button" [class.on]="fact === 'suggest'" (click)="setFact('suggest')">Suggest</button>
+              <button
+                type="button"
+                [class.on]="fact === 'suggest'"
+                (click)="setFact('suggest')"
+                [attr.data-demo]="demoMode ? 'suggest' : null"
+              >
+                Suggest
+              </button>
             </div>
 
             @if (notice) {
@@ -411,6 +430,7 @@
                     type="button"
                     (click)="savePendingLocation(person.slug)"
                     [disabled]="!pendingPin"
+                    [attr.data-demo]="demoMode ? 'save-pin' : null"
                   >
                     Save pin
                   </button>
@@ -438,7 +458,13 @@
                   <button type="button" (click)="ask()" [disabled]="providers.busy()">
                     {{ providers.busy() ? "Listening…" : "Suggest facts" }}
                   </button>
-                  <button class="brass" type="button" (click)="research()" [disabled]="providers.busy()">
+                  <button
+                    class="brass"
+                    type="button"
+                    (click)="research()"
+                    [disabled]="providers.busy()"
+                    [attr.data-demo]="demoMode ? 'research' : null"
+                  >
                     {{ providers.busy() ? "Searching…" : "Research with " + providerLabel() }}
                   </button>
                   @if (bothProviders()) {
@@ -495,7 +521,9 @@
                         <small>{{ item.source || "ask" }} · {{ item.kind }}</small>
                         <p>{{ item.body || item.value || item.url }}</p>
                         <div class="row">
-                          <button class="brass" type="button" (click)="accept(item)">Accept</button>
+                          <button class="brass" type="button" (click)="accept(item)" [attr.data-demo]="demoMode ? 'accept' : null">
+                            Accept
+                          </button>
                           <button class="ghost" type="button" (click)="reject(item)">Reject</button>
                         </div>
                       </article>
@@ -615,7 +643,7 @@
               </small>
             </button>
           }
-          <button type="button" class="person-card ghost-card" (click)="startCreate()">
+          <button type="button" class="person-card ghost-card" (click)="startCreate()" [attr.data-demo]="demoMode ? 'put-someone-in' : null">
             <span class="node plus">+</span>
             <b>Put someone in</b>
             <small>A new card</small>

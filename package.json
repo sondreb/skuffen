@@ -23,6 +23,8 @@
     "test:secrets": "tsx --test src/app/services/web-secrets.test.ts",
     "test:research": "tsx --test src/app/services/research.test.ts",
     "test:version": "tsx --test scripts/bump-version.test.ts",
+    "test:e2e": "playwright test --config e2e/playwright.config.ts",
+    "demo:record": "DEMO_RECORD=1 playwright test --config e2e/playwright.config.ts --workers=1",
     "version:lockstep": "node scripts/bump-version.mjs"
   },
   "dependencies": {
@@ -47,6 +49,7 @@
     "@angular/build": "^22.1.4",
     "@angular/cli": "^22.1.4",
     "@angular/compiler-cli": "^22.1.4",
+    "@playwright/test": "^1.62.1",
     "@tauri-apps/cli": "^2.11.4",
     "@types/leaflet": "^1.9.21",
     "tsx": "^4.23.12",

@@ -1,0 +1,22 @@
+import { expect, openDemo, test } from "../helpers/app";
+import { hold, showDemoLabel } from "../helpers/labels";
+
+test("what is Skuffen / open the people drawer", async ({ demoPage: page }) => {
+  await openDemo(page);
+  await showDemoLabel(page, "1. Open drawer");
+
+  await expect(page.getByText("Skuffen").first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "The drawer is empty" })).toBeVisible();
+  await expect(page.getByText("Private drawer")).toBeVisible();
+  await expect(page.getByText(/Preview cannot encrypt at rest/)).toBeVisible();
+  await expect(page.locator("[data-demo-label]")).toHaveText("1. Open drawer");
+
+  await page.getByRole("button", { name: "Latch" }).click();
+  await expect(page.getByRole("button", { name: "Providers" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Export plaintext OKF" })).toBeVisible();
+  await expect(page.getByText(/Preview: encryption needs/)).toBeVisible();
+  await hold(page);
+  await page.getByRole("button", { name: "Close latch" }).click();
+  await expect(page.getByRole("heading", { name: "The drawer is empty" })).toBeVisible();
+  await hold(page);
+});

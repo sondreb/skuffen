@@ -1,5 +1,6 @@
 import { Component, computed, HostListener, inject, OnDestroy, OnInit, signal } from "@angular/core";
 import { FormsModule } from "@angular/forms";
+import { isDemoMode } from "./demo-mode";
 import { PeopleMapComponent, type MapPin } from "./map/people-map.component";
 import type { FactSuggestion, FollowInterval, PersonView, ProviderId } from "./models";
 import { GeocodeService, type GeocodeHit } from "./services/geocode.service";
@@ -55,6 +56,7 @@ export class AppComponent implements OnInit, OnDestroy {
   geminiKey = "";
   readonly desktop = isTauri();
   readonly landPlotKind = LAND_PLOT_KIND;
+  readonly demoMode = isDemoMode();
 
   readonly filtered = computed(() => {
     const q = this.query().trim().toLowerCase();
@@ -470,6 +472,12 @@ export class AppComponent implements OnInit, OnDestroy {
     const person = this.people.selected();
     this.fact = "suggest";
     this.notice = null;
+    if (this.demoMode) {
+      if (!person) return;
+      await this.providers.applyDemoResearch();
+      await this.follow.storeResearch(person.slug, this.providers.suggestions());
+      return;
+    }
     if (!this.activeProvider()) {
       this.notice = "Connect Grok or Gemini in the latch first.";
       return;
