@@ -248,6 +248,34 @@ export function grokPolishRequest(model: string, prompt: string): Record<string,
   };
 }
 
+/** Search-free Gemini generate payload. Same brief constraints as Grok; no googleSearch. */
+export function geminiPolishGenerate(prompt: string): {
+  contents: string;
+  config: { systemInstruction: string };
+} {
+  return {
+    contents: prompt,
+    config: { systemInstruction: BRIEF_SYSTEM },
+  };
+}
+
+/**
+ * Live polish transport. ProvidersService must send these bodies —
+ * never askGrok / RESEARCH_SYSTEM, never research tools.
+ */
+export function livePolishRequests(input: { grokModel: string; prompt: string }): {
+  grok: { url: "https://api.x.ai/v1/chat/completions"; body: Record<string, unknown> };
+  gemini: ReturnType<typeof geminiPolishGenerate>;
+} {
+  return {
+    grok: {
+      url: "https://api.x.ai/v1/chat/completions",
+      body: grokPolishRequest(input.grokModel, input.prompt),
+    },
+    gemini: geminiPolishGenerate(input.prompt),
+  };
+}
+
 export function parsePolishedPoints(text: string): string[] {
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");

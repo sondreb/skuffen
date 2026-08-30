@@ -10,6 +10,7 @@ import {
   applyPolishedTalkingPoints,
   buildPolishPrompt,
   demoPolishTalkingPoints,
+  livePolishRequests,
   parsePolishedPoints,
   type MeetingBrief,
 } from "./brief";
@@ -247,7 +248,8 @@ export class ProvidersService {
 
   /**
    * Optional polish. Demo and the no-provider path stay offline.
-   * A connected provider may be called without web search and without the full graph.
+   * Live Grok/Gemini use livePolishRequests (BRIEF_SYSTEM chat, no tools).
+   * Never askGrok — that inherits RESEARCH_SYSTEM.
    */
   async polishBrief(brief: MeetingBrief): Promise<MeetingBrief | null> {
     if (isDemoMode()) {
@@ -263,8 +265,9 @@ export class ProvidersService {
     try {
       const prompt = buildPolishPrompt(brief);
       this.lastPrompt.set(prompt);
+      const live = livePolishRequests({ grokModel: GROK_MODEL, prompt });
       const text =
-        provider === "grok" ? await this.askGrok(prompt, false) : await this.askGemini(prompt, false);
+        provider === "grok" ? await this.askGrokPolish(live.grok) : await this.askGeminiPolish(live.gemini);
       const points = parsePolishedPoints(text);
       if (!points.length) return brief;
       return applyPolishedTalkingPoints(brief, points, true);
@@ -302,6 +305,41 @@ export class ProvidersService {
     const token = parsed.access_token || parsed.accessToken;
     if (!token) throw new Error("Grok OAuth token missing");
     return token;
+  }
+
+  /** Dedicated polish chat. Never RESEARCH_SYSTEM, never web_search / tools. */
+  private async askGrokPolish(request: {
+    url: string;
+    body: Record<string, unknown>;
+  }): Promise<string> {
+    const token = await this.grokToken();
+    const response = await fetch(request.url, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(request.body),
+    });
+    if (!response.ok) {
+      throw new Error(`Grok API ${response.status}: ${await response.text()}`);
+    }
+    return extractModelText(await response.json());
+  }
+
+  private async askGeminiPolish(request: {
+    contents: string;
+    config: { systemInstruction: string };
+  }): Promise<string> {
+    const apiKey = await this.io.secretGet(GEMINI_API_KEY);
+    if (!apiKey) throw new Error("Gemini API key missing");
+    const ai = new GoogleGenAI({ apiKey });
+    const response = await ai.models.generateContent({
+      model: GEMINI_MODEL,
+      contents: request.contents,
+      config: request.config,
+    });
+    return response.text ?? "";
   }
 
   private async askGrok(prompt: string, webSearch = false): Promise<string> {

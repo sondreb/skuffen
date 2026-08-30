@@ -2,15 +2,18 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { FactSuggestion, FollowRecord, PersonView, StoredProposal } from "../models.ts";
 import { makeStoredProposal } from "./memory.ts";
-import { assertNoAutoSend, assertNoAutoWrite, proposeOnly } from "./research.ts";
+import { RESEARCH_SYSTEM, assertNoAutoSend, assertNoAutoWrite, proposeOnly } from "./research.ts";
 import {
+  BRIEF_SYSTEM,
   applyPolishedTalkingPoints,
   assertLocalBriefNeedsNoNetwork,
   briefProposeWrites,
   buildLocalBrief,
   buildPolishPrompt,
   demoPolishTalkingPoints,
+  geminiPolishGenerate,
   grokPolishRequest,
+  livePolishRequests,
   parseEventPaste,
   parsePolishedPoints,
   writesForAcceptedBrief,
@@ -185,6 +188,30 @@ test("polish prompt includes only that person and never the graph or tokens", ()
   assert.match(json, /Never request the full people-graph/);
   assert.doesNotMatch(json, /web_search|googleSearch/);
   assert.doesNotMatch(json, /grok_api_key|access_token/);
+});
+
+test("live polish path wires BRIEF_SYSTEM for Grok and Gemini — not RESEARCH_SYSTEM, no search tools", () => {
+  const brief = buildLocalBrief({ person: person() });
+  const prompt = buildPolishPrompt(brief);
+  const live = livePolishRequests({ grokModel: "grok-4-latest", prompt });
+
+  assert.equal(live.grok.url, "https://api.x.ai/v1/chat/completions");
+  assert.deepEqual(live.grok.body, grokPolishRequest("grok-4-latest", prompt));
+  assert.deepEqual(live.gemini, geminiPolishGenerate(prompt));
+
+  const grokJson = JSON.stringify(live.grok.body);
+  assert.equal(grokJson.includes(BRIEF_SYSTEM), true);
+  assert.equal(grokJson.includes(RESEARCH_SYSTEM), false);
+  assert.doesNotMatch(grokJson, /Search public web sources/);
+  assert.equal("tools" in live.grok.body, false);
+  assert.doesNotMatch(grokJson, /web_search|googleSearch/);
+
+  const geminiJson = JSON.stringify(live.gemini);
+  assert.equal(live.gemini.config.systemInstruction, BRIEF_SYSTEM);
+  assert.equal(live.gemini.contents, prompt);
+  assert.equal(geminiJson.includes(RESEARCH_SYSTEM), false);
+  assert.doesNotMatch(geminiJson, /Search public web sources|googleSearch|web_search/);
+  assert.doesNotMatch(geminiJson, /tools/);
 });
 
 test("parsePolishedPoints reads compact JSON and ignores junk", () => {
