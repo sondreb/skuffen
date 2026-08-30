@@ -57,6 +57,7 @@ Geocode is stubbed in `?demo=1` (and again in Playwright) so the park pin is alw
 18. `e2e/specs/18-image-preview.spec.ts` — no profile photo hides diorama; people-list context menu has Delete only; click profile or gallery photo opens a local preview; close / Escape writes nothing.
 19. `e2e/specs/19-theme.spec.ts` — Menu Appearance switches Light / Dark / Auto; Auto follows `prefers-color-scheme`; the choice survives reload in app settings, not OKF or tokens.
 20. `e2e/specs/20-people-pane.spec.ts` — People heading is gone; collapse shows a photo strip; expand restores names; the choice survives reload in app settings, not OKF or tokens.
+21. `e2e/specs/21-hide-diorama-once-made.spec.ts` — after a diorama is set, the control is gone on the profile image and in its preview; changing the profile photo still works; removing that diorama photo brings the control back.
 
 Curated clips:
 
