@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { parseIndex } from "../../packages/okf/src/index.ts";
-import { EncryptedBundleError, generateKey, isEncrypted } from "../../packages/okf/src/vault.ts";
+import { EncryptedBundleError, encryptBytes, generateKey, isEncrypted } from "../../packages/okf/src/vault.ts";
 import { OkfBundle } from "./bundle.ts";
 
 test("MCP writes person, note, social and reloads from disk", () => {
@@ -88,7 +88,7 @@ test("MCP stores a Document as file bytes plus concept markdown and can link ano
   assert.equal(otherView?.documents[0].title, "Plot 12, Hvaler");
 });
 
-test("MCP with a vault key writes ciphertext and refuses reads without the key", () => {
+test("MCP writes plaintext even when a leftover vault key is present", () => {
   const root = mkdtempSync(join(tmpdir(), "skuffen-mcp-vault-"));
   const key = generateKey();
   const bundle = new OkfBundle(root, key);
@@ -104,22 +104,46 @@ test("MCP with a vault key writes ciphertext and refuses reads without the key",
     kind: "land-plot",
   });
 
-  const personOnDisk = readFileSync(join(root, "people/ada-lovelace/person.md"));
-  assert.ok(isEncrypted(personOnDisk));
-  assert.doesNotMatch(personOnDisk.toString("latin1"), /Ada Lovelace/);
-  assert.doesNotMatch(personOnDisk.toString("latin1"), /Mathematician/);
-  assert.ok(isEncrypted(readFileSync(join(root, "index.md"))));
+  const personOnDisk = readFileSync(join(root, "people/ada-lovelace/person.md"), "utf8");
+  assert.match(personOnDisk, /Ada Lovelace/);
+  assert.match(personOnDisk, /Mathematician/);
+  assert.match(readFileSync(join(root, "index.md"), "utf8"), /okf_version/);
+  assert.ok(!isEncrypted(readFileSync(join(root, "people/ada-lovelace/person.md"))));
   const plotOnDisk = readFileSync(join(root, "documents/plot-12-hvaler/incoming-plot.pdf"));
-  assert.ok(isEncrypted(plotOnDisk));
-  assert.doesNotMatch(plotOnDisk.toString("latin1"), /vault-plot/);
-  assert.ok(isEncrypted(readFileSync(join(root, "documents/plot-12-hvaler/document.md"))));
+  assert.ok(!isEncrypted(plotOnDisk));
+  assert.match(plotOnDisk.toString("utf8"), /vault-plot/);
 
-  const reloaded = new OkfBundle(root, key).getPerson(created.slug);
+  const reloaded = new OkfBundle(root, null).getPerson(created.slug);
   assert.ok(reloaded);
   assert.equal(reloaded.title, "Ada Lovelace");
   assert.equal(reloaded.notes[0].title, "Analytical Engine");
   assert.equal(reloaded.documents[0].title, "Plot 12, Hvaler");
   assert.equal(reloaded.documents[0].kind, "land-plot");
+});
 
-  assert.throws(() => new OkfBundle(root, null).getPerson(created.slug), EncryptedBundleError);
+test("MCP leftover ciphertext decrypts once, then refuses without the key", () => {
+  const root = mkdtempSync(join(tmpdir(), "skuffen-mcp-leftover-"));
+  const key = generateKey();
+  const person = [
+    "---",
+    "type: Person",
+    "title: Ada Lovelace",
+    "---",
+    "",
+    "# About",
+    "",
+  ].join("\n");
+  mkdirSync(join(root, "people/ada-lovelace"), { recursive: true });
+  writeFileSync(
+    join(root, "people/ada-lovelace/person.md"),
+    encryptBytes(key, "people/ada-lovelace/person.md", Buffer.from(person, "utf8")),
+  );
+
+  assert.throws(() => new OkfBundle(root, null).getPerson("ada-lovelace"), EncryptedBundleError);
+  assert.ok(isEncrypted(readFileSync(join(root, "people/ada-lovelace/person.md"))));
+
+  const opened = new OkfBundle(root, key).getPerson("ada-lovelace");
+  assert.equal(opened?.title, "Ada Lovelace");
+  assert.match(readFileSync(join(root, "people/ada-lovelace/person.md"), "utf8"), /Ada Lovelace/);
+  assert.ok(!isEncrypted(readFileSync(join(root, "people/ada-lovelace/person.md"))));
 });

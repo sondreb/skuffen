@@ -188,7 +188,7 @@ This playbook does not prescribe workflow YAML. Copy an existing product's workf
 
 | Store | Tokens / API keys | Personal / people-graph data |
 | --- | --- | --- |
-| OS credential store | Yes (desktop) | Vault wrapping key only, if the product encrypts at rest |
+| OS credential store | Yes (desktop) | Never. People-graph files stay on the user's machine. |
 | Git repo | Never | Never |
 | Agent descriptions | Never | Never |
 | `localStorage` / `sessionStorage` | Never | Avoid for anything honest; browser previews are not a secret store |
@@ -226,6 +226,6 @@ Factory loop on this repo: Radar / Master file issues → Bench opens a PR via a
 
 PR CI (`.github/workflows/ci.yml`) is checks + `npm run build`. It does not build the Tauri desktop app. Draft installers are a separate workflow. Linux apt on that workflow is ayatana-only (`libayatana-appindicator3-dev`, not `libappindicator3-dev`).
 
-Secrets: Grok / Gemini tokens and the vault wrapping key live in the OS credential store (service `me.grok.skuffen`). They never enter the repo, `localStorage`, or OKF files. Latch extra-scrutinizes anything that would upload the people-graph. There is no Skuffen account and no cloud backend for people data.
+Secrets: Grok / Gemini tokens live in the OS credential store (service `me.grok.skuffen`). They never enter the repo, `localStorage`, or OKF files. The people-graph is plaintext markdown+YAML on disk. Latch extra-scrutinizes anything that would upload the people-graph. There is no Skuffen account and no cloud backend for people data.
 
 Do not add people-graph fixtures or tokens when cloning this layout.

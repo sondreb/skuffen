@@ -180,7 +180,7 @@ export class FollowService {
   }
 
   async tick(): Promise<void> {
-    if (this.ticking() || this.people.locked()) return;
+    if (this.ticking()) return;
     const provider = this.providers.activeProvider();
     if (!provider && !isDemoMode()) return;
     const known = new Set(this.people.people().map((person) => person.slug));

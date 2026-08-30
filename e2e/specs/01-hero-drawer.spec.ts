@@ -8,7 +8,7 @@ test("what is Skuffen / open the people list", async ({ demoPage: page }) => {
   await expect(page.getByText("Skuffen").first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "No people yet" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "People", exact: true })).toBeVisible();
-  await expect(page.getByText(/Preview cannot encrypt at rest/)).toBeVisible();
+  await expect(page.getByText(/Preview people-graph stays in this tab/)).toBeVisible();
   await expect(page.locator("[data-demo-label]")).toHaveText("1. Open Skuffen");
   await captureReadmeStill(page, "screenshot-drawer.png");
 
@@ -17,7 +17,7 @@ test("what is Skuffen / open the people list", async ({ demoPage: page }) => {
   await expect(page.getByRole("button", { name: "Export plaintext OKF" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Check for update" })).toBeVisible();
   await expect(page.getByText(/Updates look at published GitHub Releases/)).toBeVisible();
-  await expect(page.getByText(/Preview: encryption needs/)).toBeVisible();
+  await expect(page.getByText(/Preview: people-graph in this tab/)).toBeVisible();
   await page.getByRole("button", { name: "Check for update" }).click();
   await expect(page.getByText("Updates need the desktop app.")).toBeVisible();
   await hold(page);

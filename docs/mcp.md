@@ -2,12 +2,7 @@
 
 Skuffen exposes the same OKF v0.2 people-graph the desktop app writes. There is no separate database.
 
-Desktop Skuffen encrypts the live people-graph on disk. MCP can:
-
-- Read an **exported plaintext OKF** folder (rail → Export plaintext OKF), or
-- Read the live vault if you set `SKUFFEN_OKF_KEY` to the base64 wrapping key from the OS credential store (service `me.grok.skuffen`, account `okf-master-key`).
-
-Without a key, an encrypted bundle fails closed. Never put the key, the graph, or tokens in a cloud MCP config.
+Desktop Skuffen stores the live people-graph as plaintext markdown+YAML. MCP reads that folder. Leftover AES-256-GCM files from older builds need `SKUFFEN_OKF_KEY` (the base64 wrapping key from the OS credential store, service `me.grok.skuffen`, account `okf-master-key`) so MCP can decrypt them once and rewrite plaintext. Without that key, leftover ciphertext fails closed and the file is not changed. Never put the key, the graph, or tokens in a cloud MCP config.
 
 Default bundle locations (override with `SKUFFEN_BUNDLE`):
 

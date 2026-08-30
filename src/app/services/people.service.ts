@@ -41,50 +41,29 @@ export class PeopleService {
   readonly selected = signal<PersonView | null>(null);
   readonly bundleRoot = signal<string>("");
   readonly ready = signal(false);
-  readonly locked = signal(false);
-  readonly encryptionAvailable = signal(false);
+  readonly leftoverCiphertext = signal(false);
   readonly vaultMessage = signal<string | null>(null);
   readonly error = signal<string | null>(null);
 
   constructor(private readonly io: IoService) {}
 
   async bootstrap(): Promise<void> {
-    const vault = await this.io.unlockVault();
-    this.encryptionAvailable.set(vault.available);
-    this.vaultMessage.set(vault.message ?? null);
-    if (!vault.unlocked && vault.available) {
-      this.locked.set(true);
-      this.people.set([]);
-      this.selected.set(null);
-      this.ready.set(true);
-      this.error.set(vault.message ?? "Unlock the people-graph with your OS credentials.");
-      return;
-    }
-    this.locked.set(false);
+    this.error.set(null);
     const settings = await this.io.getSettings();
     const root = await this.io.ensureBundle(settings.bundleRoot);
     if (settings.bundleRoot !== root) {
       await this.io.saveSettings({ ...settings, bundleRoot: root });
     }
     this.bundleRoot.set(root);
-    const after = await this.io.vaultStatus();
-    this.vaultMessage.set(after.message ?? vault.message ?? null);
-    this.encryptionAvailable.set(after.available);
     await this.reload();
+    await this.refreshVaultStatus();
     this.ready.set(true);
   }
 
-  async lock(): Promise<void> {
-    const status = await this.io.lockVault();
-    this.locked.set(true);
-    this.people.set([]);
-    this.selected.set(null);
-    this.vaultMessage.set(status.message ?? "People-graph locked.");
-  }
-
-  async unlock(): Promise<void> {
-    this.error.set(null);
-    await this.bootstrap();
+  private async refreshVaultStatus(): Promise<void> {
+    const status = await this.io.vaultStatus();
+    this.vaultMessage.set(status.message ?? null);
+    this.leftoverCiphertext.set(status.encrypted);
   }
 
   async exportPlain(): Promise<void> {
@@ -93,7 +72,7 @@ export class PeopleService {
       this.vaultMessage.set(
         dest.startsWith("download:")
           ? "Downloaded a plaintext JSON export of the browser preview. Desktop export writes a real OKF folder."
-          : `Exported plaintext OKF to ${dest}. That folder is readable — keep it off cloud drives.`,
+          : `Exported OKF folder to ${dest}. That folder is readable markdown+YAML.`,
       );
     }
   }
@@ -106,6 +85,7 @@ export class PeopleService {
     await this.io.saveSettings({ ...settings, bundleRoot: root });
     this.bundleRoot.set(root);
     await this.reload();
+    await this.refreshVaultStatus();
   }
 
   async reload(): Promise<void> {
@@ -120,12 +100,17 @@ export class PeopleService {
     ].sort();
     const people: PersonView[] = [];
     for (const slug of slugs) {
-      const person = await this.loadPerson(slug);
-      if (person) people.push(person);
+      try {
+        const person = await this.loadPerson(slug);
+        if (person) people.push(person);
+      } catch (error) {
+        this.error.set(error instanceof Error ? error.message : String(error));
+      }
     }
     this.people.set(people);
     const current = this.selected();
     this.selected.set(current ? people.find((p) => p.slug === current.slug) ?? null : null);
+    await this.refreshVaultStatus();
   }
 
   async select(slug: string | null): Promise<void> {
