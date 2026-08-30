@@ -8,13 +8,13 @@ test("local reconnect suggestions from notes; pick drafts; skip/dismiss write no
   await openDemo(page);
   await createAdaDemo(page);
   await pinNote(page, "Asked about the park pin and the land-plot slip.", "Last coffee");
-  await page.getByRole("button", { name: "Drawer" }).click();
+  await page.getByRole("button", { name: "People" }).click();
 
   await createBeaDemo(page);
   await pinNote(page, DEMO.bea.noteBody, DEMO.bea.noteTitle);
 
   await showDemoLabel(page, "Two local reconnects — nothing sent");
-  await page.getByRole("button", { name: "Latch" }).click();
+  await page.getByRole("button", { name: "Menu" }).click();
   await page.locator("[data-demo='open-shuffle']").click();
 
   await expect(page.getByRole("heading", { name: "Reconnect Shuffle" })).toBeVisible();
@@ -40,7 +40,7 @@ test("local reconnect suggestions from notes; pick drafts; skip/dismiss write no
   await expect(page.getByRole("heading", { name: "Last coffee" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Reconnect draft — Ada Demo" })).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Latch" }).click();
+  await page.getByRole("button", { name: "Menu" }).click();
   await page.locator("[data-demo='open-shuffle']").click();
   await page.locator("[data-demo='shuffle-pick-ada-demo']").click();
   await page.locator("[data-demo='shuffle-polish']").click();
@@ -52,12 +52,12 @@ test("local reconnect suggestions from notes; pick drafts; skip/dismiss write no
   await expect(page.locator("[data-demo='shuffle-pick-ada-demo']")).toHaveCount(0);
 
   await page.locator("[data-demo='shuffle-back']").click();
-  await page.getByRole("button", { name: "Drawer" }).click();
+  await page.getByRole("button", { name: "People" }).click();
   await page.locator(".person-card b").filter({ hasText: /^Ada Demo$/ }).click();
   await expect(page.getByRole("heading", { name: "Last coffee" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Reconnect draft — Ada Demo" })).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Latch" }).click();
+  await page.getByRole("button", { name: "Menu" }).click();
   await page.locator("[data-demo='open-shuffle']").click();
   await page.locator("[data-demo='shuffle-pick-bea-demo']").click();
   await expect(page.locator("[data-demo='shuffle-draft-text']")).toHaveValue(/Bea Demo|Studio visit|land-plot/);
@@ -73,7 +73,7 @@ test("local reconnect suggestions from notes; pick drafts; skip/dismiss write no
 
 test("demo mode can show two synthetic reconnect suggestions without live keys", async ({ demoPage: page }) => {
   await openDemo(page);
-  await page.getByRole("button", { name: "Latch" }).click();
+  await page.getByRole("button", { name: "Menu" }).click();
   await page.locator("[data-demo='open-shuffle']").click();
   await page.locator("[data-demo='shuffle-seed']").click();
 

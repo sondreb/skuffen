@@ -17,7 +17,7 @@ No ElevenLabs. No API keys. Demo people are synthetic (`Ada Demo` + a public-par
 
 Recordings use **1280×720**. A Playwright helper injects a high-contrast overlay (`data-demo-label`) with step copy such as:
 
-- `1. Open drawer`
+- `1. Open Skuffen`
 - `2. New person`
 - `Accept to save — nothing is written before this`
 
@@ -37,18 +37,18 @@ Geocode is stubbed in `?demo=1` (and again in Playwright) so the park pin is alw
 
 ## Specs
 
-1. `e2e/specs/01-hero-drawer.spec.ts` — what Skuffen is; empty drawer; Latch (local-only). Still: `screenshot-drawer.png`.
+1. `e2e/specs/01-hero-drawer.spec.ts` — what Skuffen is; empty people list; Menu (local-only). Still: `screenshot-drawer.png`.
 2. `e2e/specs/02-add-person-pin.spec.ts` — create **Ada Demo**, search a public park, save a pin. Still: `screenshot-person.png`.
 3. `e2e/specs/03-research-accept.spec.ts` — stubbed Grok proposal, then Accept (the only write). Still: `screenshot-research.png`.
 4. `e2e/specs/04-suggest-follow-mocked.spec.ts` — Suggest and Follow paint the same synthetic Ada Demo proposal. Not a README clip.
 5. `e2e/specs/04-merge-proposal.spec.ts` — two synthetic cards with the same email; proposal appears; Accept merges; dismiss leaves both. No silent merge.
-6. `e2e/specs/04-agent-memory.spec.ts` — Latch → Memory lists pending facts; dismiss drops; Accept writes.
+6. `e2e/specs/04-agent-memory.spec.ts` — Menu → Memory lists pending facts; dismiss drops; Accept writes.
 7. `e2e/specs/06-pre-meeting-brief.spec.ts` — local brief from notes/place/pending; dismiss writes nothing; Accept saves a note. No live AI.
 8. `e2e/specs/07-voice-capture.spec.ts` — paste/demo capture proposes people, dates, follow-ups; dismiss writes nothing; Accept writes. Live AI hosts blocked.
 9. `e2e/specs/09-reconnect-shuffle.spec.ts` — two local suggestions from notes; pick drafts; skip/dismiss write nothing; Accept saves a note; nothing is sent. Live AI hosts blocked.
 10. `e2e/specs/10-person-timeline.spec.ts` — empty card shows empty timeline copy; opening Timeline writes nothing; Accept of a note adds a row; demo Ada tape has more than one kind. Live AI hosts blocked.
 11. `e2e/specs/11-commitments.spec.ts` — empty copy; Accept of a promise adds a row; dismiss does not; marking done is explicit; demo Ada shows 1–2 synthetic commitments from local files. Nothing is sent. Live AI hosts blocked.
-12. `e2e/specs/12-ui-keyboard.spec.ts` — Ctrl/Cmd+, opens Latch; / focuses find; Capture is instant; no full-page scrim trap. Live AI hosts blocked.
+12. `e2e/specs/12-ui-keyboard.spec.ts` — Ctrl/Cmd+, opens Menu; / focuses find; Capture is instant; no full-page scrim trap. Live AI hosts blocked.
 
 Curated clips:
 

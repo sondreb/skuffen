@@ -448,8 +448,8 @@ test("research empty state is only after a request without a provider", () => {
   );
 });
 
-test("research empty copy tells the visitor to connect a provider in Latch", () => {
-  assert.match(RESEARCH_NEEDS_PROVIDER, /Connect Grok or Gemini in Latch/);
+test("research empty copy tells the visitor to connect a provider in Menu", () => {
+  assert.match(RESEARCH_NEEDS_PROVIDER, /Connect Grok or Gemini in Menu/);
   assert.match(RESEARCH_NEEDS_PROVIDER, /no Skuffen cloud account/);
   assert.doesNotMatch(RESEARCH_NEEDS_PROVIDER, /No proposals yet/);
   assert.doesNotMatch(RESEARCH_NEEDS_PROVIDER, /voice|shuffle|brief/i);

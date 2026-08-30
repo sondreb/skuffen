@@ -20,7 +20,7 @@ test("duplicate cards propose a merge and do not merge silently", async ({ demoP
   await hold(page);
 });
 
-test("dismiss leaves both people in the drawer", async ({ demoPage: page }) => {
+test("dismiss leaves both people in the list", async ({ demoPage: page }) => {
   await openDemo(page);
   await seedDemoMergePair(page);
   await showDemoLabel(page, "Dismiss leaves both cards");
@@ -43,7 +43,7 @@ test("Accept merges into one OKF person", async ({ demoPage: page }) => {
   await expect(page.getByRole("heading", { name: DEMO.person.title, exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: DEMO.twin.noteTitle })).toBeVisible();
   await expect(page.getByText(DEMO.twin.noteBody)).toBeVisible();
-  await page.getByRole("button", { name: "Drawer" }).click();
+  await page.getByRole("button", { name: "People" }).click();
   await expect(page.locator(".person-card b").filter({ hasText: /^Ada Demo$/ })).toBeVisible();
   await expect(page.locator(".person-card b", { hasText: DEMO.twin.title })).toHaveCount(0);
   await expect(page.getByText("may be the same person")).toHaveCount(0);

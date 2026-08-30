@@ -24,7 +24,7 @@ test("paste/demo capture proposes structure; Accept writes; dismiss does not", a
 
   await showDemoLabel(page, "Dismiss writes nothing");
   await page.locator("[data-demo='capture-dismiss']").click();
-  await expect(page.getByRole("heading", { name: "The drawer is empty" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "No people yet" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Ada Demo" })).toHaveCount(0);
   await expect(page.getByText("Voice note (demo)")).toHaveCount(0);
   await expect(page.getByText(/Follow-up —/)).toHaveCount(0);

@@ -108,7 +108,7 @@ export async function captureReadmeStill(page: Page, filename: string): Promise<
 
 export async function openDemo(page: Page): Promise<void> {
   await page.goto("/?demo=1");
-  await expect(page.getByRole("heading", { name: "The drawer is empty" })).toBeVisible({
+  await expect(page.getByRole("heading", { name: "No people yet" })).toBeVisible({
     timeout: 30_000,
   });
 }

@@ -5,7 +5,7 @@ export const CAPTURE_SYSTEM =
   "You extract people, dates, and follow-ups from one capture. Use only that capture. Never request the full people-graph. Never invent people who are not mentioned. Never draft or send messages.";
 
 export const CAPTURE_NEEDS_PROVIDER =
-  "Connect Grok or Gemini in Latch → Providers. There is no Skuffen cloud account.";
+  "Connect Grok or Gemini in Menu → Providers. There is no Skuffen cloud account.";
 
 /** Paste used by `?demo=1`. Synthetic — not a real conversation. */
 export const DEMO_CAPTURE_NOTE =

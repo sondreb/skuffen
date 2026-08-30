@@ -14,7 +14,7 @@ Sole developer: Sondre Bjellås ([sondreb](https://github.com/sondreb)).
 
 Real Angular web preview (`npm start`) at 1280×720. Synthetic **Ada Demo** data. Grok and Gemini are mocked — no live API keys.
 
-![Empty people drawer in the Skuffen web preview](docs/media/screenshot-drawer.png)
+![Empty people list in the Skuffen web preview](docs/media/screenshot-drawer.png)
 
 *Hero still. Real browser UI. Synthetic demo data. AI providers mocked.*
 
@@ -120,7 +120,7 @@ The workflow keeps versions in lockstep: `package.json`, `src-tauri/tauri.conf.j
 
 Windows ships NSIS only (no WiX MSI): per-user one-click overwrite in the same folder, no language / directory / start-menu / reinstall radios. Double-click and `/UPDATE` overwrite without running the uninstaller. A leftover MSI is uninstalled once, then NSIS owns the install. macOS replaces the `.app`. Linux uses the existing `.deb` / `.AppImage` targets. The people-graph stays in app data (`me.grok.skuffen`), not next to the exe.
 
-**Check for update** (Latch) looks at the latest **published** GitHub Release for `sondreb/skuffen`. Drafts are invisible to the public API — Sondre still publishes drafts himself. The browser preview (`npm start`) cannot install updates. No GitHub token and no signing private key live in the app or the repo. Nothing from the people-graph is uploaded.
+**Check for update** (Menu) looks at the latest **published** GitHub Release for `sondreb/skuffen`. Drafts are invisible to the public API — Sondre still publishes drafts himself. The browser preview (`npm start`) cannot install updates. No GitHub token and no signing private key live in the app or the repo. Nothing from the people-graph is uploaded.
 
 ## Storage (OKF v0.2)
 
@@ -188,7 +188,7 @@ From a person, **Research with Grok** (or Gemini if you chose it) searches publi
 
 **Follow** is a local scheduler in the desktop app. Pick a per-person interval (daily, weekly, monthly). While Skuffen is open it re-runs that person’s public search and proposes new facts. It never auto-writes, never auto-sends messages, and never uploads the people-graph. The prompt includes only that person.
 
-Follow schedules and pending proposals live in local app settings, not in the OKF bundle. Latch → **Memory** lists that inspectable store: research suggestions, follow schedules, pending facts, and a deletable log of what the model was told. Public web is treated as hostile until you Accept. Nothing durable is written to the OKF bundle without Accept. Tokens stay in the OS credential store — never `localStorage`, never OKF.
+Follow schedules and pending proposals live in local app settings, not in the OKF bundle. Menu → **Memory** lists that inspectable store: research suggestions, follow schedules, pending facts, and a deletable log of what the model was told. Public web is treated as hostile until you Accept. Nothing durable is written to the OKF bundle without Accept. Tokens stay in the OS credential store — never `localStorage`, never OKF.
 
 ```bash
 npm run test:research
@@ -196,7 +196,7 @@ npm run test:research
 
 ## Pre-meeting brief
 
-From a person card or Latch → **Pre-meeting brief**, Skuffen assembles who, last notes, open follow-ups, place, social, and talking points from what is already on disk. Paste an upcoming event if you want. No Gmail sync. No people-graph upload.
+From a person card or Menu → **Pre-meeting brief**, Skuffen assembles who, last notes, open follow-ups, place, social, and talking points from what is already on disk. Paste an upcoming event if you want. No Gmail sync. No people-graph upload.
 
 The local brief works offline from the OKF card. Optional Grok/Gemini polish rewrites talking points only — it never auto-sends, and it is never required. Browser preview (`?demo=1`) mocks polish. **Accept** saves the brief as a note. Dismiss writes nothing.
 
@@ -206,7 +206,7 @@ npm run test:brief
 
 ## Voice capture
 
-From the people UI, Latch, or the empty drawer, **Capture** takes a pasted note (browser preview) or a desktop WebView mic transcript. Grok or Gemini — whichever is connected — proposes people, dates, and follow-ups from **that capture only**. The prompt never includes the people-graph.
+From the people UI, Menu, or the empty list, **Capture** takes a pasted note (browser preview) or a desktop WebView mic transcript. Grok or Gemini — whichever is connected — proposes people, dates, and follow-ups from **that capture only**. The prompt never includes the people-graph.
 
 `?demo=1` mocks the proposal with no mic and no live API keys. Review like research: check or uncheck, then **Accept** writes to the OKF bundle. **Dismiss** writes nothing. Audio bytes are dropped and are never stored. The transcript is written only if you Accept that note. Tokens stay in the OS credential store `me.grok.skuffen`. Never auto-send. Never auto-write.
 
@@ -216,7 +216,7 @@ npm run test:capture
 
 ## Reconnect Shuffle
 
-Latch → **Reconnect Shuffle** (or Shuffle on the drawer) suggests up to two people a day from last notes, last accept, follow schedule, and recency **already on that card**. There is no cloud scoring of who matters, and no friend-ranker. The people-graph is not uploaded.
+Menu → **Reconnect Shuffle** (or Shuffle on the people list) suggests up to two people a day from last notes, last accept, follow schedule, and recency **already on that card**. There is no cloud scoring of who matters, and no friend-ranker. The people-graph is not uploaded.
 
 You pick one suggestion. An optional reconnect draft is assembled on this machine from that card only. Optional Grok/Gemini polish rewrites the draft for the picked person — never sibling cards. **Never auto-send.** Never auto-DM, never auto-email, never auto-post. **Accept** saves the draft as a note. Skip and Dismiss write nothing.
 
@@ -240,7 +240,7 @@ npm run test:timeline
 
 ## Commitments
 
-Latch → **Commitments** (or the person-card section) lists promises you made, across people, extracted from notes and voice captures you already Accepted. Each row is who, what you promised, and an optional local due date.
+Menu → **Commitments** (or the person-card section) lists promises you made, across people, extracted from notes and voice captures you already Accepted. Each row is who, what you promised, and an optional local due date.
 
 Propose from a capture or a note: check or uncheck, then **Accept** writes a commitment note on that card. **Dismiss** writes nothing. **Mark done** writes a Done note. **Drop** stores a local skip — no new OKF file. Never auto-send. Never email or SMS. In-app list only.
 

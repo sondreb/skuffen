@@ -11,7 +11,7 @@ test("name search Accept selected creates the card and shows a photo preview", a
 
   const sheet = page.locator("[data-name-proposal]");
   await expect(sheet).toBeVisible();
-  await expect(sheet.getByText("Proposed card — not in the drawer yet")).toBeVisible();
+  await expect(sheet.getByText("Proposed card — not saved yet")).toBeVisible();
   await expect(sheet.getByRole("heading", { name: "Ada Lovelace" })).toBeVisible();
   await expect(sheet.getByText("Public park mention (demo)")).toBeVisible();
   await expect(sheet.getByText("Public portrait (demo)")).toBeVisible();
