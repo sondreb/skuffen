@@ -37,6 +37,7 @@ import {
   slugify,
   subjectPaths,
   upsertRelation,
+  verifiedList,
   wipeRelationsForSlug,
   type OkfDocument,
   type OkfFrontmatter,

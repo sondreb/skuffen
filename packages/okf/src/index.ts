@@ -663,12 +663,12 @@ export function inverseRelationRole(role: string): string {
 export function normalizeRelation(value: unknown): OkfRelation | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const raw = value as Record<string, unknown>;
-  if (!isRelationKind(raw.kind)) return null;
-  const role = typeof raw.role === "string" ? normalizeRelationRole(raw.kind, raw.role) : "";
+  if (!isRelationKind(raw["kind"])) return null;
+  const role = typeof raw["role"] === "string" ? normalizeRelationRole(raw["kind"], raw["role"]) : "";
   if (!role) return null;
-  const person = typeof raw.person === "string" ? raw.person.replace(/\\/g, "/").replace(/^\//, "").trim() : "";
+  const person = typeof raw["person"] === "string" ? raw["person"].replace(/\\/g, "/").replace(/^\//, "").trim() : "";
   if (!slugFromPersonPath(person)) return null;
-  return { kind: raw.kind, role, person };
+  return { kind: raw["kind"], role, person };
 }
 
 export function normalizeRelationList(value: unknown): OkfRelation[] {
