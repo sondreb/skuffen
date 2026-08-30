@@ -19,10 +19,15 @@ test("without Grok, 3D clay diorama opens Menu → Providers and writes nothing"
   await page.locator("[data-create-form] button.brass").click();
   await expect(page.getByRole("heading", { name: "Ada Demo" })).toBeVisible();
   await expect(page.getByText("No photos yet.")).toBeVisible();
+  await expect(page.locator("[data-diorama-action]")).toHaveCount(0);
 
-  await page.locator("[data-person-row='ada-demo']").click({ button: "right" });
-  await expect(page.locator("[data-diorama-menu]")).toBeVisible();
-  await page.locator("[data-diorama-action]").click();
+  await page.locator("#skuffen-profile-file").setInputFiles({
+    name: "portrait.png",
+    mimeType: "image/png",
+    buffer: PNG,
+  });
+  await expect(page.locator("[data-profile-image] [data-diorama-action]")).toBeVisible();
+  await page.locator("[data-profile-image] [data-diorama-action]").click();
 
   await expect(page.getByRole("heading", { name: "Providers" })).toBeVisible();
   await expect(page.getByText("Connect Grok in Menu → Providers first.")).toBeVisible();
@@ -35,9 +40,7 @@ test("demo diorama becomes the local profile and keeps the previous photo", asyn
   await openDemo(page);
   await createAdaDemo(page);
 
-  await page.locator("[data-person-row='ada-demo']").click({ button: "right" });
-  await page.locator("[data-diorama-action]").click();
-  await expect(page.getByText("Add a profile photo first.")).toBeVisible();
+  await expect(page.locator("[data-diorama-action]")).toHaveCount(0);
   await expect(page.getByText("No photos yet.")).toBeVisible();
 
   await page.locator("#skuffen-profile-file").setInputFiles({
@@ -51,9 +54,8 @@ test("demo diorama becomes the local profile and keeps the previous photo", asyn
   await expect(page.locator("[data-person-row='ada-demo'] img")).toHaveAttribute("src", /^data:image\//);
   await expect(page.getByRole("heading", { name: "portrait.png" })).toBeVisible();
 
-  await page.locator("[data-profile-image]").click({ button: "right" });
-  await expect(page.getByRole("menuitem", { name: "3D clay diorama" })).toBeVisible();
-  await page.getByRole("menuitem", { name: "3D clay diorama" }).click();
+  await expect(page.locator("[data-profile-image] [data-diorama-action]")).toBeVisible();
+  await page.locator("[data-profile-image] [data-diorama-action]").click();
 
   await expect(page.getByText("Making 3D clay diorama…")).toBeVisible();
   await expect(page.getByRole("heading", { name: "3D clay diorama" })).toBeVisible();

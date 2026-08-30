@@ -54,6 +54,7 @@ Geocode is stubbed in `?demo=1` (and again in Playwright) so the park pin is alw
 15. `e2e/specs/15-delete-person.spec.ts` — Delete + confirm removes the card from the list and the person folder from the local OKF bundle, including profile image, gallery, and files. Cancel writes nothing. selfSlug / follow / memory for that slug go away.
 16. `e2e/specs/16-hide-this-is-me.spec.ts` — mark This is me hides the control on every card; clearing self (no selfSlug) brings it back. Live AI hosts blocked.
 17. `e2e/specs/17-people-filter-add-research.spec.ts` — left pane filters people already in the graph; no research submit there; Add person **AI Powered Search** starts research; More has spacing before the primary actions.
+18. `e2e/specs/18-image-preview.spec.ts` — no profile photo hides diorama; people-list context menu has Delete only; click profile or gallery photo opens a local preview; close / Escape writes nothing.
 
 Curated clips:
 

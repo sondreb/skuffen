@@ -1423,11 +1423,18 @@
                 class="portrait"
                 data-profile-image
                 [class.busy]="dioramaBusy"
-                (contextmenu)="openPersonMenu($event, person)"
               >
                 <span class="portrait-frame">
                   @if (personPhotoUrl(person); as src) {
-                    <img [src]="src" alt="" />
+                    <button
+                      type="button"
+                      class="portrait-preview"
+                      data-profile-preview
+                      (click)="openProfilePreview(person)"
+                      [attr.aria-label]="'Preview photo of ' + person.title"
+                    >
+                      <img [src]="src" alt="" />
+                    </button>
                   } @else {
                     {{ initials(person.title) }}
                   }
@@ -1439,6 +1446,16 @@
                 >
                   {{ person.image ? "Change profile image" : "Set profile image" }}
                 </button>
+                @if (hasProfilePhoto(person)) {
+                  <button
+                    type="button"
+                    data-diorama-action
+                    (click)="makeDiorama(person.slug)"
+                    [disabled]="dioramaBusy"
+                  >
+                    {{ dioramaBusy ? "Making diorama…" : dioramaMenuLabel }}
+                  </button>
+                }
               </div>
               <div class="nameplate-copy">
                 <p class="kicker">{{ person.path }}</p>
@@ -1902,7 +1919,15 @@
                   [attr.data-photo-profile]="isProfilePhoto(person, photo) ? photo.path : null"
                 >
                   @if (photo.listSrc; as src) {
-                    <img class="photo-thumb" [src]="src" alt="" />
+                    <button
+                      type="button"
+                      class="photo-preview-open"
+                      data-photo-open
+                      (click)="openPhotoPreview(person, photo)"
+                      [attr.aria-label]="'Preview ' + photo.title"
+                    >
+                      <img class="photo-thumb" [src]="src" alt="" />
+                    </button>
                   }
                   <h3>{{ photo.title }}</h3>
                   @if (isProfilePhoto(person, photo)) {
@@ -2029,20 +2054,11 @@
   @if (personMenu; as menu) {
     <div
       class="person-menu"
-      data-diorama-menu
+      data-person-menu
       role="menu"
       [style.left.px]="menu.x"
       [style.top.px]="menu.y"
     >
-      <button
-        type="button"
-        role="menuitem"
-        data-diorama-action
-        (click)="makeDiorama(menu.slug)"
-        [disabled]="dioramaBusy"
-      >
-        {{ dioramaBusy ? "Making diorama…" : dioramaMenuLabel }}
-      </button>
       <button
         type="button"
         role="menuitem"
@@ -2053,5 +2069,15 @@
         Delete
       </button>
     </div>
+  }
+
+  @if (imagePreview; as preview) {
+    <app-image-preview
+      [preview]="preview"
+      [dioramaBusy]="dioramaBusy"
+      [dioramaLabel]="dioramaMenuLabel"
+      (closed)="closeImagePreview()"
+      (imagine)="makeSelectedDiorama()"
+    />
   }
 </div>
