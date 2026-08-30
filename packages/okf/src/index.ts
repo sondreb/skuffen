@@ -586,3 +586,10 @@ export function addDocumentSubject(doc: OkfDocument, slug: string): OkfDocument 
   }
   return doc;
 }
+
+/** Drop a person from a shared document. Leaves the document on disk. */
+export function removeDocumentSubject(doc: OkfDocument, slug: string): OkfDocument {
+  const path = personPath(slug);
+  doc.frontmatter.subjects = subjectPaths(doc.frontmatter.subjects).filter((item) => item !== path);
+  return doc;
+}

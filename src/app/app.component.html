@@ -235,6 +235,7 @@
               [class.is-self]="self.isSelf(person.slug)"
               [attr.data-person-row]="person.slug"
               [attr.data-self-card]="self.isSelf(person.slug) ? person.slug : null"
+              [attr.data-person-slug]="person.slug"
               (click)="open(person)"
               (contextmenu)="openPersonMenu($event, person)"
               (dragover)="onCardDragOver($event)"
@@ -1256,6 +1257,40 @@
             </div>
           }
         </section>
+      } @else if (panel === "delete" && pendingDelete; as doomed) {
+        <section class="sheet" data-delete-confirm>
+          <header class="sheet-head">
+            <div>
+              <p class="kicker">Delete from this local graph</p>
+              <h1>Delete {{ doomed.title }}?</h1>
+            </div>
+            <button class="ghost" type="button" (click)="cancelDelete()" data-delete-cancel>Cancel</button>
+          </header>
+          <p class="lede">
+            Removes
+            <code>{{ doomed.path }}</code>
+            and their folder from this OKF bundle. Follow and memory for this card go away.
+            Nothing is uploaded.
+          </p>
+          @if (self.isSelf(doomed.slug)) {
+            <p class="whisper">This card is marked This is me. Deleting it clears that mark.</p>
+          }
+          @if (actionError) {
+            <p class="error">{{ actionError }}</p>
+          }
+          <div class="row">
+            <button
+              class="danger"
+              type="button"
+              (click)="confirmDelete()"
+              data-delete-confirm-write
+              [attr.data-demo]="demoMode ? 'delete-confirm' : null"
+            >
+              Delete
+            </button>
+            <button class="ghost" type="button" (click)="cancelDelete()">Keep</button>
+          </div>
+        </section>
       } @else if (panel === "merge" && mergeProposal) {
         <section class="sheet propose-sheet" data-merge-proposal>
           <header class="sheet-head">
@@ -1450,6 +1485,14 @@
                   data-self-toggle
                 >
                   {{ self.isSelf(person.slug) ? "Not me" : "This is me" }}
+                </button>
+                <button
+                  type="button"
+                  class="danger"
+                  (click)="askDelete(person)"
+                  data-delete-person
+                >
+                  Delete
                 </button>
               </div>
             </header>
@@ -1993,6 +2036,15 @@
         [disabled]="dioramaBusy"
       >
         {{ dioramaBusy ? "Making diorama…" : dioramaMenuLabel }}
+      </button>
+      <button
+        type="button"
+        role="menuitem"
+        class="danger"
+        data-delete-person-menu
+        (click)="askDeleteFromList(menu.slug)"
+      >
+        Delete
       </button>
     </div>
   }

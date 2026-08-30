@@ -280,6 +280,15 @@ test("follow settings persist schedule only — never provider tokens", () => {
   assert.deepEqual(unfollow(follows, "ada-lovelace"), []);
 });
 
+test("delete drops follow rows for that slug so leftover ticks never invent people", () => {
+  const now = new Date("2026-08-30T21:00:00Z");
+  const follows = mergeFollow([], "ada-lovelace", "weekly", now);
+  const afterDelete = unfollow(follows, "ada-lovelace");
+  const due = dueFollows(afterDelete, now, new Set());
+  assert.deepEqual(afterDelete, []);
+  assert.deepEqual(due, []);
+});
+
 test("rejecting a follow proposal drops it without an OKF write", () => {
   const writes: unknown[] = [];
   const stored = upsertProposal([], {

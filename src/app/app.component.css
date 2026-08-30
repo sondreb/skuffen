@@ -102,6 +102,19 @@ button.ghost {
   background: transparent;
 }
 
+button.danger {
+  border-color: rgba(196, 92, 74, 0.55);
+  color: #f0c4bc;
+  background: rgba(196, 92, 74, 0.12);
+}
+
+button.danger:hover,
+button.danger:focus-visible {
+  border-color: #c45c4a;
+  color: #fff;
+  background: rgba(196, 92, 74, 0.22);
+}
+
 button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
@@ -289,6 +302,24 @@ button:disabled {
 
 .person-card.on.is-self {
   box-shadow: inset 3px 0 0 var(--teal);
+}
+
+.person-menu {
+  position: fixed;
+  z-index: 6;
+  min-width: 11rem;
+  display: flex;
+  flex-direction: column;
+  padding: 0.35rem;
+  background: #121c1e;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+}
+
+.person-menu button {
+  width: 100%;
+  text-align: left;
 }
 
 .person-meta {

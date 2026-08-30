@@ -4,6 +4,7 @@ import {
   DOCUMENT_TYPE,
   addDocumentSubject,
   appendLog,
+  removeDocumentSubject,
   createDocumentDocument,
   createNoteDocument,
   createPersonDocument,
@@ -366,6 +367,22 @@ export class PeopleService {
     await this.updatePerson(slug, { [field]: "" });
   }
 
+  /**
+   * Delete a person from the local graph. Confirm in the UI first.
+   * Removes the person folder, unlinks them from shared documents, and
+   * drops the card from the in-memory list. Does not upload anything.
+   */
+  async deletePerson(slug: string): Promise<void> {
+    const person = this.people().find((item) => item.slug === slug);
+    const title = person?.title ?? slug;
+    await this.unlinkPersonFromDocuments(slug);
+    await this.deletePersonFolder(slug);
+    await this.log("Update", `Deleted [${title}](/${personPath(slug)}).`);
+    if (this.selected()?.slug === slug) this.selected.set(null);
+    await this.reload();
+    await this.rebuildIndexes();
+  }
+
   async addDocument(
     slug: string,
     input: {
@@ -553,6 +570,20 @@ export class PeopleService {
       if (!documentLinkedToPerson(item.frontmatter, fromSlug)) continue;
       const docSlug = file.slice("documents/".length, -"/document.md".length);
       await this.retargetDocument(docSlug, fromSlug, toSlug);
+    }
+  }
+
+  private async unlinkPersonFromDocuments(slug: string): Promise<void> {
+    const files = await this.io.listFiles(this.bundleRoot(), "documents/");
+    for (const file of files) {
+      if (!file.endsWith("/document.md")) continue;
+      const text = await this.io.readText(this.bundleRoot(), file);
+      if (!text) continue;
+      const item = parseDocument(file, text);
+      if (item.frontmatter.type !== DOCUMENT_TYPE) continue;
+      if (!documentLinkedToPerson(item.frontmatter, slug)) continue;
+      const next = removeDocumentSubject(item, slug);
+      await this.writeDoc(next);
     }
   }
 

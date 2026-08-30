@@ -150,11 +150,13 @@ type Panel =
   | "map"
   | "propose"
   | "merge"
+  | "delete"
   | "memory"
   | "brief"
   | "capture"
   | "shuffle"
   | "commitments";
+
 type SpeechSession = {
   stop: () => void;
   abort?: () => void;
@@ -231,6 +233,7 @@ export class AppComponent implements OnInit, OnDestroy {
   nameProposal: NameResearchProposal | null = null;
   researchRequestedWithoutProvider = false;
   mergeProposal: MergeProposal | null = null;
+  pendingDelete: PersonView | null = null;
   meetingBrief: MeetingBrief | null = null;
   briefEventPaste = "";
   briefEvent: MeetingEvent = {};
@@ -409,6 +412,10 @@ export class AppComponent implements OnInit, OnDestroy {
       this.closeMergeSheet();
       return;
     }
+    if (this.panel === "delete") {
+      this.cancelDelete();
+      return;
+    }
     if (this.panel === "brief") {
       this.dismissBrief();
       return;
@@ -481,6 +488,8 @@ export class AppComponent implements OnInit, OnDestroy {
   async open(person: PersonView): Promise<void> {
     this.panel = "none";
     this.menuOpen = false;
+    this.personMenu = null;
+    this.pendingDelete = null;
     this.fact = "none";
     this.notice = null;
     this.actionError = null;
@@ -1243,6 +1252,46 @@ export class AppComponent implements OnInit, OnDestroy {
     await this.self.toggle(slug);
   }
 
+  askDelete(person: PersonView): void {
+    this.closePersonMenu();
+    this.pendingDelete = person;
+    this.panel = "delete";
+    this.menuOpen = false;
+    this.notice = null;
+    this.actionError = null;
+  }
+
+  askDeleteFromList(slug: string): void {
+    const person = this.people.people().find((item) => item.slug === slug);
+    if (!person) {
+      this.personMenu = null;
+      return;
+    }
+    this.askDelete(person);
+  }
+
+  cancelDelete(): void {
+    this.pendingDelete = null;
+    this.panel = "none";
+  }
+
+  async confirmDelete(): Promise<void> {
+    const person = this.pendingDelete;
+    if (!person) return;
+    this.actionError = null;
+    try {
+      await this.people.deletePerson(person.slug);
+      await this.follow.forgetSlug(person.slug);
+      await this.self.forget(person.slug);
+      this.pendingDelete = null;
+      this.personMenu = null;
+      this.panel = "none";
+      this.notice = null;
+    } catch (error) {
+      this.actionError = error instanceof Error ? error.message : String(error);
+    }
+  }
+
   async toggleFollow(enabled: boolean): Promise<void> {
     const person = this.people.selected();
     if (!person) return;
@@ -1995,7 +2044,7 @@ export class AppComponent implements OnInit, OnDestroy {
     event.preventDefault();
     event.stopPropagation();
     const width = 220;
-    const height = 52;
+    const height = 96;
     const pad = 8;
     const x = Math.max(pad, Math.min(event.clientX, window.innerWidth - width - pad));
     const y = Math.max(pad, Math.min(event.clientY, window.innerHeight - height - pad));

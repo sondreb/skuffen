@@ -8,6 +8,7 @@ import {
   DOCUMENT_TYPE,
   OKF_VERSION,
   addDocumentSubject,
+  removeDocumentSubject,
   appendLog,
   createDocumentDocument,
   createNoteDocument,
@@ -163,6 +164,20 @@ test("Person profile image is a local bundle path — never http(s)", () => {
     image: "https://cdn.example/ada.jpg",
   });
   assert.equal(remote.frontmatter.image, undefined);
+});
+
+test("removeDocumentSubject unlinks a person and leaves the document", () => {
+  const doc = createDocumentDocument({
+    docSlug: "plot-12-hvaler",
+    fileName: "plot-12.pdf",
+    title: "Plot 12, Hvaler",
+    subjectSlugs: ["ada-lovelace"],
+  });
+  addDocumentSubject(doc, "other-contact");
+  removeDocumentSubject(doc, "ada-lovelace");
+  assert.deepEqual(doc.frontmatter.subjects, ["people/other-contact/person.md"]);
+  assert.equal(documentLinkedToPerson(doc.frontmatter, "ada-lovelace"), false);
+  assert.equal(doc.path, "documents/plot-12-hvaler/document.md");
 });
 
 test("Document requires type, title, and resource; file bytes stay beside the concept", () => {
