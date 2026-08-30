@@ -1116,10 +1116,6 @@ export class AppComponent implements OnInit, OnDestroy {
     await this.self.toggle(slug);
   }
 
-  async toggleSelf(slug: string): Promise<void> {
-    await this.self.toggle(slug);
-  }
-
   async toggleFollow(enabled: boolean): Promise<void> {
     const person = this.people.selected();
     if (!person) return;
