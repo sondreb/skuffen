@@ -117,7 +117,7 @@ Unsigned Windows, Linux, and macOS installers are built by **Draft desktop relea
 
 The workflow keeps versions in lockstep: `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`. App identifier stays `me.grok.skuffen`. Installers only — never people-graph data, tokens, or OKF fixtures.
 
-Windows NSIS is a per-user one-click overwrite (same folder, no language / directory / start-menu / component pages). macOS replaces the `.app`. Linux uses the existing `.deb` / `.AppImage` targets. The people-graph stays in app data, not next to the exe.
+Windows ships NSIS only (no WiX MSI): per-user one-click overwrite in the same folder, no language / directory / start-menu / reinstall radios. Double-click and `/UPDATE` overwrite without running the uninstaller. A leftover MSI is uninstalled once, then NSIS owns the install. macOS replaces the `.app`. Linux uses the existing `.deb` / `.AppImage` targets. The people-graph stays in app data (`me.grok.skuffen`), not next to the exe.
 
 **Check for update** (Latch) looks at the latest **published** GitHub Release for `sondreb/skuffen`. Drafts are invisible to the public API — Sondre still publishes drafts himself. The browser preview (`npm start`) cannot install updates. No GitHub token and no signing private key live in the app or the repo. Nothing from the people-graph is uploaded.
 

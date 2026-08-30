@@ -114,19 +114,28 @@ test("bundle stays unsigned GitHub fallback: no updater artifacts, ayatana-only 
   const tauri = JSON.parse(readFileSync(join(root, "src-tauri", "tauri.conf.json"), "utf8")) as {
     identifier: string;
     bundle: {
+      targets?: string | string[];
       createUpdaterArtifacts?: boolean;
       windows?: { nsis?: { installMode?: string; displayLanguageSelector?: boolean; template?: string } };
     };
   };
   assert.equal(tauri.identifier, "me.grok.skuffen");
   assert.equal(tauri.bundle.createUpdaterArtifacts, false);
+  assert.deepEqual(tauri.bundle.targets, ["nsis", "app", "dmg", "deb", "rpm", "appimage"]);
+  assert.ok(!Array.isArray(tauri.bundle.targets) || !tauri.bundle.targets.includes("msi"));
   assert.equal(tauri.bundle.windows?.nsis?.installMode, "currentUser");
   assert.equal(tauri.bundle.windows?.nsis?.displayLanguageSelector, false);
   assert.equal(tauri.bundle.windows?.nsis?.template, "windows/nsis/installer.nsi");
 
+  // Manual verify: install 0.1.x, run the next NSIS setup (double-click, no flags),
+  // same $INSTDIR, app launches, people-graph intact, no Already Installed prompt.
   const nsis = readFileSync(join(root, "src-tauri", "windows", "nsis", "installer.nsi"), "utf8");
-  assert.match(nsis, /StrCpy \$PassiveMode 1/);
+  const onInit = nsis.match(/Function \.onInit[\s\S]*?^FunctionEnd/m)?.[0] ?? "";
+  assert.match(onInit, /StrCpy \$PassiveMode 1/);
+  assert.doesNotMatch(onInit, /GetOptions \$CMDLINE "\/P" \$PassiveMode/);
   assert.match(nsis, /Skuffen one-click: overwrite/);
+  assert.match(nsis, /Do not ExecWait the uninstaller/);
+  assert.match(nsis, /WiX leftover: uninstall that MSI once/);
   assert.doesNotMatch(nsis, /TAURI_SIGNING_PRIVATE_KEY/);
 
   const release = readFileSync(join(root, ".github", "workflows", "release.yml"), "utf8");
