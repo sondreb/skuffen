@@ -48,6 +48,7 @@ import {
   setAllMergeFieldsKept,
   setMergeFieldKept,
 } from "./services/merge";
+import { personListPhotoUrl } from "./list-photo";
 import {
   deleteProposedFact,
   dismissNameProposal,
@@ -1915,9 +1916,8 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   personPhotoUrl(person: PersonView): string | null {
-    const resource = person.photos[0]?.resource?.trim();
-    if (resource && /^(https?:|data:|blob:)/i.test(resource)) return resource;
-    return null;
+    const photo = person.photos[0];
+    return personListPhotoUrl(photo?.listSrc ?? photo?.resource);
   }
 
   initials(title: string): string {
