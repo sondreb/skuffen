@@ -5,6 +5,7 @@ import type { FactSuggestion, FollowInterval, PersonView, ProviderId } from "./m
 import { GeocodeService, type GeocodeHit } from "./services/geocode.service";
 import { LAND_PLOT_KIND } from "../../packages/okf/src/index";
 import { FollowService } from "./services/follow.service";
+import { grokConnectionLabel } from "./services/grok-oauth";
 import { isTauri } from "./services/io.service";
 import { PeopleService } from "./services/people.service";
 import { ProvidersService } from "./services/providers.service";
@@ -573,6 +574,10 @@ export class AppComponent implements OnInit, OnDestroy {
 
   providerLabel(): string {
     return this.activeProvider() === "gemini" ? "Gemini" : "Grok";
+  }
+
+  grokLabel(): string {
+    return grokConnectionLabel(this.providers.status());
   }
 }
 

@@ -2,6 +2,8 @@ import { Injectable, signal } from "@angular/core";
 import { GoogleGenAI } from "@google/genai";
 import { actorAgent } from "../../../packages/okf/src/index";
 import type { FactSuggestion, PersonView, ProviderId, ProviderStatus, SuggestionSource } from "../models";
+import type { GrokDevicePending } from "./grok-oauth";
+import { GROK_API_KEY_SECRET_KEY, GROK_OAUTH_SECRET_KEY } from "./grok-oauth";
 import { IoService } from "./io.service";
 import {
   RESEARCH_SYSTEM,
@@ -12,8 +14,8 @@ import {
   parseSuggestions,
 } from "./research";
 
-const GROK_API_KEY = "grok_api_key";
-const GROK_OAUTH = "grok_oauth";
+const GROK_API_KEY = GROK_API_KEY_SECRET_KEY;
+const GROK_OAUTH = GROK_OAUTH_SECRET_KEY;
 const GEMINI_API_KEY = "gemini_api_key";
 const GROK_MODEL = "grok-4-latest";
 const GEMINI_MODEL = "gemini-2.5-flash";
@@ -27,6 +29,8 @@ export class ProvidersService {
     preferred: "grok",
   });
   readonly busy = signal(false);
+  readonly signingIn = signal(false);
+  readonly devicePending = signal<GrokDevicePending | null>(null);
   readonly error = signal<string | null>(null);
   readonly suggestions = signal<FactSuggestion[]>([]);
 
@@ -97,11 +101,19 @@ export class ProvidersService {
 
   async signInGrok(): Promise<void> {
     this.error.set(null);
+    this.devicePending.set(null);
+    this.signingIn.set(true);
     try {
-      await this.io.grokOauthLogin();
+      const pending = await this.io.grokOauthBegin();
+      this.devicePending.set(pending);
+      await this.io.grokOauthWait();
+      this.devicePending.set(null);
       await this.refresh();
     } catch (error) {
+      this.devicePending.set(null);
       this.error.set(error instanceof Error ? error.message : String(error));
+    } finally {
+      this.signingIn.set(false);
     }
   }
 

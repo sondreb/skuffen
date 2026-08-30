@@ -1,5 +1,12 @@
 import { Injectable } from "@angular/core";
 import type { Settings, VaultStatus } from "../models";
+import {
+  BROWSER_OAUTH_ERROR,
+  type GrokDevicePending,
+  type GrokOAuthStatus,
+  publicDevicePending,
+  publicOauthStatus,
+} from "./grok-oauth";
 import { purgeDurableBrowserSecrets, webSecretDelete, webSecretGet, webSecretSet } from "./web-secrets";
 
 export const BROWSER_VAULT_MESSAGE =
@@ -165,13 +172,18 @@ export class IoService {
     webSecretDelete(key);
   }
 
-  async grokOauthLogin(): Promise<{ connected: boolean }> {
-    if (isTauri()) return this.invoke("grok_oauth_login");
-    throw new Error("Grok OAuth needs the Skuffen desktop shell. Use an API key in this browser preview.");
+  async grokOauthBegin(): Promise<GrokDevicePending> {
+    if (!isTauri()) throw new Error(BROWSER_OAUTH_ERROR);
+    return publicDevicePending(await this.invoke("grok_oauth_begin"));
   }
 
-  async grokOauthStatus(): Promise<{ connected: boolean }> {
-    if (isTauri()) return this.invoke("grok_oauth_status");
+  async grokOauthWait(): Promise<GrokOAuthStatus> {
+    if (!isTauri()) throw new Error(BROWSER_OAUTH_ERROR);
+    return publicOauthStatus(await this.invoke("grok_oauth_wait"));
+  }
+
+  async grokOauthStatus(): Promise<GrokOAuthStatus> {
+    if (isTauri()) return publicOauthStatus(await this.invoke("grok_oauth_status"));
     return { connected: false };
   }
 

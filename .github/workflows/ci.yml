@@ -36,6 +36,9 @@ jobs:
       - name: Browser-secret tests
         run: npm run test:secrets
 
+      - name: Grok OAuth device-flow tests
+        run: npm run test:oauth
+
       - name: Research and follow (propose-only) tests
         run: npm run test:research
 

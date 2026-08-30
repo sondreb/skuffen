@@ -472,6 +472,22 @@ button:disabled {
   align-items: center;
 }
 
+.device-pending {
+  margin: 0.75rem 0 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px dashed #8a7038;
+  border-radius: 12px;
+  background: rgba(46, 196, 182, 0.06);
+}
+
+.user-code {
+  margin: 0.45rem 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 1.65rem;
+  letter-spacing: 0.14em;
+  color: var(--teal-glow);
+}
+
 label {
   display: block;
   margin: 0.65rem 0;
