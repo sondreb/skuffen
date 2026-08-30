@@ -155,3 +155,15 @@ export function relationCue(person: PersonView): string {
 export function otherPeopleForRelation(people: PersonView[], slug: string): PersonView[] {
   return people.filter((item) => item.slug !== slug);
 }
+
+/** Card rows show the other person's title, not their slug. */
+export function resolveRelationTitles(people: PersonView[]): PersonView[] {
+  const titles = new Map(people.map((person) => [person.slug, person.title]));
+  return people.map((person) => ({
+    ...person,
+    relations: person.relations.map((edge) => ({
+      ...edge,
+      title: titles.get(edge.slug) ?? edge.title,
+    })),
+  }));
+}

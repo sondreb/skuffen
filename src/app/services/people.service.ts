@@ -49,6 +49,7 @@ import type { PersonLocation, PersonRelation, PersonView } from "../models";
 import { localPhotoBundlePath, localPhotoDataUrl, personListPhotoUrl } from "../list-photo";
 import type { MergePlan } from "./merge";
 import { IoService } from "./io.service";
+import { resolveRelationTitles } from "./relations";
 
 @Injectable({ providedIn: "root" })
 export class PeopleService {
@@ -137,7 +138,13 @@ export class PeopleService {
     const cached = this.people().find((item) => item.slug === slug);
     if (cached) this.selected.set(cached);
     const fresh = await this.loadPerson(slug);
-    if (fresh) this.selected.set(fresh);
+    if (fresh) {
+      const pool = this.people().some((person) => person.slug === slug)
+        ? this.people().map((person) => (person.slug === slug ? fresh : person))
+        : [...this.people(), fresh];
+      const titled = resolveRelationTitles(pool);
+      this.selected.set(titled.find((person) => person.slug === slug) ?? fresh);
+    }
   }
 
   async createPerson(input: {
@@ -767,7 +774,7 @@ export class PeopleService {
           role: edge.role,
           slug: other,
           path: edge.person,
-          title: other,
+          title: this.people().find((person) => person.slug === other)?.title ?? other,
         };
       })
       .filter((item): item is PersonRelation => item !== null);
@@ -936,17 +943,6 @@ export class PeopleService {
     await this.io.writeText(this.bundleRoot(), "index.md", serializeBundleIndex(entries));
     await this.io.writeText(this.bundleRoot(), "people/index.md", serializePeopleIndex(entries));
   }
-}
-
-function resolveRelationTitles(people: PersonView[]): PersonView[] {
-  const titles = new Map(people.map((person) => [person.slug, person.title]));
-  return people.map((person) => ({
-    ...person,
-    relations: person.relations.map((edge) => ({
-      ...edge,
-      title: titles.get(edge.slug) ?? edge.title,
-    })),
-  }));
 }
 
 function optionalString(value: unknown): string | undefined {

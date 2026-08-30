@@ -9,6 +9,7 @@ import {
   planAcceptedRelation,
   proposeRelation,
   relationWritesWithoutAccept,
+  resolveRelationTitles,
   setRelationChecked,
   writesForAcceptedRelation,
 } from "./relations.ts";
@@ -104,6 +105,38 @@ test("filter people by relation kind", () => {
   assert.deepEqual(peopleMatchingRelationKind([ada, bea, cal], "business"), []);
   assert.equal(filterPeopleByRelation([ada, bea, cal], "sibling", "family").length, 2);
   assert.equal(filterPeopleByRelation([ada, bea, cal], "Cal", "").length, 1);
+});
+
+test("relation rows resolve the other person's title, not their slug", () => {
+  const ada = person({
+    slug: "ada-demo",
+    title: "Ada Demo",
+    relations: [
+      {
+        kind: "family",
+        role: "sibling",
+        slug: "bea-demo",
+        path: "people/bea-demo/person.md",
+        title: "bea-demo",
+      },
+    ],
+  });
+  const bea = person({
+    slug: "bea-demo",
+    title: "Bea Demo",
+    relations: [
+      {
+        kind: "family",
+        role: "sibling",
+        slug: "ada-demo",
+        path: "people/ada-demo/person.md",
+        title: "ada-demo",
+      },
+    ],
+  });
+  const [adaTitled, beaTitled] = resolveRelationTitles([ada, bea]);
+  assert.equal(adaTitled?.relations[0]?.title, "Bea Demo");
+  assert.equal(beaTitled?.relations[0]?.title, "Ada Demo");
 });
 
 test("never uploads and never stores tokens on a relation write", () => {
