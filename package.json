@@ -1,6 +1,6 @@
 {
   "name": "skuffen",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "private": true,
   "description": "Local-only personal intelligence. People-graph on your machine as OKF.",
   "license": "MIT",
