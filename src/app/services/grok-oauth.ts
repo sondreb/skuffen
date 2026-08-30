@@ -15,12 +15,20 @@ export interface GrokDevicePending {
   verificationUri: string;
   verificationUriComplete?: string | null;
   expiresIn: number;
+  interval: number;
 }
 
 export interface GrokOAuthStatus {
   connected: boolean;
   expiresAt?: number | null;
   tokenType?: string | null;
+}
+
+export type GrokOAuthPollState = "pending" | "signedIn";
+
+export interface GrokOAuthPoll extends GrokOAuthStatus {
+  state: GrokOAuthPollState;
+  interval?: number | null;
 }
 
 const SECRET_FIELD = /^(access_token|accessToken|refresh_token|refreshToken|device_code|deviceCode)$/;
@@ -75,12 +83,57 @@ export function publicOauthStatus(raw: unknown): GrokOAuthStatus {
 export function publicDevicePending(raw: unknown): GrokDevicePending {
   const rec = asRecord(raw);
   return {
-    userCode: String(rec["userCode"] ?? ""),
-    verificationUri: String(rec["verificationUri"] ?? ""),
+    userCode: String(rec["userCode"] ?? rec["user_code"] ?? ""),
+    verificationUri: String(rec["verificationUri"] ?? rec["verification_uri"] ?? ""),
     verificationUriComplete:
-      typeof rec["verificationUriComplete"] === "string" ? rec["verificationUriComplete"] : null,
-    expiresIn: typeof rec["expiresIn"] === "number" ? rec["expiresIn"] : 0,
+      typeof rec["verificationUriComplete"] === "string"
+        ? rec["verificationUriComplete"]
+        : typeof rec["verification_uri_complete"] === "string"
+          ? rec["verification_uri_complete"]
+          : null,
+    expiresIn: asOptionalNumber(rec["expiresIn"] ?? rec["expires_in"]) ?? 0,
+    interval: asOptionalNumber(rec["interval"]) ?? 5,
   };
+}
+
+export function publicOauthPoll(raw: unknown): GrokOAuthPoll {
+  const rec = asRecord(raw);
+  const status = publicOauthStatus(raw);
+  const stateRaw = typeof rec["state"] === "string" ? rec["state"] : "";
+  const state: GrokOAuthPollState =
+    stateRaw === "signedIn" || status.connected ? "signedIn" : "pending";
+  return {
+    state,
+    interval: asOptionalNumber(rec["interval"]),
+    connected: status.connected,
+    expiresAt: status.expiresAt,
+    tokenType: status.tokenType,
+  };
+}
+
+/** Tauri invoke rejects with Error, string, or `{ message }`. Never copy token bodies. */
+export function invokeErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message.trim()) return sanitizeError(error.message);
+  if (typeof error === "string" && error.trim()) return sanitizeError(error);
+  const rec = asRecord(error);
+  if (typeof rec["message"] === "string" && rec["message"].trim()) {
+    return sanitizeError(rec["message"]);
+  }
+  if (typeof rec["error"] === "string" && rec["error"].trim()) {
+    return sanitizeError(rec["error"]);
+  }
+  return "Grok sign-in failed.";
+}
+
+function sanitizeError(message: string): string {
+  if (
+    SECRET_FIELD.test(message) ||
+    /\b(access_token|accessToken|refresh_token|refreshToken|device_code|deviceCode)\b/.test(message) ||
+    /sk-[A-Za-z0-9_-]{8,}|eyJ[A-Za-z0-9_-]{10,}/.test(message)
+  ) {
+    return "Grok sign-in failed.";
+  }
+  return message;
 }
 
 /** True if an IPC/UI payload still carries tokens or the device_code secret. */
@@ -113,5 +166,10 @@ function asOptionalString(value: unknown): string | null {
 }
 
 function asOptionalNumber(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
 }

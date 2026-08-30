@@ -13,9 +13,11 @@ import {
   deviceCodeRequestBody,
   deviceTokenPollBody,
   grokConnectionLabel,
+  invokeErrorMessage,
   nextPollInterval,
   payloadHasSecretFields,
   publicDevicePending,
+  publicOauthPoll,
   publicOauthStatus,
 } from "./grok-oauth.ts";
 import { resetWebSecretsForTests, webSecretGet, webSecretSet } from "./web-secrets.ts";
@@ -84,12 +86,37 @@ test("public OAuth status and device pending never expose tokens", () => {
     verificationUri: "https://auth.x.ai/connect",
     verificationUriComplete: "https://auth.x.ai/connect?user_code=WDJB-MJHT",
     expiresIn: 900,
+    interval: 5,
     device_code: "secret-device",
     access_token: "sk-leaked",
   });
   assert.equal(pending.userCode, "WDJB-MJHT");
+  assert.equal(pending.interval, 5);
   assert.equal(payloadHasSecretFields(pending), false);
   assert.doesNotMatch(JSON.stringify(pending), /secret-device|sk-leaked|access_token|device_code/);
+
+  const poll = publicOauthPoll({
+    state: "signedIn",
+    connected: true,
+    tokenType: "Bearer",
+    access_token: "sk-poll-secret",
+    refresh_token: "refresh-hidden",
+  });
+  assert.equal(poll.state, "signedIn");
+  assert.equal(poll.connected, true);
+  assert.equal(payloadHasSecretFields(poll), false);
+  assert.doesNotMatch(JSON.stringify(poll), /sk-poll-secret|refresh-hidden|access_token/);
+});
+
+test("invoke errors stay readable and never echo token-shaped text", () => {
+  assert.equal(invokeErrorMessage(new Error("Grok sign-in expired. Try again.")), "Grok sign-in expired. Try again.");
+  assert.equal(
+    invokeErrorMessage({ message: "Could not persist the secret in the OS credential store." }),
+    "Could not persist the secret in the OS credential store.",
+  );
+  assert.equal(invokeErrorMessage("xAI token poll failed: denied"), "xAI token poll failed: denied");
+  assert.equal(invokeErrorMessage({}), "Grok sign-in failed.");
+  assert.equal(invokeErrorMessage({ message: "access_token missing from store" }), "Grok sign-in failed.");
 });
 
 test("connection label is Signed in or API key saved, never the secret", () => {
@@ -110,6 +137,10 @@ test("browser preview rejects device flow and keeps paste-key fallback", async (
     return true;
   });
   await assert.rejects(() => io.grokOauthWait(), (error: Error) => {
+    assert.equal(error.message, BROWSER_OAUTH_ERROR);
+    return true;
+  });
+  await assert.rejects(() => io.grokOauthPoll(), (error: Error) => {
     assert.equal(error.message, BROWSER_OAUTH_ERROR);
     return true;
   });

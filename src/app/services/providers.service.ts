@@ -4,7 +4,13 @@ import { actorAgent } from "../../../packages/okf/src/index";
 import { demoResearchPrompt, demoResearchSuggestions, isDemoMode } from "../demo-mode";
 import type { FactSuggestion, PersonView, ProviderId, ProviderStatus, SuggestionSource } from "../models";
 import type { GrokDevicePending, GrokOAuthStatus } from "./grok-oauth";
-import { GROK_API_KEY_SECRET_KEY, GROK_OAUTH_SECRET_KEY, publicOauthStatus } from "./grok-oauth";
+import {
+  GROK_API_KEY_SECRET_KEY,
+  GROK_OAUTH_SECRET_KEY,
+  invokeErrorMessage,
+  publicOauthPoll,
+  publicOauthStatus,
+} from "./grok-oauth";
 import { IoService } from "./io.service";
 import {
   applyPolishedTalkingPoints,
@@ -134,16 +140,40 @@ export class ProvidersService {
     try {
       const pending = await this.io.grokOauthBegin();
       this.devicePending.set(pending);
-      const oauth = await this.io.grokOauthWait();
+      const oauth = await this.waitForGrokApproval(pending);
       this.devicePending.set(null);
+      if (!oauth.connected) {
+        this.error.set("Grok sign-in did not persist in the OS credential store.");
+        return;
+      }
       // Apply the poll result immediately. A follow-up status IPC can lag or use another shape.
       await this.refresh(oauth);
     } catch (error) {
       this.devicePending.set(null);
-      this.error.set(error instanceof Error ? error.message : String(error));
+      this.error.set(invokeErrorMessage(error));
     } finally {
       this.signingIn.set(false);
     }
+  }
+
+  /** One-shot Rust polls. Sleep lives here so a blocking invoke cannot die after approval. */
+  private async waitForGrokApproval(pending: GrokDevicePending): Promise<GrokOAuthStatus> {
+    const lifetime = Math.max(pending.expiresIn || 1800, 1);
+    const deadline = Date.now() + lifetime * 1000;
+    let waitSecs = Math.max(pending.interval ?? 5, 0);
+    while (Date.now() < deadline) {
+      if (waitSecs > 0) await delay(waitSecs * 1000);
+      const outcome = publicOauthPoll(await this.io.grokOauthPoll());
+      if (outcome.state === "signedIn") {
+        const oauth = publicOauthStatus(outcome);
+        if (!oauth.connected) {
+          throw new Error("Grok sign-in did not persist in the OS credential store.");
+        }
+        return oauth;
+      }
+      waitSecs = outcome.interval != null && Number.isFinite(outcome.interval) ? Math.max(outcome.interval, 0) : 5;
+    }
+    throw new Error("Grok sign-in expired. Try again.");
   }
 
   async suggest(person: PersonView): Promise<void> {
@@ -481,4 +511,8 @@ export class ProvidersService {
     });
     return response.text ?? "";
   }
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
