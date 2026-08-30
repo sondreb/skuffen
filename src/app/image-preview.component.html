@@ -1,0 +1,46 @@
+@if (src; as photo) {
+  <div
+    class="preview-scrim"
+    data-image-preview
+    role="dialog"
+    aria-modal="true"
+    aria-label="Image preview"
+    (click)="onBackdrop($event)"
+  >
+    <div class="preview-bar" data-image-preview-chrome>
+      <p class="preview-title">{{ preview.title || "Photo" }}</p>
+      <div class="preview-tools">
+        <button type="button" data-preview-zoom-out (click)="zoomBy(-1)" aria-label="Zoom out">−</button>
+        <button type="button" data-preview-zoom-in (click)="zoomBy(1)" aria-label="Zoom in">+</button>
+        @if (showDiorama) {
+          <button
+            type="button"
+            data-diorama-action
+            (click)="imagine.emit()"
+            [disabled]="dioramaBusy"
+          >
+            {{ dioramaBusy ? "Making diorama…" : dioramaLabel }}
+          </button>
+        }
+        <button type="button" class="ghost" data-preview-close (click)="close()">Close</button>
+      </div>
+    </div>
+    <div
+      #stage
+      class="preview-stage"
+      (dblclick)="onDblClick($event)"
+      (pointerdown)="onPointerDown($event)"
+      (pointermove)="onPointerMove($event)"
+      (pointerup)="onPointerUp($event)"
+      (pointercancel)="onPointerUp($event)"
+    >
+      <img
+        data-image-preview-photo
+        [src]="photo"
+        alt=""
+        draggable="false"
+        [style.transform]="transformCss()"
+      />
+    </div>
+  </div>
+}

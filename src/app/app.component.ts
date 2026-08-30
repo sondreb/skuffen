@@ -12,6 +12,8 @@ import {
 } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { DEMO_COMMITMENTS, DEMO_MERGE, DEMO_SHUFFLE, isDemoMode } from "./demo-mode";
+import { ImagePreviewComponent } from "./image-preview.component";
+import { type ImagePreview, previewImageSrc } from "./image-preview";
 import { PeopleMapComponent, type MapPin } from "./map/people-map.component";
 import type {
   FactSuggestion,
@@ -172,7 +174,7 @@ type FactSurface = "none" | "drop" | "pin" | "note" | "suggest" | "timeline" | "
 
 @Component({
   selector: "app-root",
-  imports: [FormsModule, PeopleMapComponent],
+  imports: [FormsModule, PeopleMapComponent, ImagePreviewComponent],
   templateUrl: "./app.component.html",
   styleUrl: "./app.component.css",
 })
@@ -204,6 +206,7 @@ export class AppComponent implements OnInit, OnDestroy {
   fact: FactSurface = "none";
   menuOpen = false;
   personMenu: { slug: string; x: number; y: number } | null = null;
+  imagePreview: ImagePreview | null = null;
   dioramaBusy = false;
   readonly dioramaMenuLabel = DIORAMA_MENU_LABEL;
   showMore = false;
@@ -396,6 +399,10 @@ export class AppComponent implements OnInit, OnDestroy {
 
   @HostListener("document:keydown.escape")
   onEscape(): void {
+    if (this.imagePreview) {
+      this.closeImagePreview();
+      return;
+    }
     if (this.personMenu) {
       this.closePersonMenu();
       return;
@@ -475,7 +482,7 @@ export class AppComponent implements OnInit, OnDestroy {
   onDocumentPointer(event: PointerEvent): void {
     const target = event.target;
     if (this.personMenu) {
-      if (target instanceof Element && target.closest("[data-diorama-menu]")) return;
+      if (target instanceof Element && target.closest("[data-person-menu]")) return;
       this.closePersonMenu();
     }
     if (!this.menuOpen) return;
@@ -489,6 +496,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.panel = "none";
     this.menuOpen = false;
     this.personMenu = null;
+    this.closeImagePreview();
     this.pendingDelete = null;
     this.fact = "none";
     this.notice = null;
@@ -526,6 +534,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.actionError = null;
     this.pinDropped = false;
     this.addingSocial = false;
+    this.closeImagePreview();
     this.providers.clearSuggestions();
     this.nameProposal = null;
     this.resetLocationDraft(null);
@@ -1254,6 +1263,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
   askDelete(person: PersonView): void {
     this.closePersonMenu();
+    this.closeImagePreview();
     this.pendingDelete = person;
     this.panel = "delete";
     this.menuOpen = false;
@@ -2041,11 +2051,49 @@ export class AppComponent implements OnInit, OnDestroy {
     return personListPhotoUrl(photo?.listSrc ?? photo?.resource);
   }
 
+  hasProfilePhoto(person: PersonView): boolean {
+    return Boolean(person.image && personListPhotoUrl(person.imageSrc));
+  }
+
+  openProfilePreview(person: PersonView): void {
+    this.openImagePreview(this.personPhotoUrl(person), {
+      title: person.title,
+      diorama: this.hasProfilePhoto(person),
+    });
+  }
+
+  openPhotoPreview(person: PersonView, photo: PersonView["photos"][number]): void {
+    this.openImagePreview(photo.listSrc, {
+      title: photo.title,
+      diorama: this.isProfilePhoto(person, photo),
+    });
+  }
+
+  openImagePreview(src: string | null | undefined, options?: { title?: string; diorama?: boolean }): void {
+    const local = previewImageSrc(src);
+    if (!local) return;
+    this.personMenu = null;
+    this.imagePreview = {
+      src: local,
+      title: options?.title,
+      diorama: Boolean(options?.diorama),
+    };
+  }
+
+  closeImagePreview(): void {
+    this.imagePreview = null;
+  }
+
+  makeSelectedDiorama(): void {
+    const slug = this.people.selected()?.slug;
+    if (slug) void this.makeDiorama(slug);
+  }
+
   openPersonMenu(event: MouseEvent, person: PersonView): void {
     event.preventDefault();
     event.stopPropagation();
     const width = 220;
-    const height = 96;
+    const height = 52;
     const pad = 8;
     const x = Math.max(pad, Math.min(event.clientX, window.innerWidth - width - pad));
     const y = Math.max(pad, Math.min(event.clientY, window.innerHeight - height - pad));
@@ -2058,6 +2106,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
   async makeDiorama(slug: string): Promise<void> {
     this.closePersonMenu();
+    this.closeImagePreview();
     if (this.dioramaBusy) return;
     if (!this.demoMode && !this.providers.grokConnected()) {
       this.notice = DIORAMA_NEEDS_GROK;
@@ -2070,7 +2119,7 @@ export class AppComponent implements OnInit, OnDestroy {
       this.actionError = "Could not open that card.";
       return;
     }
-    const sourceResource = person.image ?? person.photos[0]?.resource;
+    const sourceResource = person.image;
     const source = sourceResource ? await this.people.readPhotoBytes(sourceResource) : null;
     if (!source) {
       this.actionError = DIORAMA_NEEDS_PHOTO;
