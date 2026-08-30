@@ -54,7 +54,7 @@ test("local pre-meeting brief from OKF facts; no write until Accept", async ({ d
   await page.locator("[data-demo='brief-accept']").click();
 
   await expect(page.getByRole("heading", { name: "Pre-meeting brief — Coffee with Ada Demo" })).toBeVisible();
-  await expect(page.getByText(/Last coffee/)).toBeVisible();
-  await expect(page.getByText(/Assembled on this machine/)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Last coffee" })).toBeVisible();
+  await expect(page.getByText(/Assembled on this machine from the OKF card/)).toBeVisible();
   await hold(page);
 });
