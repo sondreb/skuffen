@@ -132,7 +132,10 @@ export class PeopleService {
       this.selected.set(null);
       return;
     }
-    this.selected.set(await this.loadPerson(slug));
+    const cached = this.people().find((item) => item.slug === slug);
+    if (cached) this.selected.set(cached);
+    const fresh = await this.loadPerson(slug);
+    if (fresh) this.selected.set(fresh);
   }
 
   async createPerson(input: {

@@ -21,7 +21,7 @@ test("what is Skuffen / open the people drawer", async ({ demoPage: page }) => {
   await page.getByRole("button", { name: "Check for update" }).click();
   await expect(page.getByText("Updates need the desktop app.")).toBeVisible();
   await hold(page);
-  await page.getByRole("button", { name: "Close latch" }).click();
+  await page.getByRole("button", { name: "Close", exact: true }).click();
   await expect(page.getByRole("heading", { name: "The drawer is empty" })).toBeVisible();
   await hold(page);
 });

@@ -1,4 +1,14 @@
-import { Component, computed, HostListener, inject, OnDestroy, OnInit, signal } from "@angular/core";
+import {
+  Component,
+  computed,
+  ElementRef,
+  HostListener,
+  inject,
+  OnDestroy,
+  OnInit,
+  signal,
+  viewChild,
+} from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { DEMO_COMMITMENTS, DEMO_MERGE, DEMO_SHUFFLE, isDemoMode } from "./demo-mode";
 import { PeopleMapComponent, type MapPin } from "./map/people-map.component";
@@ -156,6 +166,11 @@ export class AppComponent implements OnInit, OnDestroy {
   private readonly io = inject(IoService);
   readonly updates = inject(UpdateService);
   readonly updateWhisper = UPDATE_WHISPER;
+  private readonly findInput = viewChild<ElementRef<HTMLInputElement>>("findInput");
+  private readonly latchSheet = viewChild<ElementRef<HTMLElement>>("latchSheet");
+  private readonly latchBtn = viewChild<ElementRef<HTMLButtonElement>>("latchBtn");
+  private readonly captureField = viewChild<ElementRef<HTMLTextAreaElement>>("captureField");
+  private readonly nameField = viewChild<ElementRef<HTMLInputElement>>("nameField");
 
   readonly query = signal("");
   panel: Panel = "none";
@@ -319,18 +334,38 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   toggleLatch(): void {
-    this.latchOpen = !this.latchOpen;
-    if (this.latchOpen) void this.providers.refresh();
+    if (this.latchOpen) this.closeLatch(true);
+    else this.openLatch();
   }
 
-  closeLatch(): void {
+  openLatch(): void {
+    this.latchOpen = true;
+    void this.providers.refresh();
+    this.focusSoon(() => {
+      const sheet = this.latchSheet()?.nativeElement;
+      return sheet?.querySelector<HTMLElement>("button.ghost, button") ?? sheet ?? undefined;
+    });
+  }
+
+  closeLatch(returnFocus = false): void {
+    if (!this.latchOpen) return;
     this.latchOpen = false;
+    if (returnFocus) this.focusSoon(() => this.latchBtn()?.nativeElement);
+  }
+
+  focusFind(): void {
+    if (this.people.locked()) return;
+    this.focusSoon(() => {
+      const input = this.findInput()?.nativeElement;
+      input?.select();
+      return input;
+    });
   }
 
   @HostListener("document:keydown.escape")
   onEscape(): void {
     if (this.latchOpen) {
-      this.closeLatch();
+      this.closeLatch(true);
       return;
     }
     if (this.panel === "propose") {
@@ -370,10 +405,40 @@ export class AppComponent implements OnInit, OnDestroy {
 
   @HostListener("document:keydown", ["$event"])
   onDocumentKey(event: KeyboardEvent): void {
-    if ((event.ctrlKey || event.metaKey) && event.key === ",") {
+    const meta = event.ctrlKey || event.metaKey;
+    if (meta && event.key === ",") {
       event.preventDefault();
-      this.latchOpen = true;
+      this.openLatch();
+      return;
     }
+    if (meta && event.key.toLowerCase() === "k" && !event.shiftKey) {
+      event.preventDefault();
+      this.focusFind();
+      return;
+    }
+    if (meta && event.shiftKey && event.key.toLowerCase() === "c") {
+      event.preventDefault();
+      if (!this.people.locked()) this.openCapture();
+      return;
+    }
+    if (event.key === "/" && !meta && !event.altKey && !this.isTypingTarget(event.target)) {
+      event.preventDefault();
+      this.focusFind();
+      return;
+    }
+    if (this.latchOpen && event.key === "Tab") {
+      this.cycleLatchFocus(event);
+    }
+  }
+
+  @HostListener("document:pointerdown", ["$event"])
+  onDocumentPointer(event: PointerEvent): void {
+    if (!this.latchOpen) return;
+    const target = event.target;
+    if (!(target instanceof Node)) return;
+    if (this.latchSheet()?.nativeElement.contains(target)) return;
+    if (this.latchBtn()?.nativeElement.contains(target)) return;
+    this.closeLatch();
   }
 
   async open(person: PersonView): Promise<void> {
@@ -428,6 +493,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.nameProposal = null;
     this.people.selected.set(null);
     this.resetLocationDraft(null);
+    this.focusSoon(() => this.nameField()?.nativeElement);
   }
 
   startEdit(): void {
@@ -769,7 +835,7 @@ export class AppComponent implements OnInit, OnDestroy {
       return false;
     }
     this.notice = notice;
-    this.latchOpen = true;
+    this.openLatch();
     this.researchRequestedWithoutProvider = true;
     return true;
   }
@@ -1515,6 +1581,7 @@ export class AppComponent implements OnInit, OnDestroy {
     if (this.demoMode && !this.captureNote.trim()) {
       this.captureNote = this.demoCaptureNote;
     }
+    this.focusSoon(() => this.captureField()?.nativeElement);
   }
 
   showCaptureEmpty(): boolean {
@@ -1799,6 +1866,40 @@ export class AppComponent implements OnInit, OnDestroy {
 
   grokChipConnected(): boolean {
     return this.providers.grokConnected();
+  }
+
+  private focusSoon(getEl: () => HTMLElement | undefined): void {
+    requestAnimationFrame(() => getEl()?.focus());
+  }
+
+  private isTypingTarget(target: EventTarget | null): boolean {
+    if (!(target instanceof HTMLElement)) return false;
+    const tag = target.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+    return target.isContentEditable;
+  }
+
+  private cycleLatchFocus(event: KeyboardEvent): void {
+    const sheet = this.latchSheet()?.nativeElement;
+    if (!sheet) return;
+    const nodes = Array.from(
+      sheet.querySelectorAll<HTMLElement>(
+        "button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])",
+      ),
+    ).filter((el) => el.tabIndex !== -1 && !el.hasAttribute("disabled"));
+    if (!nodes.length) return;
+    const first = nodes[0];
+    const last = nodes[nodes.length - 1];
+    const active = document.activeElement;
+    if (event.shiftKey && (active === first || !sheet.contains(active))) {
+      event.preventDefault();
+      last.focus();
+      return;
+    }
+    if (!event.shiftKey && active === last) {
+      event.preventDefault();
+      first.focus();
+    }
   }
 }
 

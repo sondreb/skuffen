@@ -27,10 +27,12 @@
             <label class="find">
               <span class="sr">Find someone</span>
               <input
+                #findInput
                 [ngModel]="query()"
                 (ngModelChange)="query.set($event)"
                 (keyup.enter)="onFindEnter()"
                 placeholder="Find someone"
+                autocomplete="off"
               />
             </label>
             <button
@@ -44,39 +46,57 @@
           </div>
         }
         @if (!people.locked()) {
-          <button
-            type="button"
-            [class.on]="panel === 'capture'"
-            (click)="openCapture()"
-            [attr.data-demo]="demoMode ? 'capture' : null"
-          >
-            Capture
-          </button>
-        }
-        @if (!people.locked() && !empty()) {
-          <button class="brass" type="button" (click)="startCreate()" [attr.data-demo]="demoMode ? 'put-someone-in' : null">
-            Put someone in
-          </button>
-          <button type="button" [class.on]="panel === 'map'" (click)="openMap()">Map</button>
-          <button
-            type="button"
-            [class.on]="panel === 'shuffle'"
-            (click)="openShuffle()"
-            [attr.data-demo]="demoMode ? 'shuffle' : null"
-          >
-            Shuffle
-          </button>
-          <button
-            type="button"
-            [class.on]="panel === 'commitments'"
-            (click)="openCommitments()"
-            [attr.data-demo]="demoMode ? 'commitments' : null"
-          >
-            Commitments
-          </button>
+          <div class="tools">
+            <button
+              type="button"
+              class="tool"
+              [class.on]="panel === 'capture'"
+              (click)="openCapture()"
+              [attr.data-demo]="demoMode ? 'capture' : null"
+            >
+              Capture
+            </button>
+            @if (!empty()) {
+              <button
+                type="button"
+                class="tool"
+                (click)="startCreate()"
+                [attr.data-demo]="demoMode ? 'put-someone-in' : null"
+              >
+                Put someone in
+              </button>
+              <button type="button" class="tool" [class.on]="panel === 'map'" (click)="openMap()">Map</button>
+              <button
+                type="button"
+                class="tool"
+                [class.on]="panel === 'shuffle'"
+                (click)="openShuffle()"
+                [attr.data-demo]="demoMode ? 'shuffle' : null"
+              >
+                Shuffle
+              </button>
+              <button
+                type="button"
+                class="tool"
+                [class.on]="panel === 'commitments'"
+                (click)="openCommitments()"
+                [attr.data-demo]="demoMode ? 'commitments' : null"
+              >
+                Commitments
+              </button>
+            }
+          </div>
         }
 
-        <button class="latch-btn" type="button" [class.on]="latchOpen" (click)="toggleLatch()">
+        <button
+          #latchBtn
+          class="latch-btn"
+          type="button"
+          [class.on]="latchOpen"
+          (click)="toggleLatch()"
+          [attr.aria-expanded]="latchOpen"
+          aria-controls="skuffen-latch"
+        >
           Latch
           @if (follow.pendingCount()) {
             <span class="memory-count">{{ follow.pendingCount() }}</span>
@@ -85,19 +105,26 @@
       </div>
 
       @if (latchOpen) {
-        <button class="scrim" type="button" (click)="closeLatch()" aria-label="Close latch"></button>
-        <aside class="latch-sheet" role="dialog" aria-label="Latch">
+        <aside
+          #latchSheet
+          id="skuffen-latch"
+          class="latch-sheet"
+          role="dialog"
+          aria-label="Latch"
+          aria-modal="false"
+          tabindex="-1"
+        >
           <header>
             <div>
               <strong>Latch</strong>
               <span>Providers & settings</span>
             </div>
-            <button class="ghost" type="button" (click)="closeLatch()">Close</button>
+            <button class="ghost" type="button" (click)="closeLatch(true)">Close</button>
           </header>
           <p class="provider-chip" [class.connected]="grokChipConnected()">
             Grok · {{ grokLabel() }}
           </p>
-          <button type="button" (click)="openProviders()">Providers</button>
+          <p class="latch-kicker">Today</p>
           <button
             type="button"
             (click)="openMemory()"
@@ -140,6 +167,8 @@
           >
             Commitments
           </button>
+          <p class="latch-kicker">Drawer</p>
+          <button type="button" (click)="openProviders()">Providers</button>
           <button type="button" (click)="people.chooseFolder(); latchOpen = false" [disabled]="people.locked()">
             Bundle folder
           </button>
@@ -766,24 +795,24 @@
             <p class="whisper">Put someone in first. Suggestions come from notes already on disk.</p>
             @if (demoMode) {
               <button
-                class="brass"
+                class="demo-quiet"
                 type="button"
                 (click)="seedDemoShuffle()"
                 data-demo="shuffle-seed"
               >
-                Put two reconnect demo cards in
+                Show two demo cards
               </button>
             }
           } @else {
             <p class="whisper">No more local reconnects in this deck. Skip wrote nothing.</p>
             @if (demoMode && people.people().length < 2) {
               <button
-                class="brass"
+                class="demo-quiet"
                 type="button"
                 (click)="seedDemoShuffle()"
                 data-demo="shuffle-seed"
               >
-                Put two reconnect demo cards in
+                Show two demo cards
               </button>
             }
           }
@@ -855,12 +884,12 @@
             <p class="whisper" data-demo="commitments-empty">{{ commitmentsEmpty }}</p>
             @if (demoMode) {
               <button
-                class="brass"
+                class="demo-quiet"
                 type="button"
                 (click)="seedDemoCommitments()"
                 data-demo="commitments-seed"
               >
-                Put Ada Demo commitments in
+                Show Ada Demo commitments
               </button>
             }
           }
@@ -975,6 +1004,7 @@
           <label>
             Voice or text note
             <textarea
+              #captureField
               [ngModel]="captureNote"
               (ngModelChange)="captureNote = $event"
               name="capture-note"
@@ -1082,7 +1112,7 @@
       } @else if (panel === "create" || panel === "edit") {
         <section class="sheet card-form">
           <h1>{{ panel === "create" ? "Who?" : "Edit card" }}</h1>
-          <label>Name <input [(ngModel)]="draft.title" name="person-name" /></label>
+          <label>Name <input #nameField [(ngModel)]="draft.title" name="person-name" /></label>
           @if (showMore || panel === "edit") {
             <div class="grid">
               <label>How you know them <input [(ngModel)]="draft.description" /></label>
@@ -1262,26 +1292,28 @@
           <img src="assets/skuffen-icon.png" alt="Open wooden drawer" />
           <h1>The drawer is empty</h1>
           <p class="lede">
-            Type a name above and press Enter or Research. Paste a capture. Or put someone in yourself.
+            Type a name above and press Enter. Or put a card in yourself.
           </p>
           @if (notice) {
             <p class="notice">{{ notice }}</p>
           }
-          <p class="whisper">Need Grok or Gemini? Open Latch for Providers & settings. Ctrl+, also opens Latch.</p>
-          <button class="brass" type="button" (click)="startCreate()" [attr.data-demo]="demoMode ? 'put-someone-in' : null">
-            Put someone in
-          </button>
-          <button type="button" (click)="openCapture()" [attr.data-demo]="demoMode ? 'capture-empty' : null">
-            Capture a note
-          </button>
+          <p class="whisper">Need Grok or Gemini? Latch holds Providers. Ctrl+, opens Latch. / finds someone.</p>
+          <div class="invite-actions">
+            <button class="brass" type="button" (click)="startCreate()" [attr.data-demo]="demoMode ? 'put-someone-in' : null">
+              Put someone in
+            </button>
+            <button type="button" (click)="openCapture()" [attr.data-demo]="demoMode ? 'capture-empty' : null">
+              Capture a note
+            </button>
+          </div>
           @if (demoMode) {
             <button
               type="button"
-              class="ghost"
+              class="demo-quiet"
               (click)="seedDemoDuplicate()"
               data-demo="put-matching-card"
             >
-              Put a matching demo card in
+              Matching demo card
             </button>
           }
         </section>
@@ -1374,6 +1406,8 @@
               >
                 Timeline
               </button>
+            </div>
+            <div class="card-go">
               <button
                 type="button"
                 [class.on]="fact === 'commitments'"
@@ -1804,10 +1838,10 @@
             </p>
           }
           @if (people.people().length) {
-            <p class="notice invite-line" data-demo="shuffle-banner">
+            <p class="hint-line" data-demo="shuffle-banner">
               Daily reconnects from notes on this machine. Nothing is sent.
               <button
-                class="brass"
+                class="ghost"
                 type="button"
                 (click)="openShuffle()"
                 [attr.data-demo]="demoMode ? 'shuffle-banner' : null"
@@ -1850,13 +1884,11 @@
           @if (demoMode) {
             <button
               type="button"
-              class="person-card ghost-card"
+              class="demo-quiet tray-demo"
               (click)="seedDemoDuplicate()"
               data-demo="put-matching-card"
             >
-              <span class="node plus">+</span>
-              <b>Matching demo card</b>
-              <small>Same email — propose merge</small>
+              Matching demo card
             </button>
           }
         </section>
