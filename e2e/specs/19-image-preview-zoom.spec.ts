@@ -59,10 +59,11 @@ async function diskSnapshot(page: import("@playwright/test").Page) {
   );
 }
 
-function parseTransform(value: string): { x: number; y: number; scale: number } {
-  const match = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)\s*scale\(([-\d.]+)\)/.exec(value);
-  if (!match) throw new Error(`unexpected transform: ${value}`);
-  return { x: Number(match[1]), y: Number(match[2]), scale: Number(match[3]) };
+async function previewTransform(photo: import("@playwright/test").Locator) {
+  const scale = Number(await photo.getAttribute("data-preview-scale"));
+  const x = Number(await photo.getAttribute("data-preview-x"));
+  const y = Number(await photo.getAttribute("data-preview-y"));
+  return { scale, x, y };
 }
 
 test("wheel zoom in the overlay is toward the pointer, not the image center", async ({
@@ -92,17 +93,13 @@ test("wheel zoom in the overlay is toward the pointer, not the image center", as
 
   const leftX = box.x + 24;
   const midY = box.y + box.height / 2;
-  await page.locator("[data-image-preview-stage]").evaluate(
-    (el, { clientX, clientY }) => {
-      el.dispatchEvent(
-        new WheelEvent("wheel", { deltaY: -160, clientX, clientY, bubbles: true, cancelable: true }),
-      );
-    },
-    { clientX: leftX, clientY: midY },
-  );
+  await page.mouse.move(leftX, midY);
+  await page.mouse.wheel(0, -160);
 
-  const leftZoom = parseTransform(await photo.evaluate((el) => (el as HTMLElement).style.transform));
-  expect(leftZoom.scale).toBeGreaterThan(1);
+  await expect
+    .poll(async () => Number(await photo.getAttribute("data-preview-scale")))
+    .toBeGreaterThan(1);
+  const leftZoom = await previewTransform(photo);
   expect(leftZoom.x).toBeGreaterThan(20);
 
   await page.locator("[data-preview-close]").click();
@@ -111,28 +108,23 @@ test("wheel zoom in the overlay is toward the pointer, not the image center", as
 
   const centerBox = await photo.boundingBox();
   if (!centerBox) throw new Error("preview photo has no box");
-  await page.locator("[data-image-preview-stage]").evaluate(
-    (el, { clientX, clientY }) => {
-      el.dispatchEvent(
-        new WheelEvent("wheel", { deltaY: -160, clientX, clientY, bubbles: true, cancelable: true }),
-      );
-    },
-    { clientX: centerBox.x + centerBox.width / 2, clientY: centerBox.y + centerBox.height / 2 },
-  );
+  const centerX = centerBox.x + centerBox.width / 2;
+  const centerY = centerBox.y + centerBox.height / 2;
+  await page.mouse.move(centerX, centerY);
+  await page.mouse.wheel(0, -160);
 
-  const centerZoom = parseTransform(
-    await photo.evaluate((el) => (el as HTMLElement).style.transform),
-  );
-  expect(centerZoom.scale).toBeGreaterThan(1);
+  await expect
+    .poll(async () => Number(await photo.getAttribute("data-preview-scale")))
+    .toBeGreaterThan(1);
+  const centerZoom = await previewTransform(photo);
   expect(Math.abs(centerZoom.x)).toBeLessThan(2);
   expect(Math.abs(centerZoom.y)).toBeLessThan(2);
 
   const beforePan = centerZoom;
-  await photo.hover();
   await page.mouse.down();
-  await page.mouse.move(centerBox.x + centerBox.width / 2 + 48, centerBox.y + centerBox.height / 2 + 16);
+  await page.mouse.move(centerX + 48, centerY + 16);
   await page.mouse.up();
-  const panned = parseTransform(await photo.evaluate((el) => (el as HTMLElement).style.transform));
+  const panned = await previewTransform(photo);
   expect(panned.scale).toBe(beforePan.scale);
   expect(Math.abs(panned.x - beforePan.x)).toBeGreaterThan(10);
 

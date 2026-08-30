@@ -1,5 +1,5 @@
 import {
-  AfterViewInit,
+  ChangeDetectorRef,
   Component,
   ElementRef,
   EventEmitter,
@@ -9,6 +9,7 @@ import {
   Output,
   SimpleChanges,
   ViewChild,
+  inject,
 } from "@angular/core";
 import { DIORAMA_MENU_LABEL } from "./services/imagine";
 import {
@@ -31,8 +32,11 @@ import {
   templateUrl: "./image-preview.component.html",
   styleUrl: "./image-preview.component.css",
 })
-export class ImagePreviewComponent implements AfterViewInit, OnChanges, OnDestroy {
-  @ViewChild("stage") stage?: ElementRef<HTMLElement>;
+export class ImagePreviewComponent implements OnChanges, OnDestroy {
+  @ViewChild("stage")
+  set stage(ref: ElementRef<HTMLElement> | undefined) {
+    this.bindWheel(ref?.nativeElement ?? null);
+  }
   @Input({ required: true }) preview!: ImagePreview;
   @Input() dioramaBusy = false;
   @Input() dioramaLabel = DIORAMA_MENU_LABEL;
@@ -40,12 +44,13 @@ export class ImagePreviewComponent implements AfterViewInit, OnChanges, OnDestro
   @Output() readonly imagine = new EventEmitter<void>();
 
   transform: PreviewTransform = IDENTITY_TRANSFORM;
+  private readonly cdr = inject(ChangeDetectorRef);
   private readonly pointers = new Map<number, { x: number; y: number }>();
   private pinch:
     | { distance: number; start: PreviewTransform; mid: { x: number; y: number } }
     | null = null;
   private lastPan: { x: number; y: number } | null = null;
-  private wheelBound = false;
+  private stageEl: HTMLElement | null = null;
 
   get src(): string | null {
     return previewImageSrc(this.preview.src);
@@ -64,16 +69,8 @@ export class ImagePreviewComponent implements AfterViewInit, OnChanges, OnDestro
     }
   }
 
-  ngAfterViewInit(): void {
-    const host = this.stage?.nativeElement;
-    if (!host || this.wheelBound) return;
-    host.addEventListener("wheel", this.onWheel, { passive: false });
-    this.wheelBound = true;
-  }
-
   ngOnDestroy(): void {
-    this.stage?.nativeElement.removeEventListener("wheel", this.onWheel);
-    this.wheelBound = false;
+    this.bindWheel(null);
   }
 
   close(): void {
@@ -160,8 +157,15 @@ export class ImagePreviewComponent implements AfterViewInit, OnChanges, OnDestro
     return `translate(${x}px, ${y}px) scale(${scale})`;
   }
 
+  private bindWheel(host: HTMLElement | null): void {
+    if (this.stageEl === host) return;
+    this.stageEl?.removeEventListener("wheel", this.onWheel);
+    this.stageEl = host;
+    this.stageEl?.addEventListener("wheel", this.onWheel, { passive: false });
+  }
+
   private photoRect(): PreviewRect | null {
-    const img = this.stage?.nativeElement.querySelector("[data-image-preview-photo]");
+    const img = this.stageEl?.querySelector("[data-image-preview-photo]");
     if (!(img instanceof HTMLElement)) return null;
     const rect = img.getBoundingClientRect();
     return { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
@@ -184,5 +188,6 @@ export class ImagePreviewComponent implements AfterViewInit, OnChanges, OnDestro
       event.clientY,
       rect,
     );
+    this.cdr.detectChanges();
   };
 }
