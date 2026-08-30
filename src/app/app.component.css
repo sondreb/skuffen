@@ -429,16 +429,19 @@ button:disabled {
 }
 
 .card-form [data-ai-search] {
-  margin: 0.15rem 0 0.35rem;
+  display: block;
+  width: fit-content;
+  margin: 0.2rem 0 0.85rem;
 }
 
 .card-form .more-toggle {
-  display: inline-block;
-  margin: 0.75rem 0 1.15rem;
+  display: block;
+  width: fit-content;
+  margin: 0 0 1.5rem;
 }
 
 .card-form .create-actions {
-  margin-top: 0.25rem;
+  margin-top: 0;
 }
 
 .file-nav {
