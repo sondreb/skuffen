@@ -16,13 +16,16 @@ import {
   isPublicHttpUrl,
   keepFetchedPhoto,
   mergeFollow,
+  nameAcceptErrorMessage,
   nextRunAt,
   parseSuggestions,
   photoFileNameFromUrl,
+  photoPreviewUrl,
   planAcceptedNameProposal,
   proposalsForSlug,
   proposeNameResearch,
   proposeOnly,
+  readPublicPhotoBytes,
   recordFollowRun,
   removeSuggestion,
   RESEARCH_NEEDS_PROVIDER,
@@ -30,6 +33,8 @@ import {
   setFactChecked,
   settingsWithoutSecrets,
   showResearchEmptyState,
+  skippedPhotosNotice,
+  attachStoredProposalSlug,
   unfollow,
   upsertProposal,
   writesForAcceptedSuggestion,
@@ -318,6 +323,66 @@ test("photo bytes stay off disk until Accept, and a failed fetch is skipped", ()
   assert.equal(stored?.bytes.byteLength, 3);
   assert.equal(isPublicHttpUrl("javascript:alert(1)"), false);
   assert.equal(photoFileNameFromUrl("https://cdn.example/pic.PNG", "research-1"), "research-1.png");
+});
+
+test("photo proposal previews only public http(s) image URLs", () => {
+  assert.equal(
+    photoPreviewUrl({ kind: "photo", url: "https://upload.example/ada.jpg" }),
+    "https://upload.example/ada.jpg",
+  );
+  assert.equal(photoPreviewUrl({ kind: "photo", url: "http://cdn.example/ada.jpg" }), "http://cdn.example/ada.jpg");
+  assert.equal(photoPreviewUrl({ kind: "photo", url: "javascript:alert(1)" }), null);
+  assert.equal(photoPreviewUrl({ kind: "photo", url: "data:image/png;base64,aa" }), null);
+  assert.equal(photoPreviewUrl({ kind: "note", url: "https://example.com/ada.jpg" }), null);
+  assert.equal(photoPreviewUrl({ kind: "photo" }), null);
+});
+
+test("photo fetch throws or returns empty bytes are skipped, not thrown", async () => {
+  assert.equal(await readPublicPhotoBytes("javascript:alert(1)", async () => new Uint8Array([1])), null);
+  assert.equal(
+    await readPublicPhotoBytes("https://example.com/ada.jpg", async () => {
+      throw new Error("network down");
+    }),
+    null,
+  );
+  assert.equal(await readPublicPhotoBytes("https://example.com/ada.jpg", async () => new Uint8Array()), null);
+  const bytes = await readPublicPhotoBytes("https://example.com/ada.jpg", async () => new Uint8Array([9, 8]));
+  assert.deepEqual(bytes, new Uint8Array([9, 8]));
+});
+
+test("Accept failures surface a message and skipped photos become a notice", () => {
+  assert.equal(nameAcceptErrorMessage(new Error("Person not found")), "Person not found");
+  assert.equal(nameAcceptErrorMessage(""), "Could not save the proposed card.");
+  assert.equal(skippedPhotosNotice(0), null);
+  assert.equal(skippedPhotosNotice(1), "1 photo could not be fetched. The rest of the card was saved.");
+  assert.equal(skippedPhotosNotice(2), "2 photos could not be fetched. The rest of the card was saved.");
+});
+
+test("name research attaches the created slug only on Accept", () => {
+  const writes: unknown[] = [];
+  const stored = [
+    {
+      id: "research-Ada Lovelace-1",
+      slug: "",
+      query: "Ada Lovelace",
+      source: "research" as const,
+      createdAt: "2026-08-30T09:00:00Z",
+      suggestions: [suggestion],
+    },
+    {
+      id: "capture-note-1",
+      slug: "",
+      query: "Ada Lovelace",
+      source: "capture" as const,
+      createdAt: "2026-08-30T09:00:00Z",
+      suggestions: [suggestion],
+    },
+  ];
+  const attached = attachStoredProposalSlug(stored, "Ada Lovelace", "ada-lovelace");
+  assert.equal(attached[0]?.slug, "ada-lovelace");
+  assert.equal(attached[1]?.slug, "");
+  assert.deepEqual(proposeOnly(stored[0]!.suggestions), []);
+  assertNoAutoWrite(writes);
 });
 
 test("research empty state is only after a request without a provider", () => {

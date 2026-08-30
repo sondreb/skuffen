@@ -3,6 +3,7 @@ import { test } from "node:test";
 import type { FactSuggestion, FollowRecord, StoredProposal } from "../models.ts";
 import {
   assertNoAutoWrite,
+  attachStoredProposalSlug,
   proposeOnly,
   removeSuggestion,
   settingsWithoutSecrets,
@@ -200,4 +201,9 @@ test("name-research pending memory has no slug and stays off the bundle until Ac
   assert.equal(pending[0]?.personLabel, "Ada Lovelace");
   assert.equal(proposeOnly(stored[0]!.suggestions).length, 0);
   assertNoAutoWrite(writes);
+
+  const attached = attachStoredProposalSlug(stored, "Ada Lovelace", "ada-lovelace");
+  const afterAccept = inspectableMemory({ proposals: attached, follows: [], people });
+  assert.equal(pendingFacts(afterAccept)[0]?.slug, "ada-lovelace");
+  assert.equal(proposeOnly(attached[0]!.suggestions).length, 0);
 });

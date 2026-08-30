@@ -160,11 +160,15 @@ export class IoService {
   }
 
   async fetchPublicBytes(url: string): Promise<Uint8Array | null> {
-    if (isTauri()) {
-      const raw = await this.invoke<number[] | null>("fetch_public_bytes", { url });
-      return raw ? Uint8Array.from(raw) : null;
+    try {
+      if (isTauri()) {
+        const raw = await this.invoke<number[] | null>("fetch_public_bytes", { url });
+        return raw ? Uint8Array.from(raw) : null;
+      }
+      return await fetchPublicPhotoBytes(url);
+    } catch {
+      return null;
     }
-    return fetchPublicPhotoBytes(url);
   }
 
   async secretGet(key: string): Promise<string | null> {

@@ -677,6 +677,17 @@ button:disabled {
   margin: 0;
 }
 
+.fact-photo {
+  display: block;
+  width: min(100%, 12rem);
+  max-height: 10rem;
+  height: auto;
+  margin-top: 0.35rem;
+  object-fit: cover;
+  border-radius: 8px;
+  background: rgba(20, 16, 10, 0.35);
+}
+
 .chip-x {
   border: 0;
   background: transparent;

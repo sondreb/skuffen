@@ -41,6 +41,26 @@ export function demoResearchSuggestions(source: FactSuggestion["source"] = "rese
   ];
 }
 
+/** Same-origin icon so ?demo=1 can preview a public http(s) photo without live hosts. */
+export function demoPublicPhotoUrl(): string {
+  if (typeof globalThis.location === "undefined") return "https://example.com/skuffen-demo-portrait.jpg";
+  return `${globalThis.location.origin}/assets/skuffen-icon.png`;
+}
+
+/** Name-search demo: note plus a checkable public photo preview. */
+export function demoNameResearchSuggestions(name: string): FactSuggestion[] {
+  return [
+    ...demoResearchSuggestions("research"),
+    {
+      id: `demo-research-name-photo-${name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-") || "untitled"}`,
+      source: "research",
+      kind: "photo",
+      title: "Public portrait (demo)",
+      url: demoPublicPhotoUrl(),
+    },
+  ];
+}
+
 /** Obviously synthetic. Shared email is the identity overlap — name alone is never enough. */
 export const DEMO_MERGE = {
   email: "ada.demo@example.invalid",

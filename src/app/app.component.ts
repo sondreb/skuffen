@@ -51,14 +51,18 @@ import {
   deleteProposedFact,
   dismissNameProposal,
   keepFetchedPhoto,
+  nameAcceptErrorMessage,
   normalizeInterval,
   photoFileNameFromUrl,
+  photoPreviewUrl,
   planAcceptedNameProposal,
   proposeNameResearch,
+  readPublicPhotoBytes,
   RESEARCH_NEEDS_PROVIDER,
   setAllFactsChecked,
   setFactChecked,
   showResearchEmptyState,
+  skippedPhotosNotice,
   writesForAcceptedSuggestion,
 } from "./services/research";
 import {
@@ -181,6 +185,7 @@ export class AppComponent implements OnInit, OnDestroy {
   dragging = false;
   pinDropped = false;
   notice: string | null = null;
+  actionError: string | null = null;
   addressQuery = "";
   geocodeHits: GeocodeHit[] = [];
   geocodeBusy = false;
@@ -446,6 +451,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.latchOpen = false;
     this.fact = "none";
     this.notice = null;
+    this.actionError = null;
     this.pinDropped = false;
     this.addingSocial = false;
     this.providers.clearSuggestions();
@@ -476,6 +482,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.panel = "none";
     this.fact = "none";
     this.notice = null;
+    this.actionError = null;
     this.pinDropped = false;
     this.addingSocial = false;
     this.providers.clearSuggestions();
@@ -884,6 +891,7 @@ export class AppComponent implements OnInit, OnDestroy {
     const name = this.query().trim();
     if (!name) return;
     this.notice = null;
+    this.actionError = null;
     this.latchOpen = false;
     this.panel = "propose";
     this.people.selected.set(null);
@@ -897,15 +905,19 @@ export class AppComponent implements OnInit, OnDestroy {
     }
     const suggestions = await this.providers.researchName(name);
     this.nameProposal = proposeNameResearch(name, suggestions);
-    await this.follow.storeResearch(
-      "",
-      this.nameProposal.facts.map((fact) => fact.suggestion),
-      {
-        source: "research",
-        query: name,
-        prompt: this.providers.lastPrompt() ?? undefined,
-      },
-    );
+    try {
+      await this.follow.storeResearch(
+        "",
+        this.nameProposal.facts.map((fact) => fact.suggestion),
+        {
+          source: "research",
+          query: name,
+          prompt: this.providers.lastPrompt() ?? undefined,
+        },
+      );
+    } catch (error) {
+      this.actionError = nameAcceptErrorMessage(error);
+    }
   }
 
   toggleProposalFact(id: string, checked: boolean): void {
@@ -928,6 +940,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.nameProposal = null;
     this.panel = "none";
     this.notice = null;
+    this.actionError = null;
     this.researchRequestedWithoutProvider = false;
     void dismissNameProposal();
     if (pending) {
@@ -938,21 +951,50 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   async acceptNameProposal(): Promise<void> {
-    if (!this.nameProposal) return;
-    const plan = planAcceptedNameProposal(this.nameProposal);
-    if (!plan) return;
-    const generatedBy = this.providers.actorForActive();
-    const created = await this.people.createPerson({ ...plan.person, generatedBy });
-    const skippedPhotos = await this.applyExtras(created.slug, plan.extras, generatedBy);
-    for (const fact of this.nameProposal.facts) {
-      await this.follow.acceptLocalOnly(fact.id);
+    const pending = this.nameProposal;
+    if (!pending) return;
+    const plan = planAcceptedNameProposal(pending);
+    if (!plan) {
+      this.actionError = "Check at least one fact, then Accept selected.";
+      return;
     }
+    this.actionError = null;
+    this.notice = null;
+    const generatedBy = this.providers.actorForActive();
+    let created: PersonView | null = null;
+    try {
+      created = await this.people.createPerson({ ...plan.person, generatedBy });
+      try {
+        await this.follow.attachNameProposal(pending.query, created.slug);
+      } catch {
+        /* Card write already happened. Leftover empty-slug facts still accept by id. */
+      }
+      const skippedPhotos = await this.applyExtras(created.slug, plan.extras, generatedBy);
+      for (const fact of pending.facts) {
+        await this.follow.acceptLocalOnly(fact.id);
+      }
+      await this.openAcceptedNameCard(created, skippedPhotosNotice(skippedPhotos));
+    } catch (error) {
+      this.actionError = nameAcceptErrorMessage(error);
+      if (created) {
+        await this.openAcceptedNameCard(created, null);
+      }
+    }
+  }
+
+  private async openAcceptedNameCard(created: PersonView, photoNotice: string | null): Promise<void> {
     this.nameProposal = null;
     this.panel = "none";
+    this.latchOpen = false;
+    this.fact = "none";
     this.query.set("");
-    this.notice = skippedPhotos
-      ? `${skippedPhotos} photo${skippedPhotos === 1 ? "" : "s"} could not be fetched. The rest of the card was saved.`
-      : null;
+    this.researchRequestedWithoutProvider = false;
+    this.notice = photoNotice;
+    await this.people.select(created.slug);
+  }
+
+  photoPreviewUrl(suggestion: FactSuggestion): string | null {
+    return photoPreviewUrl(suggestion);
   }
 
   proposalHasChecked(): boolean {
@@ -1199,7 +1241,10 @@ export class AppComponent implements OnInit, OnDestroy {
     for (const extra of extras) {
       const write = writesForAcceptedSuggestion(slug, extra);
       if (write.type === "photo") {
-        const stored = keepFetchedPhoto(write, await this.io.fetchPublicBytes(write.url));
+        const stored = keepFetchedPhoto(
+          write,
+          await readPublicPhotoBytes(write.url, (url) => this.io.fetchPublicBytes(url)),
+        );
         if (!stored) {
           skippedPhotos += 1;
           continue;

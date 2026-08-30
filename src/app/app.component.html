@@ -1139,7 +1139,7 @@
           </div>
         </section>
       } @else if (panel === "propose") {
-        <section class="sheet propose-sheet">
+        <section class="sheet propose-sheet" data-name-proposal>
           <header class="sheet-head">
             <div>
               <p class="kicker">Proposed card — not in the drawer yet</p>
@@ -1151,6 +1151,9 @@
             Public facts only. Check what belongs, delete what is wrong, then Accept selected.
             Nothing is written until you accept.
           </p>
+          @if (actionError) {
+            <p class="error">{{ actionError }}</p>
+          }
           @if (notice) {
             <p class="notice">{{ notice }}</p>
           }
@@ -1190,7 +1193,18 @@
                           · {{ fact.suggestion.field }}
                         }
                       </small>
-                      <p>{{ suggestionLabel(fact.suggestion) }}</p>
+                      @if (photoPreviewUrl(fact.suggestion); as preview) {
+                        <img
+                          class="fact-photo"
+                          data-photo-preview
+                          [src]="preview"
+                          [alt]="fact.suggestion.title"
+                          referrerpolicy="no-referrer"
+                          loading="lazy"
+                        />
+                      } @else {
+                        <p>{{ suggestionLabel(fact.suggestion) }}</p>
+                      }
                     </span>
                   </label>
                   <button class="ghost" type="button" (click)="deleteProposalFact(fact.id)">Delete</button>
@@ -1439,6 +1453,9 @@
               </button>
             </div>
 
+            @if (actionError) {
+              <p class="error">{{ actionError }}</p>
+            }
             @if (notice) {
               <p class="notice">{{ notice }}</p>
             }

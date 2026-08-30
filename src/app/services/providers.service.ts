@@ -1,7 +1,12 @@
 import { Injectable, signal } from "@angular/core";
 import { GoogleGenAI } from "@google/genai";
 import { actorAgent } from "../../../packages/okf/src/index";
-import { demoResearchPrompt, demoResearchSuggestions, isDemoMode } from "../demo-mode";
+import {
+  demoNameResearchSuggestions,
+  demoResearchPrompt,
+  demoResearchSuggestions,
+  isDemoMode,
+} from "../demo-mode";
 import type { FactSuggestion, PersonView, ProviderId, ProviderStatus, SuggestionSource } from "../models";
 import type { GrokDevicePending, GrokOAuthStatus } from "./grok-oauth";
 import {
@@ -196,6 +201,7 @@ export class ProvidersService {
   async applyDemoResearch(
     source: SuggestionSource = "research",
     personTitle = "Ada Demo",
+    items = demoResearchSuggestions(source),
   ): Promise<FactSuggestion[]> {
     this.busy.set(true);
     this.error.set(null);
@@ -203,7 +209,6 @@ export class ProvidersService {
     this.lastPrompt.set(null);
     await new Promise((resolve) => setTimeout(resolve, 400));
     this.lastPrompt.set(demoResearchPrompt(personTitle));
-    const items = demoResearchSuggestions(source);
     this.suggestions.set(items);
     this.busy.set(false);
     return items;
@@ -228,7 +233,7 @@ export class ProvidersService {
 
   async researchName(name: string): Promise<FactSuggestion[]> {
     if (isDemoMode()) {
-      return this.applyDemoResearch("research", name);
+      return this.applyDemoResearch("research", name, demoNameResearchSuggestions(name));
     }
     const provider = this.activeProvider();
     if (!provider) {
