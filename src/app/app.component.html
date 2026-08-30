@@ -931,21 +931,24 @@
                       Accept selected
                     </button>
                   </div>
+                } @else if (!providers.busy()) {
+                  <p class="whisper">No proposals yet.</p>
                 }
               </div>
             }
 
-            @if (person.notes.length) {
-              <section class="slips">
-                <h2>Notes</h2>
-                @for (note of person.notes; track note.id) {
-                  <article>
-                    <h3>{{ note.title }}</h3>
-                    <p>{{ note.body }}</p>
-                  </article>
-                }
-              </section>
-            }
+            <section class="slips">
+              <h2>Notes</h2>
+              @for (note of person.notes; track note.id) {
+                <article>
+                  <h3>{{ note.title }}</h3>
+                  <p>{{ note.body }}</p>
+                </article>
+              }
+              @if (!person.notes.length) {
+                <p class="whisper">No notes yet.</p>
+              }
+            </section>
 
             <section class="threads">
               <h2>Threads</h2>
@@ -958,6 +961,9 @@
                   }
                   <button class="ghost" type="button" (click)="removeSocial(item.path)">Delete</button>
                 </article>
+              }
+              @if (!person.social.length && !addingSocial) {
+                <p class="whisper">No threads yet.</p>
               }
               @if (addingSocial) {
                 <div class="grid">
@@ -974,51 +980,53 @@
               }
             </section>
 
-            @if (person.photos.length) {
-              <section class="prints">
-                <h2>Photos</h2>
-                @for (photo of person.photos; track photo.id) {
-                  <article>
-                    <h3>{{ photo.title }}</h3>
-                    <code>{{ photo.resource }}</code>
-                    <button class="ghost" type="button" (click)="removePhoto(photo)">Delete</button>
-                  </article>
-                }
-              </section>
-            }
+            <section class="prints">
+              <h2>Photos</h2>
+              @for (photo of person.photos; track photo.id) {
+                <article>
+                  <h3>{{ photo.title }}</h3>
+                  <code>{{ photo.resource }}</code>
+                  <button class="ghost" type="button" (click)="removePhoto(photo)">Delete</button>
+                </article>
+              }
+              @if (!person.photos.length) {
+                <p class="whisper">No photos yet.</p>
+              }
+            </section>
 
-            @if (person.documents.length) {
-              <section class="prints">
-                <h2>Documents</h2>
-                @for (doc of person.documents; track doc.id) {
-                  <article>
-                    <h3>{{ doc.title }}</h3>
-                    <small>{{ kindLabel(doc.kind) }}</small>
-                    @if (doc.note) {
-                      <p>{{ doc.note }}</p>
-                    }
-                    <code>{{ doc.resource }}</code>
-                    <p class="whisper">Linked: {{ doc.subjects.join(", ") }}</p>
-                    @if (unlinkedPeople(doc).length) {
-                      <div class="row">
-                        <label>
-                          Also link to
-                          <select [(ngModel)]="linkSlug" name="link-{{ doc.slug }}">
-                            <option value="">Choose a person already in the drawer</option>
-                            @for (other of unlinkedPeople(doc); track other.slug) {
-                              <option [value]="other.slug">{{ other.title }}</option>
-                            }
-                          </select>
-                        </label>
-                        <button type="button" (click)="linkSelectedDocument(doc.slug)" [disabled]="!linkSlug">
-                          Link
-                        </button>
-                      </div>
-                    }
-                  </article>
-                }
-              </section>
-            }
+            <section class="prints">
+              <h2>Documents</h2>
+              @for (doc of person.documents; track doc.id) {
+                <article>
+                  <h3>{{ doc.title }}</h3>
+                  <small>{{ kindLabel(doc.kind) }}</small>
+                  @if (doc.note) {
+                    <p>{{ doc.note }}</p>
+                  }
+                  <code>{{ doc.resource }}</code>
+                  <p class="whisper">Linked: {{ doc.subjects.join(", ") }}</p>
+                  @if (unlinkedPeople(doc).length) {
+                    <div class="row">
+                      <label>
+                        Also link to
+                        <select [(ngModel)]="linkSlug" name="link-{{ doc.slug }}">
+                          <option value="">Choose a person already in the drawer</option>
+                          @for (other of unlinkedPeople(doc); track other.slug) {
+                            <option [value]="other.slug">{{ other.title }}</option>
+                          }
+                        </select>
+                      </label>
+                      <button type="button" (click)="linkSelectedDocument(doc.slug)" [disabled]="!linkSlug">
+                        Link
+                      </button>
+                    </div>
+                  }
+                </article>
+              }
+              @if (!person.documents.length) {
+                <p class="whisper">No documents yet.</p>
+              }
+            </section>
           </article>
         </section>
       } @else if (browsing()) {

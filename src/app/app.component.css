@@ -436,6 +436,13 @@ button:disabled {
   white-space: pre-wrap;
 }
 
+.slips > .whisper,
+.threads > .whisper,
+.prints > .whisper {
+  margin: 0;
+  color: var(--mute);
+}
+
 .prose {
   margin: 0.8rem 0 0;
 }
