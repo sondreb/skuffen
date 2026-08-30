@@ -1,8 +1,8 @@
 /**
- * OKF-at-rest file format. AES-256-GCM per file, path-bound AAD.
- * Paths stay the same (file path is identity). Bytes on disk are ciphertext.
+ * Leftover SKUF1 ciphertext from older Skuffen builds.
+ * Current people-graph files are plaintext markdown+YAML.
  *
- * Layout: SKUF1 | version(1) | nonce(12) | ciphertext | tag(16)
+ * Layout of leftover objects: SKUF1 | version(1) | nonce(12) | ciphertext | tag(16)
  */
 
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
@@ -17,7 +17,7 @@ export const AES_NONCE_BYTES = 12;
 export const AES_TAG_BYTES = 16;
 
 export const ENCRYPTED_BUNDLE_MESSAGE =
-  "This OKF bundle is encrypted at rest. Export plaintext OKF from the Skuffen desktop app, or set SKUFFEN_OKF_KEY to the base64 vault key from the OS keychain (service me.grok.skuffen, account okf-master-key). Never upload the key, the graph, or tokens.";
+  "This OKF file is leftover AES-256-GCM ciphertext. Set SKUFFEN_OKF_KEY to the base64 wrapping key from the OS credential store (service me.grok.skuffen, account okf-master-key) to decrypt it once and rewrite as plaintext. The file was not changed. Never upload the key, the graph, or tokens.";
 
 export class EncryptedBundleError extends Error {
   constructor(message = ENCRYPTED_BUNDLE_MESSAGE) {
@@ -107,7 +107,9 @@ export function decryptBytes(key: Uint8Array, relPath: string, sealed: Uint8Arra
   try {
     return Buffer.concat([decipher.update(ciphertext), decipher.final()]);
   } catch {
-    throw new Error(`Could not decrypt ${relPath}. Wrong key, or the file was moved.`);
+    throw new Error(
+      `Could not decrypt ${relPath}. Wrong key, or the file was moved. The leftover ciphertext was not changed.`,
+    );
   }
 }
 

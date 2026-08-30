@@ -77,7 +77,7 @@ Frontend only (browser preview, localStorage stand-in for the people-graph bundl
 npm start
 ```
 
-The browser preview **cannot encrypt the people-graph honestly** — there is no OS keychain in `npm start`. The graph stays in a localStorage stand-in (plaintext). Use `npm run tauri dev` for OS-backed encryption. Grok/Gemini API keys and OAuth tokens still stay in memory for the current tab only. They are never written to `localStorage`, `sessionStorage`, or any other durable browser storage, and they vanish on reload.
+The browser preview keeps the people-graph in a localStorage stand-in (plaintext). Use `npm run tauri dev` for the on-disk OKF folder. Grok/Gemini API keys and OAuth tokens still stay in memory for the current tab only. They are never written to `localStorage`, `sessionStorage`, or any other durable browser storage, and they vanish on reload.
 
 OKF / vault / MCP / browser-secret / OAuth / research-follow / merge-proposal / brief / capture / shuffle / timeline / commitments / update-check checks:
 
@@ -127,7 +127,6 @@ Windows ships NSIS only (no WiX MSI): per-user one-click overwrite in the same f
 Default bundle: the app data directory `people-graph` folder, or a folder you choose.
 
 ```
-.skuffen-vault.json      # vault sidecar (not secret; no key)
 index.md                 # okf_version: "0.2"
 log.md
 people/
@@ -144,36 +143,31 @@ documents/
 
 Photos and documents are files, not markdown blobs. A Document has required `type`, `title`, and `resource` pointing at the file. File path is identity. Land plots are documents (`kind: land-plot`) with a title, file, optional note, and `subjects` linking one or more people. Drop a file onto a person or use Add document — nothing is uploaded.
 
-A person's map pin is a linked `Place` concept (`people/<slug>/place.md`). Suggested facts from Grok or Gemini are written only after you accept them. On desktop, the *bytes* of those files (markdown, YAML, photos, documents, places) are AES-256-GCM ciphertext.
+A person's map pin is a linked `Place` concept (`people/<slug>/place.md`). Suggested facts from Grok or Gemini are written only after you accept them. On desktop, those files are plaintext markdown+YAML (photos and documents stay as their own files).
 
 ## People map
 
 The people-graph can be plotted on a map. Search an address or drop a pin from person detail or the map view. **Pins and people stay on disk** in the OKF bundle. They are never sent to a Skuffen cloud backend (there is none). Map tiles and Nominatim geocoding may use the public internet (OpenStreetMap). No analytics.
 
-## Encryption at rest
+## On-disk format
 
-A stolen laptop should not be a stolen graph. Desktop Skuffen (`npm run tauri dev` or an installer) encrypts every people-graph file in place.
+Desktop Skuffen (`npm run tauri dev` or an installer) stores the people-graph as **plaintext markdown+YAML**. File path is identity. Photos and documents are ordinary files beside their concept markdown.
 
-**Why encrypted files, not SQLCipher.** OKF on disk is the product: path is identity, photos are files, MCP and export are folders of markdown. Replacing the graph with a database would hide that until export. Encrypted files keep the tree and only change the bytes.
+Older builds wrote AES-256-GCM ciphertext in place (`SKUF1` header). If a leftover ciphertext file is still on disk, Skuffen tries to decrypt it once with the wrapping key from the OS credential store (service `me.grok.skuffen`, account `okf-master-key`) and rewrite it as plaintext. If that key is missing or wrong, the file is left unchanged and the UI shows a clear error.
 
-**Cipher.** AES-256-GCM per file. Header `SKUF1` + version + 12-byte nonce + ciphertext + tag. Additional data is the bundle-relative path, so files cannot be swapped. Closing or locking the app leaves ciphertext on disk.
-
-**Where the key lives.** A 32-byte wrapping key is created on first unlock and stored in the OS credential store:
+**Where tokens live.** Grok and Gemini tokens stay in the OS credential store:
 
 - Service: `me.grok.skuffen`
-- Account: `okf-master-key`
 - macOS Keychain, Windows Credential Manager, Linux Secret Service
-- If no OS keychain is available, the same 0600 file fallback used for provider tokens (`<app-data>/credentials/okf-master-key.secret`)
+- If no OS keychain is available, the same 0600 file fallback (`<app-data>/credentials/<name>.secret`)
 
-Unlock uses your OS login session (the keychain). There is no Skuffen password, no Skuffen account, and no cloud KMS. The people-graph, tokens, and the vault key are never uploaded.
+There is no Skuffen password, no Skuffen account, and no cloud KMS. Tokens never enter the OKF bundle or `localStorage`. The people-graph is never uploaded.
 
-`.skuffen-vault.json` records that the folder is a vault. It is not secret and does not contain the key.
+**Browser `npm start`.** The preview keeps the graph in a localStorage stand-in (plaintext) and tells you to use the desktop app for the on-disk folder. Tokens still never land in `localStorage`.
 
-**Browser `npm start`.** Encryption is gated. The preview cannot talk to the OS keychain, so it does not invent a cloud secret store. It keeps the graph in localStorage as a stand-in and tells you to use the desktop app. Tokens still never land in `localStorage`.
+**Export OKF.** Export (Menu → Export plaintext OKF) copies the on-disk folder. The browser preview downloads a JSON map of its localStorage stand-in.
 
-**Export plaintext OKF.** Export is an explicit action (rail → Export plaintext OKF). Desktop writes a decrypted OKF v0.2 folder you choose. That export is portable and honest — and plaintext. Do not sync it to a cloud drive if a stolen copy of the graph would matter. The browser preview downloads a JSON map of its localStorage stand-in; that is not OS-backed encryption.
-
-**MCP.** Point `SKUFFEN_BUNDLE` at an exported plaintext folder, or set `SKUFFEN_OKF_KEY` to the base64 vault key from the OS keychain to read the live vault. Never upload that key.
+**MCP.** Point `SKUFFEN_BUNDLE` at the live people-graph folder. Leftover ciphertext needs `SKUFFEN_OKF_KEY` (the base64 leftover wrapping key) so MCP can decrypt-then-rewrite once. Never upload that key.
 
 ## Providers
 

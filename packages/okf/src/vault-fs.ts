@@ -11,12 +11,10 @@ import {
 import { dirname, join } from "node:path";
 import {
   decryptBytes,
-  encryptBytes,
   EncryptedBundleError,
   isEncrypted,
   normalizeVaultPath,
   VAULT_META_NAME,
-  vaultMetaDocument,
   type VaultMeta,
 } from "./vault.ts";
 
@@ -44,11 +42,6 @@ export function readVaultMeta(root: string): VaultMeta | null {
   return null;
 }
 
-export function writeVaultMeta(root: string): void {
-  mkdirSync(root, { recursive: true });
-  writeFileSync(join(root, VAULT_META_NAME), `${JSON.stringify(vaultMetaDocument(), null, 2)}\n`, "utf8");
-}
-
 export function listBundleFiles(root: string): string[] {
   if (!existsSync(root)) return [];
   const out: string[] = [];
@@ -69,15 +62,29 @@ export function listBundleFiles(root: string): string[] {
   return out;
 }
 
+export function leftoverCiphertext(root: string): boolean {
+  return listBundleFiles(root).some((rel) => {
+    const abs = safeJoin(root, rel);
+    return existsSync(abs) && isEncrypted(readFileSync(abs));
+  });
+}
+
+export function removeVaultMetaIfPlain(root: string): void {
+  if (leftoverCiphertext(root)) return;
+  const abs = join(root, VAULT_META_NAME);
+  if (existsSync(abs)) rmSync(abs);
+}
+
 export function readBundleFile(root: string, rel: string, key: Uint8Array | null): Buffer | null {
   const abs = safeJoin(root, rel);
   if (!existsSync(abs) || !statSync(abs).isFile()) return null;
   const raw = readFileSync(abs);
-  if (isEncrypted(raw)) {
-    if (!key) throw new EncryptedBundleError();
-    return Buffer.from(decryptBytes(key, rel, raw));
-  }
-  return raw;
+  if (!isEncrypted(raw)) return raw;
+  if (!key) throw new EncryptedBundleError();
+  const plain = Buffer.from(decryptBytes(key, rel, raw));
+  atomicWrite(abs, plain);
+  removeVaultMetaIfPlain(root);
+  return plain;
 }
 
 export function deleteBundleFile(root: string, rel: string): void {
@@ -90,41 +97,34 @@ export function deleteBundleFile(root: string, rel: string): void {
   }
 }
 
-export function writeBundleFile(root: string, rel: string, data: Uint8Array, key: Uint8Array | null): void {
+export function writeBundleFile(root: string, rel: string, data: Uint8Array, _key?: Uint8Array | null): void {
   if (isVaultMetaPath(rel)) {
     throw new Error("Cannot overwrite vault metadata as an OKF document");
   }
   const abs = safeJoin(root, rel);
   mkdirSync(dirname(abs), { recursive: true });
-  if (!key) {
-    if (existsSync(abs) && isEncrypted(readFileSync(abs))) {
-      throw new EncryptedBundleError();
-    }
-    writeFileSync(abs, data);
-    return;
-  }
-  const sealed = encryptBytes(key, rel, data);
-  atomicWrite(abs, sealed);
-  writeVaultMeta(root);
+  atomicWrite(abs, data);
 }
 
-export function sealBundle(root: string, key: Uint8Array): { sealed: number } {
-  let sealed = 0;
+export function unsealBundle(root: string, key: Uint8Array | null): { rewritten: number } {
+  let rewritten = 0;
   for (const rel of listBundleFiles(root)) {
     const abs = safeJoin(root, rel);
     const raw = readFileSync(abs);
-    if (isEncrypted(raw)) continue;
-    atomicWrite(abs, encryptBytes(key, rel, raw));
-    sealed += 1;
+    if (!isEncrypted(raw)) continue;
+    if (!key) throw new EncryptedBundleError();
+    const plain = Buffer.from(decryptBytes(key, rel, raw));
+    atomicWrite(abs, plain);
+    rewritten += 1;
   }
-  writeVaultMeta(root);
-  return { sealed };
+  removeVaultMetaIfPlain(root);
+  return { rewritten };
 }
 
-export function exportPlainBundle(root: string, dest: string, key: Uint8Array): void {
+export function exportPlainBundle(root: string, dest: string, key: Uint8Array | null): void {
   const destRoot = dest.replace(/[/\\]+$/, "");
   if (!destRoot || destRoot === root) {
-    throw new Error("Export folder must be outside the encrypted bundle");
+    throw new Error("Export folder must be outside the people-graph bundle");
   }
   mkdirSync(destRoot, { recursive: true });
   for (const rel of listBundleFiles(root)) {

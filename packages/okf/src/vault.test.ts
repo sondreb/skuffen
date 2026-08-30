@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -16,9 +16,9 @@ import {
   VAULT_KEY_ID,
   VAULT_MAGIC,
 } from "./vault.ts";
-import { exportPlainBundle, listBundleFiles, readBundleFile, sealBundle, writeBundleFile } from "./vault-fs.ts";
+import { exportPlainBundle, listBundleFiles, readBundleFile, unsealBundle, writeBundleFile } from "./vault-fs.ts";
 
-test("file path is identity: encrypting does not rename the document", () => {
+test("file path is identity: leftover encrypting does not rename the document", () => {
   const key = generateKey();
   const path = "people/ada-lovelace/person.md";
   const doc = createPersonDocument({
@@ -33,7 +33,7 @@ test("file path is identity: encrypting does not rename the document", () => {
   assert.equal(decryptBytes(key, path, sealed).toString("utf8"), plain.toString("utf8"));
 });
 
-test("ciphertext is not plaintext markdown, YAML, or the email", () => {
+test("leftover ciphertext is not plaintext markdown, YAML, or the email", () => {
   const key = generateKey();
   const path = "people/ada-lovelace/person.md";
   const plain = Buffer.from(
@@ -58,14 +58,13 @@ test("ciphertext is not plaintext markdown, YAML, or the email", () => {
   assert.doesNotMatch(hay, /okf_version/);
 });
 
-test("document files (binary) encrypt at rest like photos; concept path stays identity", () => {
+test("document files (binary) and photos still decrypt leftover ciphertext; concept path stays identity", () => {
   const key = generateKey();
   const filePath = "documents/plot-12-hvaler/plot-12.pdf";
   const pdf = Buffer.from("%PDF-1.4 secret-land-plot", "utf8");
   const sealed = encryptBytes(key, filePath, pdf);
   assert.ok(isEncrypted(sealed));
   assert.doesNotMatch(Buffer.from(sealed).toString("latin1"), /secret-land-plot/);
-  assert.doesNotMatch(Buffer.from(sealed).toString("latin1"), /%PDF-1.4/);
   assert.deepEqual(Buffer.from(decryptBytes(key, filePath, sealed)), pdf);
 
   const concept = createDocumentDocument({
@@ -76,25 +75,20 @@ test("document files (binary) encrypt at rest like photos; concept path stays id
     subjectSlugs: ["ada-lovelace"],
   });
   assert.equal(concept.path, "documents/plot-12-hvaler/document.md");
-  const conceptSealed = encryptBytes(key, concept.path, Buffer.from(serializeDocument(concept), "utf8"));
-  assert.ok(isEncrypted(conceptSealed));
-  assert.doesNotMatch(Buffer.from(conceptSealed).toString("latin1"), /Plot 12/);
-  assert.doesNotMatch(Buffer.from(conceptSealed).toString("latin1"), /ada-lovelace/);
 });
 
-test("photos (binary) round-trip and stay non-plaintext", () => {
+test("photos (binary) leftover ciphertext still round-trips", () => {
   const key = generateKey();
   const path = "people/ada-lovelace/photos/portrait.jpg";
   const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01, 0xaa, 0xbb]);
   const sealed = encryptBytes(key, path, jpeg);
   assert.ok(isEncrypted(sealed));
-  assert.notDeepEqual(Buffer.from(sealed.subarray(0, jpeg.length)), jpeg);
   assert.deepEqual(Buffer.from(decryptBytes(key, path, sealed)), jpeg);
   const concept = createPhotoDocument({ slug: "ada-lovelace", fileName: "portrait.jpg" });
   assert.equal(concept.path, "people/ada-lovelace/photos/portrait.md");
 });
 
-test("wrong key or swapped path fails closed", () => {
+test("wrong key or swapped path fails closed and does not rewrite", () => {
   const key = generateKey();
   const other = generateKey();
   const path = "people/ada-lovelace/person.md";
@@ -103,7 +97,7 @@ test("wrong key or swapped path fails closed", () => {
   assert.throws(() => decryptBytes(key, "people/other/person.md", sealed), /Could not decrypt/);
 });
 
-test("encode/decode key is 32-byte base64", () => {
+test("encode/decode leftover key is 32-byte base64", () => {
   const key = generateKey();
   assert.equal(key.length, 32);
   const encoded = encodeKey(key);
@@ -113,7 +107,7 @@ test("encode/decode key is 32-byte base64", () => {
   assert.equal(VAULT_KEY_ID, "okf-master-key");
 });
 
-test("sealBundle encrypts a directory in place; export restores plaintext OKF", () => {
+test("writes are plaintext markdown+YAML; leftover ciphertext is rewritten once", () => {
   const root = mkdtempSync(join(tmpdir(), "skuffen-vault-"));
   const dest = mkdtempSync(join(tmpdir(), "skuffen-export-"));
   const key = generateKey();
@@ -125,39 +119,74 @@ test("sealBundle encrypts a directory in place; export restores plaintext OKF", 
   const abs = join(root, person.path);
   mkdirSync(join(abs, ".."), { recursive: true });
   const plain = serializeDocument(person);
-  writeFileSync(abs, plain, "utf8");
-  writeFileSync(join(root, "index.md"), '---\nokf_version: "0.2"\n---\n\n# Skuffen\n', "utf8");
+  writeFileSync(abs, encryptBytes(key, person.path, Buffer.from(plain, "utf8")));
+  writeFileSync(
+    join(root, "index.md"),
+    encryptBytes(key, "index.md", Buffer.from('---\nokf_version: "0.2"\n---\n\n# Skuffen\n', "utf8")),
+  );
   const photo = Buffer.from("FAKEJPEG-ada-portrait", "utf8");
   mkdirSync(join(root, "people/ada-lovelace/photos"), { recursive: true });
-  writeFileSync(join(root, "people/ada-lovelace/photos/portrait.jpg"), photo);
+  writeFileSync(
+    join(root, "people/ada-lovelace/photos/portrait.jpg"),
+    encryptBytes(key, "people/ada-lovelace/photos/portrait.jpg", photo),
+  );
+  writeFileSync(join(root, ".skuffen-vault.json"), '{"format":"skuffen-okf-vault","encrypted":true}\n');
 
-  const { sealed } = sealBundle(root, key);
-  assert.equal(sealed, 3);
+  assert.ok(isEncrypted(readFileSync(abs)));
+  assert.throws(() => readBundleFile(root, person.path, null), EncryptedBundleError);
+  assert.ok(isEncrypted(readFileSync(abs)), "missing key must leave leftover ciphertext unchanged");
 
-  const onDisk = readFileSync(abs);
-  assert.ok(isEncrypted(onDisk));
-  assert.doesNotMatch(onDisk.toString("latin1"), /Ada Lovelace/);
-  assert.doesNotMatch(onDisk.toString("latin1"), /ada@example.com/);
-  assert.doesNotMatch(readFileSync(join(root, "people/ada-lovelace/photos/portrait.jpg")).toString("latin1"), /FAKEJPEG/);
-  assert.doesNotMatch(readFileSync(join(root, "index.md")).toString("latin1"), /okf_version/);
-  assert.ok(readFileSync(join(root, ".skuffen-vault.json"), "utf8").includes("aes-256-gcm"));
+  const { rewritten } = unsealBundle(root, key);
+  assert.equal(rewritten, 3);
+  assert.match(readFileSync(abs, "utf8"), /Ada Lovelace/);
+  assert.match(readFileSync(abs, "utf8"), /ada@example.com/);
+  assert.match(readFileSync(join(root, "index.md"), "utf8"), /okf_version: "0.2"/);
+  assert.deepEqual(readFileSync(join(root, "people/ada-lovelace/photos/portrait.jpg")), photo);
+  assert.equal(existsSync(join(root, ".skuffen-vault.json")), false);
   assert.deepEqual(listBundleFiles(root), [
     "index.md",
     "people/ada-lovelace/person.md",
     "people/ada-lovelace/photos/portrait.jpg",
   ]);
 
-  assert.throws(() => readBundleFile(root, person.path, null), EncryptedBundleError);
+  writeBundleFile(root, "log.md", Buffer.from("# Directory Update Log\n* **Accept**: wrote plaintext.\n", "utf8"));
+  assert.match(readFileSync(join(root, "log.md"), "utf8"), /Accept/);
+  assert.ok(!isEncrypted(readFileSync(join(root, "log.md"))));
 
-  exportPlainBundle(root, dest, key);
+  exportPlainBundle(root, dest, null);
   assert.equal(readFileSync(join(dest, person.path), "utf8"), plain);
   assert.match(readFileSync(join(dest, "index.md"), "utf8"), /okf_version: "0.2"/);
   assert.deepEqual(readFileSync(join(dest, "people/ada-lovelace/photos/portrait.jpg")), photo);
 });
 
-test("Place coordinates and address are sealed with the vault key", () => {
-  const root = mkdtempSync(join(tmpdir(), "skuffen-place-vault-"));
+test("readBundleFile decrypts leftover ciphertext once and rewrites plaintext", () => {
+  const root = mkdtempSync(join(tmpdir(), "skuffen-rewrite-"));
   const key = generateKey();
+  const path = "log.md";
+  const plain = "# Directory Update Log\n";
+  mkdirSync(root, { recursive: true });
+  writeFileSync(join(root, path), encryptBytes(key, path, Buffer.from(plain, "utf8")));
+  const opened = readBundleFile(root, path, key);
+  assert.equal(opened?.toString("utf8"), plain);
+  const onDisk = readFileSync(join(root, path));
+  assert.ok(!isEncrypted(onDisk));
+  assert.equal(onDisk.toString("utf8"), plain);
+});
+
+test("wrong leftover key leaves the ciphertext file unchanged", () => {
+  const root = mkdtempSync(join(tmpdir(), "skuffen-wrong-key-"));
+  const key = generateKey();
+  const other = generateKey();
+  const path = "log.md";
+  mkdirSync(root, { recursive: true });
+  const sealed = Buffer.from(encryptBytes(key, path, Buffer.from("# secret\n", "utf8")));
+  writeFileSync(join(root, path), sealed);
+  assert.throws(() => readBundleFile(root, path, other), /Could not decrypt log.md/);
+  assert.deepEqual(readFileSync(join(root, path)), sealed);
+});
+
+test("Place coordinates are stored as plaintext markdown+YAML", () => {
+  const root = mkdtempSync(join(tmpdir(), "skuffen-place-"));
   const place = createPlaceDocument({
     slug: "ada-lovelace",
     address: "12 St James's Square, London",
@@ -165,31 +194,28 @@ test("Place coordinates and address are sealed with the vault key", () => {
     longitude: -0.12574,
     source: "search",
   });
-  writeBundleFile(root, place.path, Buffer.from(serializeDocument(place), "utf8"), key);
-  const onDisk = readFileSync(join(root, place.path));
-  assert.ok(isEncrypted(onDisk));
-  assert.doesNotMatch(onDisk.toString("latin1"), /St James's Square/);
-  assert.doesNotMatch(onDisk.toString("latin1"), /51\.50848/);
-  assert.doesNotMatch(onDisk.toString("latin1"), /-0\.12574/);
-  assert.doesNotMatch(onDisk.toString("latin1"), /type: Place/);
-  const plain = readBundleFile(root, place.path, key);
+  writeBundleFile(root, place.path, Buffer.from(serializeDocument(place), "utf8"));
+  const onDisk = readFileSync(join(root, place.path), "utf8");
+  assert.match(onDisk, /St James's Square/);
+  assert.match(onDisk, /51\.50848/);
+  assert.match(onDisk, /-0\.12574/);
+  assert.match(onDisk, /type: Place/);
+  const plain = readBundleFile(root, place.path, null);
   assert.ok(plain);
   const reloaded = parseDocument(place.path, plain.toString("utf8"));
   assert.equal(reloaded.frontmatter.address, "12 St James's Square, London");
   assert.equal(reloaded.frontmatter.latitude, 51.50848);
 });
 
-test("writeBundleFile with a key never leaves plaintext; without a key it stays honest portable OKF", () => {
-  const encryptedRoot = mkdtempSync(join(tmpdir(), "skuffen-enc-"));
-  const plainRoot = mkdtempSync(join(tmpdir(), "skuffen-plain-"));
+test("writeBundleFile always leaves plaintext, even when a leftover key is passed", () => {
+  const root = mkdtempSync(join(tmpdir(), "skuffen-plain-write-"));
   const key = generateKey();
-  writeBundleFile(encryptedRoot, "index.md", Buffer.from('---\nokf_version: "0.2"\n---\n'), key);
-  writeBundleFile(plainRoot, "index.md", Buffer.from('---\nokf_version: "0.2"\n---\n'), null);
-  assert.ok(isEncrypted(readFileSync(join(encryptedRoot, "index.md"))));
-  assert.match(readFileSync(join(plainRoot, "index.md"), "utf8"), /okf_version/);
+  writeBundleFile(root, "index.md", Buffer.from('---\nokf_version: "0.2"\n---\n'), key);
+  assert.match(readFileSync(join(root, "index.md"), "utf8"), /okf_version/);
+  assert.ok(!isEncrypted(readFileSync(join(root, "index.md"))));
 });
 
-test("known vector: AES-256-GCM with fixed key and nonce", () => {
+test("known vector: leftover AES-256-GCM with fixed key and nonce still decrypts", () => {
   const key = Buffer.alloc(32, 0x11);
   const nonce = Buffer.alloc(12, 0x22);
   const path = "people/ada-lovelace/person.md";

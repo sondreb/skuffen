@@ -13,7 +13,7 @@ import type { DesktopRuntime, GithubRelease } from "./update";
 import { purgeDurableBrowserSecrets, webSecretDelete, webSecretGet, webSecretSet } from "./web-secrets";
 
 export const BROWSER_VAULT_MESSAGE =
-  "Browser preview cannot use the OS keychain, so it cannot encrypt the people-graph honestly. The graph stays in this tab's localStorage stand-in (plaintext). Use npm run tauri dev for OS-backed AES-256-GCM. Tokens still never go to localStorage.";
+  "Browser preview keeps the people-graph in this tab's localStorage stand-in (plaintext). Use npm run tauri dev for the on-disk OKF folder. Tokens still never go to localStorage.";
 
 const FILES_KEY = "skuffen.bundle.files";
 const BLOBS_KEY = "skuffen.bundle.blobs";

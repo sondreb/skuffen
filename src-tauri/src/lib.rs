@@ -109,21 +109,17 @@ fn list_files(root: String, prefix: Option<String>) -> Result<Vec<String>, Strin
 
 #[tauri::command]
 fn read_text(
+    app: tauri::AppHandle,
     vault: State<VaultState>,
     root: String,
     path: String,
 ) -> Result<Option<String>, String> {
-    vault::read_text(&vault, &root, &path)
+    vault::read_text(&app, &vault, &root, &path)
 }
 
 #[tauri::command]
-fn write_text(
-    vault: State<VaultState>,
-    root: String,
-    path: String,
-    contents: String,
-) -> Result<(), String> {
-    vault::write_text(&vault, &root, &path, &contents)
+fn write_text(root: String, path: String, contents: String) -> Result<(), String> {
+    vault::write_text(&root, &path, &contents)
 }
 
 #[tauri::command]
@@ -133,31 +129,26 @@ fn delete_file(root: String, path: String) -> Result<(), String> {
 
 #[tauri::command]
 fn copy_file_into_bundle(
-    vault: State<VaultState>,
     root: String,
     source: String,
     dest: String,
 ) -> Result<(), String> {
-    vault::import_file(&vault, &root, &source, &dest)
+    vault::import_file(&root, &source, &dest)
 }
 
 #[tauri::command]
-fn write_bytes(
-    vault: State<VaultState>,
-    root: String,
-    path: String,
-    contents: Vec<u8>,
-) -> Result<(), String> {
-    vault::write_bytes(&vault, &root, &path, &contents)
+fn write_bytes(root: String, path: String, contents: Vec<u8>) -> Result<(), String> {
+    vault::write_bytes(&root, &path, &contents)
 }
 
 #[tauri::command]
 fn read_bytes(
+    app: tauri::AppHandle,
     vault: State<VaultState>,
     root: String,
     path: String,
 ) -> Result<Option<Vec<u8>>, String> {
-    vault::read_bytes(&vault, &root, &path)
+    vault::read_bytes(&app, &vault, &root, &path)
 }
 
 #[tauri::command]
@@ -177,17 +168,18 @@ fn vault_status(app: tauri::AppHandle, vault: State<VaultState>) -> Result<vault
 
 #[tauri::command]
 fn export_plain_okf(
+    app: tauri::AppHandle,
     vault: State<VaultState>,
     root: String,
 ) -> Result<Option<String>, String> {
     let dest = rfd::FileDialog::new()
-        .set_title("Export plaintext OKF (this folder will be readable)")
+        .set_title("Export OKF folder (plaintext markdown+YAML)")
         .pick_folder()
         .map(|p| p.to_string_lossy().to_string());
     let Some(dest) = dest else {
         return Ok(None);
     };
-    vault::export_plain(&vault, &root, &dest)?;
+    vault::export_plain(&app, &vault, &root, &dest)?;
     Ok(Some(dest))
 }
 

@@ -1,6 +1,6 @@
 # Labeled E2E demo recordings
 
-Training clips are recorded against the **Angular web preview** (`npm start` / `ng serve` on port 1420), not the Tauri desktop shell. The browser stand-in keeps the people-graph in `localStorage` (plaintext). Tokens still never land in durable browser storage. Use `npm run tauri dev` when you need OS keychain encryption.
+Training clips are recorded against the **Angular web preview** (`npm start` / `ng serve` on port 1420), not the Tauri desktop shell. The browser stand-in keeps the people-graph in `localStorage` (plaintext). Tokens still never land in durable browser storage. Use `npm run tauri dev` for the on-disk OKF folder and OS keychain tokens.
 
 No ElevenLabs. No API keys. Demo people are synthetic (`Ada Demo` + a public-park geocode stub). Do not copy real people-graph files into this tree. Grok (`api.x.ai`) and Gemini (`generativelanguage.google.com` / `generativelanguage.googleapis.com`) are mocked — the suite fails if the app attempts those hosts.
 

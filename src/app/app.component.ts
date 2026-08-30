@@ -248,11 +248,10 @@ export class AppComponent implements OnInit, OnDestroy {
     return all.filter((person) => `${person.title} ${person.description ?? ""}`.toLowerCase().includes(q));
   });
 
-  readonly empty = computed(() => this.people.ready() && !this.people.locked() && this.people.people().length === 0);
+  readonly empty = computed(() => this.people.ready() && this.people.people().length === 0);
   readonly browsing = computed(
     () =>
       this.people.ready() &&
-      !this.people.locked() &&
       this.panelState() === "none" &&
       !this.people.selected() &&
       this.people.people().length > 0,
@@ -345,9 +344,7 @@ export class AppComponent implements OnInit, OnDestroy {
     const settings = await this.io.getSettings();
     this.dismissedMerges.set(settings.dismissedMerges ?? []);
     this.droppedCommitments.set(settings.droppedCommitments ?? []);
-    if (!this.people.locked()) {
-      await this.follow.start();
-    }
+    await this.follow.start();
     this.offerMergeIfNeeded(false);
   }
 
@@ -377,7 +374,6 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   focusFind(): void {
-    if (this.people.locked()) return;
     this.focusSoon(() => {
       const input = this.findInput()?.nativeElement;
       input?.select();
@@ -441,7 +437,7 @@ export class AppComponent implements OnInit, OnDestroy {
     }
     if (meta && event.shiftKey && event.key.toLowerCase() === "c") {
       event.preventDefault();
-      if (!this.people.locked()) this.openCapture();
+      this.openCapture();
       return;
     }
     if (event.key === "/" && !meta && !event.altKey && !this.isTypingTarget(event.target)) {
@@ -1880,21 +1876,6 @@ export class AppComponent implements OnInit, OnDestroy {
 
   trustLabel(trust: string): string {
     return trust === "hostile-web" ? "Public web — hostile until Accept" : "Local ask";
-  }
-
-  async unlock(): Promise<void> {
-    await this.people.unlock();
-    if (!this.people.locked()) {
-      await this.follow.start();
-    }
-  }
-
-  async lock(): Promise<void> {
-    this.follow.stop();
-    await this.people.lock();
-    this.panel = "none";
-    this.menuOpen = false;
-    this.fact = "none";
   }
 
   async exportPlain(): Promise<void> {

@@ -10,12 +10,11 @@
       <img src="assets/skuffen-icon.png" alt="" />
       <div>
         <strong>Skuffen</strong>
-        <span>{{ people.locked() ? "Locked" : personCount() ? personCount() + (personCount() === 1 ? " person" : " people") : "People" }}</span>
+        <span>{{ personCount() ? personCount() + (personCount() === 1 ? " person" : " people") : "People" }}</span>
       </div>
     </div>
 
-    @if (!people.locked()) {
-      <div class="tools">
+    <div class="tools">
         <button
           type="button"
           class="tool"
@@ -57,9 +56,8 @@
           </button>
         }
       </div>
-    }
 
-    <button
+    <button>
       #menuBtn
       class="menu-btn"
       type="button"
@@ -108,7 +106,7 @@
           <button
             type="button"
             (click)="openBrief()"
-            [disabled]="people.locked() || people.people().length === 0"
+            [disabled]="people.people().length === 0"
             [attr.data-demo]="demoMode ? 'open-brief' : null"
           >
             Pre-meeting brief
@@ -116,7 +114,6 @@
           <button
             type="button"
             (click)="openCapture()"
-            [disabled]="people.locked()"
             [attr.data-demo]="demoMode ? 'open-capture' : null"
           >
             Capture
@@ -124,7 +121,6 @@
           <button
             type="button"
             (click)="openShuffle()"
-            [disabled]="people.locked()"
             [attr.data-demo]="demoMode ? 'open-shuffle' : null"
           >
             Reconnect Shuffle
@@ -132,7 +128,6 @@
           <button
             type="button"
             (click)="openCommitments()"
-            [disabled]="people.locked()"
             [attr.data-demo]="demoMode ? 'open-commitments' : null"
           >
             Commitments
@@ -142,15 +137,12 @@
             <p class="whisper" data-self-owner>You · {{ you.title }}</p>
           }
           <button type="button" (click)="openProviders()">Providers</button>
-          <button type="button" (click)="people.chooseFolder(); menuOpen = false" [disabled]="people.locked()">
+          <button type="button" (click)="people.chooseFolder(); menuOpen = false">
             Bundle folder
           </button>
-          <button type="button" (click)="exportPlain(); menuOpen = false" [disabled]="people.locked()">
+          <button type="button" (click)="exportPlain(); menuOpen = false">
             Export plaintext OKF
           </button>
-          @if (desktop && !people.locked()) {
-            <button type="button" (click)="lock()">Lock</button>
-          }
           <button
             type="button"
             (click)="checkForUpdate()"
@@ -180,10 +172,14 @@
             <p class="whisper">{{ people.vaultMessage() }}</p>
           }
           <p class="whisper">
-            @if (desktop && people.encryptionAvailable()) {
-              Disk: AES-256-GCM. Key: OS credential store.
+            @if (desktop) {
+              @if (people.leftoverCiphertext()) {
+                Leftover ciphertext will be rewritten as plaintext when the OS key can decrypt it.
+              } @else {
+                Disk: plaintext markdown+YAML. Tokens: OS credential store.
+              }
             } @else {
-              Preview: encryption needs <code>npm run tauri dev</code>.
+              Preview: people-graph in this tab. Tokens never go to localStorage.
             }
           </p>
         </aside>
@@ -191,8 +187,7 @@
     </header>
 
   <div class="workspace">
-    @if (!people.locked()) {
-      <aside class="sidebar" aria-label="People">
+    <aside class="sidebar" aria-label="People">
         <div class="sidebar-head">
           <h2>People</h2>
           <button
@@ -268,26 +263,19 @@
           }
         </nav>
       </aside>
-    }
 
     <main class="main well">
-      @if (!desktop && !people.locked()) {
+      @if (!desktop) {
         <p class="ribbon">
-          Preview cannot encrypt at rest. Tokens stay in this tab — never localStorage.
+          Preview people-graph stays in this tab. Tokens stay in this tab — never localStorage.
           Use <code>npm run tauri dev</code>.
         </p>
       }
+      @if (people.error()) {
+        <p class="ribbon error">{{ people.error() }}</p>
+      }
 
-      @if (people.locked()) {
-        <section class="invite">
-          <img src="assets/skuffen-icon.png" alt="Skuffen" />
-          <h1>Unlock</h1>
-          @if (people.error()) {
-            <p class="error">{{ people.error() }}</p>
-          }
-          <button class="brass" type="button" (click)="unlock()">Unlock</button>
-        </section>
-      } @else if (panel === "providers") {
+      @if (panel === "providers") {
         <section class="sheet">
           <header class="sheet-head">
             <h1>Providers</h1>
