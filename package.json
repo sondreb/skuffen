@@ -23,6 +23,7 @@
     "test:secrets": "tsx --test src/app/services/web-secrets.test.ts",
     "test:oauth": "tsx --test src/app/services/grok-oauth.test.ts src/app/services/providers.service.test.ts",
     "test:research": "tsx --test src/app/services/research.test.ts",
+    "test:merge": "tsx --test src/app/services/merge.test.ts",
     "test:update": "tsx --test src/app/services/update.test.ts",
     "test:version": "tsx --test scripts/bump-version.test.ts",
     "test:e2e": "playwright test --config e2e/playwright.config.ts",

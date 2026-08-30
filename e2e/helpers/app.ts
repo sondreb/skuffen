@@ -119,10 +119,17 @@ export async function fillAdaDemoForm(page: Page): Promise<void> {
   await page.locator('input[name="person-name"]').fill(DEMO.person.title);
   await page.getByRole("button", { name: "More" }).click();
   await page.getByLabel("How you know them").fill(DEMO.person.description);
+  await page.getByLabel("Email").fill(DEMO.person.email);
 }
 
 export async function createAdaDemo(page: Page): Promise<void> {
   await fillAdaDemoForm(page);
   await page.locator("[data-demo='save-person']").click();
   await expect(page.getByRole("heading", { name: "Ada Demo" })).toBeVisible();
+}
+
+export async function seedDemoMergePair(page: Page): Promise<void> {
+  await page.locator("[data-demo='put-matching-card']").first().click();
+  await expect(page.locator("[data-merge-proposal]")).toBeVisible();
+  await expect(page.getByText("Proposed merge — nothing happens until you Accept")).toBeVisible();
 }

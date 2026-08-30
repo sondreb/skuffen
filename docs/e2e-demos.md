@@ -41,6 +41,7 @@ Geocode is stubbed in `?demo=1` (and again in Playwright) so the park pin is alw
 2. `e2e/specs/02-add-person-pin.spec.ts` — create **Ada Demo**, search a public park, save a pin. Still: `screenshot-person.png`.
 3. `e2e/specs/03-research-accept.spec.ts` — stubbed Grok proposal, then Accept (the only write). Still: `screenshot-research.png`.
 4. `e2e/specs/04-suggest-follow-mocked.spec.ts` — Suggest and Follow paint the same synthetic Ada Demo proposal. Not a README clip.
+5. `e2e/specs/04-merge-proposal.spec.ts` — two synthetic cards with the same email; proposal appears; Accept merges; dismiss leaves both. No silent merge.
 
 Curated clips:
 

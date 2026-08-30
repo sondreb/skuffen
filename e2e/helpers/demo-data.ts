@@ -3,6 +3,14 @@ export const DEMO = {
   person: {
     title: "Ada Demo",
     description: "Synthetic demo card — not a real person",
+    email: "ada.demo@example.invalid",
+  },
+  twin: {
+    title: "Ada Demo Twin",
+    description: "Second synthetic card — email overlap only",
+    email: "ada.demo@example.invalid",
+    noteTitle: "Twin card note (demo)",
+    noteBody: "Synthetic note on the twin card. Accept merge to move it — nothing merges before that.",
   },
   park: {
     query: "Golden Gate Park, San Francisco",

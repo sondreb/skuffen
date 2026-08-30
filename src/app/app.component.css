@@ -685,3 +685,14 @@ label {
   width: auto;
   margin: 0;
 }
+
+.merge-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.merge-banner button {
+  width: auto;
+}

@@ -42,6 +42,9 @@ jobs:
       - name: Research and follow (propose-only) tests
         run: npm run test:research
 
+      - name: Duplicate-person merge (propose-only) tests
+        run: npm run test:merge
+
       - name: GitHub update check (offline fixtures)
         run: npm run test:update
 

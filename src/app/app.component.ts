@@ -1,8 +1,15 @@
 import { Component, computed, HostListener, inject, OnDestroy, OnInit, signal } from "@angular/core";
 import { FormsModule } from "@angular/forms";
-import { isDemoMode } from "./demo-mode";
+import { DEMO_MERGE, isDemoMode } from "./demo-mode";
 import { PeopleMapComponent, type MapPin } from "./map/people-map.component";
-import type { FactSuggestion, FollowInterval, NameResearchProposal, PersonView, ProviderId } from "./models";
+import type {
+  FactSuggestion,
+  FollowInterval,
+  MergeProposal,
+  NameResearchProposal,
+  PersonView,
+  ProviderId,
+} from "./models";
 import { GeocodeService, type GeocodeHit } from "./services/geocode.service";
 import { LAND_PLOT_KIND } from "../../packages/okf/src/index";
 import { FollowService } from "./services/follow.service";
@@ -10,6 +17,17 @@ import { grokConnectionLabel } from "./services/grok-oauth";
 import { IoService, isTauri } from "./services/io.service";
 import { PeopleService } from "./services/people.service";
 import { ProvidersService } from "./services/providers.service";
+import {
+  deleteMergeField,
+  dismissMergeProposal,
+  findDuplicateCandidates,
+  mergeWritesWithoutAccept,
+  planAcceptedMerge,
+  proposeMerge,
+  rememberDismissedPair,
+  setAllMergeFieldsKept,
+  setMergeFieldKept,
+} from "./services/merge";
 import {
   deleteProposedFact,
   dismissNameProposal,
@@ -25,7 +43,7 @@ import {
 import { UPDATE_WHISPER } from "./services/update";
 import { UpdateService } from "./services/update.service";
 
-type Panel = "none" | "create" | "edit" | "providers" | "map" | "propose";
+type Panel = "none" | "create" | "edit" | "providers" | "map" | "propose" | "merge";
 type FactSurface = "none" | "drop" | "pin" | "note" | "suggest";
 
 @Component({
@@ -72,6 +90,8 @@ export class AppComponent implements OnInit, OnDestroy {
   grokKey = "";
   geminiKey = "";
   nameProposal: NameResearchProposal | null = null;
+  mergeProposal: MergeProposal | null = null;
+  readonly dismissedMerges = signal<string[]>([]);
   checkedSuggestionIds = new Set<string>();
   readonly desktop = isTauri();
   readonly landPlotKind = LAND_PLOT_KIND;
@@ -116,14 +136,30 @@ export class AppComponent implements OnInit, OnDestroy {
     return slug ? this.follow.followFor(slug) : null;
   });
   readonly grokLabel = computed(() => grokConnectionLabel(this.providers.status()));
+  readonly mergeCandidates = computed(() =>
+    findDuplicateCandidates(this.people.people(), this.dismissedMerges()),
+  );
+  readonly visibleMerge = computed(() => {
+    const selected = this.people.selected();
+    const candidates = this.mergeCandidates();
+    if (!selected) return candidates[0] ?? null;
+    return (
+      candidates.find(
+        (item) => item.keeper.slug === selected.slug || item.incoming.slug === selected.slug,
+      ) ?? null
+    );
+  });
 
   async ngOnInit(): Promise<void> {
     await this.people.bootstrap();
     await this.providers.refresh();
     await this.follow.load();
+    const settings = await this.io.getSettings();
+    this.dismissedMerges.set(settings.dismissedMerges ?? []);
     if (!this.people.locked()) {
       await this.follow.start();
     }
+    this.offerMergeIfNeeded(false);
   }
 
   ngOnDestroy(): void {
@@ -138,6 +174,10 @@ export class AppComponent implements OnInit, OnDestroy {
     }
     if (this.panel === "propose") {
       this.dismissProposal();
+      return;
+    }
+    if (this.panel === "merge") {
+      this.closeMergeSheet();
       return;
     }
     if (this.panel === "providers" || this.panel === "create" || this.panel === "edit" || this.panel === "map") {
@@ -231,6 +271,7 @@ export class AppComponent implements OnInit, OnDestroy {
     }
     this.panel = "none";
     this.fact = "none";
+    this.offerMergeIfNeeded(true);
   }
 
   setFact(next: FactSurface): void {
@@ -586,6 +627,140 @@ export class AppComponent implements OnInit, OnDestroy {
 
   proposalHasChecked(): boolean {
     return Boolean(this.nameProposal?.facts.some((fact) => fact.checked));
+  }
+
+  offerMergeIfNeeded(openSheet: boolean): void {
+    const hit = this.visibleMerge();
+    if (!hit) {
+      if (this.panel === "merge") this.panel = "none";
+      this.mergeProposal = null;
+      return;
+    }
+    const same =
+      this.mergeProposal?.keeperSlug === hit.keeper.slug &&
+      this.mergeProposal?.incomingSlug === hit.incoming.slug;
+    if (!same) {
+      this.mergeProposal = proposeMerge(hit.keeper, hit.incoming, hit.overlaps);
+    }
+    mergeWritesWithoutAccept(this.mergeProposal);
+    if (openSheet) {
+      this.panel = "merge";
+      this.fact = "none";
+    }
+  }
+
+  openMergeReview(keeperSlug?: string, incomingSlug?: string): void {
+    const candidates = this.mergeCandidates();
+    const hit =
+      keeperSlug && incomingSlug
+        ? candidates.find((item) => item.keeper.slug === keeperSlug && item.incoming.slug === incomingSlug)
+        : this.visibleMerge();
+    if (!hit) return;
+    this.mergeProposal = proposeMerge(hit.keeper, hit.incoming, hit.overlaps);
+    this.panel = "merge";
+    this.latchOpen = false;
+    this.fact = "none";
+    this.notice = null;
+  }
+
+  toggleMergeField(id: string, keep: boolean): void {
+    if (!this.mergeProposal) return;
+    this.mergeProposal = setMergeFieldKept(this.mergeProposal, id, keep);
+  }
+
+  selectAllMergeFields(keep: boolean): void {
+    if (!this.mergeProposal) return;
+    this.mergeProposal = setAllMergeFieldsKept(this.mergeProposal, keep);
+  }
+
+  deleteMergeChoice(id: string): void {
+    if (!this.mergeProposal) return;
+    this.mergeProposal = deleteMergeField(this.mergeProposal, id);
+  }
+
+  closeMergeSheet(): void {
+    this.panel = "none";
+    this.notice = null;
+    void this.people.select(null);
+  }
+
+  async dismissMerge(): Promise<void> {
+    if (!this.mergeProposal) {
+      this.closeMergeSheet();
+      return;
+    }
+    this.dismissedMerges.set(
+      rememberDismissedPair(this.dismissedMerges(), this.mergeProposal.keeperSlug, this.mergeProposal.incomingSlug),
+    );
+    await this.persistDismissedMerges();
+    this.mergeProposal = null;
+    this.panel = "none";
+    this.notice = null;
+    void dismissMergeProposal();
+    await this.people.select(null);
+  }
+
+  async keepBothPeople(): Promise<void> {
+    await this.dismissMerge();
+  }
+
+  async acceptMerge(): Promise<void> {
+    if (!this.mergeProposal) return;
+    const plan = planAcceptedMerge(this.mergeProposal);
+    await this.follow.retargetSlug(plan.incomingSlug, plan.keeperSlug);
+    await this.follow.forgetSlug(plan.incomingSlug);
+    await this.people.applyMerge(plan);
+    this.mergeProposal = null;
+    this.panel = "none";
+    this.notice = null;
+  }
+
+  allMergeFieldsKept(): boolean {
+    return Boolean(
+      this.mergeProposal &&
+        this.mergeProposal.fields.length > 0 &&
+        this.mergeProposal.fields.every((field) => field.keep),
+    );
+  }
+
+  mergeOverlapLabel(): string {
+    return this.mergeProposal?.overlaps.map((item) => item.label).join(" · ") ?? "";
+  }
+
+  overlapLabels(overlaps: { label: string }[]): string {
+    return overlaps.map((item) => item.label).join(" · ");
+  }
+
+  async seedDemoDuplicate(): Promise<void> {
+    if (!this.demoMode) return;
+    const drafts = DEMO_MERGE;
+    const people = this.people.people();
+    const hasKeeper = people.some((item) => item.title === drafts.keeper.title);
+    if (!hasKeeper) {
+      const created = await this.people.createPerson({
+        title: drafts.keeper.title,
+        description: drafts.keeper.description,
+        email: drafts.keeper.email,
+      });
+      await this.people.addNote(created.slug, "Ada Demo card (demo)", "Synthetic keeper card. Not a real person.");
+    }
+    const afterKeeper = this.people.people();
+    if (afterKeeper.some((item) => item.title === drafts.incoming.title)) {
+      this.offerMergeIfNeeded(true);
+      return;
+    }
+    const twin = await this.people.createPerson({
+      title: drafts.incoming.title,
+      description: drafts.incoming.description,
+      email: drafts.incoming.email,
+    });
+    await this.people.addNote(twin.slug, drafts.incoming.noteTitle, drafts.incoming.noteBody);
+    this.offerMergeIfNeeded(true);
+  }
+
+  private async persistDismissedMerges(): Promise<void> {
+    const settings = await this.io.getSettings();
+    await this.io.saveSettings({ ...settings, dismissedMerges: this.dismissedMerges() });
   }
 
   allProposalChecked(): boolean {

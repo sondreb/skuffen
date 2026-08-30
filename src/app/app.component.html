@@ -403,6 +403,80 @@
             </div>
           }
         </section>
+      } @else if (panel === "merge" && mergeProposal) {
+        <section class="sheet propose-sheet" data-merge-proposal>
+          <header class="sheet-head">
+            <div>
+              <p class="kicker">Proposed merge — nothing happens until you Accept</p>
+              <h1>{{ mergeProposal.keeperTitle }} ← {{ mergeProposal.incomingTitle }}</h1>
+            </div>
+            <button class="ghost" type="button" (click)="closeMergeSheet()">Back</button>
+          </header>
+          <p class="whisper">
+            These cards look like the same human ({{ mergeOverlapLabel() }}).
+            Name alone is never enough. Check fields to keep from the other card, then Accept.
+            Dismiss or Keep both leaves both cards. Nothing merges until you accept.
+          </p>
+          @if (notice) {
+            <p class="notice">{{ notice }}</p>
+          }
+          @if (mergeProposal.fields.length) {
+            <label class="follow-line">
+              <input
+                type="checkbox"
+                [ngModel]="allMergeFieldsKept()"
+                (ngModelChange)="selectAllMergeFields($event)"
+              />
+              Keep all from the other card
+            </label>
+            <div class="offers">
+              @for (field of mergeProposal.fields; track field.id) {
+                <article class="fact-offer">
+                  <label class="follow-line">
+                    <input
+                      type="checkbox"
+                      [ngModel]="field.keep"
+                      (ngModelChange)="toggleMergeField(field.id, $event)"
+                    />
+                    <span>
+                      <strong>{{ field.label }}</strong>
+                      <small>{{ field.kind }} · {{ field.sourceSlug }}</small>
+                      <p>{{ field.value }}</p>
+                    </span>
+                  </label>
+                  <button class="ghost" type="button" (click)="deleteMergeChoice(field.id)">Drop</button>
+                </article>
+              }
+            </div>
+          } @else {
+            <p class="whisper">No extra fields to copy. Accept still folds the other card into this one.</p>
+          }
+          <div class="row">
+            <button
+              class="brass"
+              type="button"
+              (click)="acceptMerge()"
+              [attr.data-demo]="demoMode ? 'merge-accept' : null"
+            >
+              Accept merge
+            </button>
+            <button
+              type="button"
+              (click)="keepBothPeople()"
+              [attr.data-demo]="demoMode ? 'merge-keep-both' : null"
+            >
+              Keep both
+            </button>
+            <button
+              class="ghost"
+              type="button"
+              (click)="dismissMerge()"
+              [attr.data-demo]="demoMode ? 'merge-dismiss' : null"
+            >
+              Dismiss
+            </button>
+          </div>
+        </section>
       } @else if (empty()) {
         <section class="invite">
           <img src="assets/skuffen-icon.png" alt="Open wooden drawer" />
@@ -417,6 +491,16 @@
           <button class="brass" type="button" (click)="startCreate()" [attr.data-demo]="demoMode ? 'put-someone-in' : null">
             Put someone in
           </button>
+          @if (demoMode) {
+            <button
+              type="button"
+              class="ghost"
+              (click)="seedDemoDuplicate()"
+              data-demo="put-matching-card"
+            >
+              Put a matching demo card in
+            </button>
+          }
         </section>
       } @else if (people.selected(); as person) {
         <section class="file">
@@ -436,6 +520,22 @@
           </nav>
 
           <article class="card">
+            @if (visibleMerge(); as pair) {
+              <p class="notice merge-banner">
+                This card may be the same person as
+                {{ pair.keeper.slug === person.slug ? pair.incoming.title : pair.keeper.title }}
+                ({{ overlapLabels(pair.overlaps) }}).
+                Nothing merges until you Accept.
+                <button
+                  class="brass"
+                  type="button"
+                  (click)="openMergeReview(pair.keeper.slug, pair.incoming.slug)"
+                  [attr.data-demo]="demoMode ? 'merge-review' : null"
+                >
+                  Review merge
+                </button>
+              </p>
+            }
             <header class="nameplate">
               <div>
                 <p class="kicker">{{ person.path }}</p>
@@ -792,6 +892,20 @@
           @if (notice) {
             <p class="notice invite-line">{{ notice }}</p>
           }
+          @if (mergeCandidates().length) {
+            <p class="notice invite-line merge-banner">
+              {{ mergeCandidates().length === 1 ? "Two cards" : "Some cards" }}
+              may be the same person. Review the merge proposal — nothing merges until you Accept.
+              <button
+                class="brass"
+                type="button"
+                (click)="openMergeReview()"
+                [attr.data-demo]="demoMode ? 'merge-review' : null"
+              >
+                Review merge
+              </button>
+            </p>
+          }
           @if (query().trim() && filtered().length === 0) {
             <p class="invite-line">
               No one by that name. Press Enter or Research to propose a card from public sources.
@@ -823,6 +937,18 @@
             <b>Put someone in</b>
             <small>A new card</small>
           </button>
+          @if (demoMode) {
+            <button
+              type="button"
+              class="person-card ghost-card"
+              (click)="seedDemoDuplicate()"
+              data-demo="put-matching-card"
+            >
+              <span class="node plus">+</span>
+              <b>Matching demo card</b>
+              <small>Same email — propose merge</small>
+            </button>
+          }
         </section>
       }
     </div>

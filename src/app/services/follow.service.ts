@@ -108,6 +108,28 @@ export class FollowService {
     await this.rejectSuggestion(id);
   }
 
+  async forgetSlug(slug: string): Promise<void> {
+    this.follows.set(dropFollow(this.follows(), slug));
+    this.proposals.set(this.proposals().filter((item) => item.slug !== slug));
+    await this.persist();
+  }
+
+  async retargetSlug(fromSlug: string, toSlug: string): Promise<void> {
+    if (fromSlug === toSlug) return;
+    const known = new Set(this.people.people().map((person) => person.slug));
+    known.add(toSlug);
+    const incomingFollow = this.follows().find((item) => item.slug === fromSlug);
+    let follows = dropFollow(this.follows(), fromSlug);
+    if (incomingFollow && !follows.some((item) => item.slug === toSlug) && known.has(toSlug)) {
+      follows = [...follows, { ...incomingFollow, slug: toSlug }];
+    }
+    this.follows.set(follows);
+    this.proposals.set(
+      this.proposals().map((item) => (item.slug === fromSlug ? { ...item, slug: toSlug } : item)),
+    );
+    await this.persist();
+  }
+
   async tick(): Promise<void> {
     if (this.ticking() || this.people.locked()) return;
     const provider = this.providers.activeProvider();
