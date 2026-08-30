@@ -46,6 +46,7 @@ Geocode is stubbed in `?demo=1` (and again in Playwright) so the park pin is alw
 7. `e2e/specs/06-pre-meeting-brief.spec.ts` — local brief from notes/place/pending; dismiss writes nothing; Accept saves a note. No live AI.
 8. `e2e/specs/07-voice-capture.spec.ts` — paste/demo capture proposes people, dates, follow-ups; dismiss writes nothing; Accept writes. Live AI hosts blocked.
 9. `e2e/specs/09-reconnect-shuffle.spec.ts` — two local suggestions from notes; pick drafts; skip/dismiss write nothing; Accept saves a note; nothing is sent. Live AI hosts blocked.
+10. `e2e/specs/10-person-timeline.spec.ts` — empty card shows empty timeline copy; opening Timeline writes nothing; Accept of a note adds a row; demo Ada tape has more than one kind. Live AI hosts blocked.
 
 Curated clips:
 

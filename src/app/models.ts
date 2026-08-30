@@ -64,7 +64,7 @@ export interface PersonView {
   email?: string;
   phone?: string;
   body: string;
-  notes: Array<{ id: string; path: string; title: string; body: string }>;
+  notes: Array<{ id: string; path: string; title: string; body: string; at?: string }>;
   social: Array<{
     id: string;
     path: string;
@@ -73,7 +73,7 @@ export interface PersonView {
     handle?: string;
     url?: string;
   }>;
-  photos: Array<{ id: string; path: string; title: string; resource?: string }>;
+  photos: Array<{ id: string; path: string; title: string; resource?: string; at?: string }>;
   location?: PersonLocation;
   documents: Array<{
     id: string;
@@ -84,6 +84,7 @@ export interface PersonView {
     kind?: string;
     note?: string;
     subjects: string[];
+    at?: string;
   }>;
 }
 
@@ -94,6 +95,8 @@ export interface PersonLocation {
   latitude: number;
   longitude: number;
   source?: string;
+  /** ISO stamp from the Place file when dated. */
+  at?: string;
 }
 
 export type PersonField = "title" | "description" | "body" | "email" | "phone" | "givenName" | "familyName";

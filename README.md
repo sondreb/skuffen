@@ -223,6 +223,18 @@ You pick one suggestion. An optional reconnect draft is assembled on this machin
 npm run test:shuffle
 ```
 
+## Person-card timeline
+
+The person card has a **Timeline**: one chronological tape of what already exists locally for that person — notes (including accepted briefs, capture notes, and shuffle drafts saved as notes), photos, documents, accepted research facts (only after Accept), a dated place pin, and follow / last-touch when it lives on disk for that card. Newest first. Short honest label plus date. Click a row to open the existing detail.
+
+Timeline is a view of the OKF card already on disk. File path stays identity. Opening Timeline writes nothing. Accept remains the only OKF write for new facts. The people-graph is never uploaded.
+
+`?demo=1` Ada Demo shows a short tape from synthetic local files when the card has more than one kind of event.
+
+```bash
+npm run test:timeline
+```
+
 ## Duplicate-person merge
 
 When two cards share a hard identity signal — the same email, phone, or social URL/handle — Skuffen proposes a merge. **Name string alone is never enough.** You review fields from the other card (keep or drop), then Accept, Dismiss, or Keep both.
