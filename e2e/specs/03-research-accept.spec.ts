@@ -1,4 +1,4 @@
-import { createAdaDemo, expect, openDemo, test } from "../helpers/app";
+import { captureReadmeStill, createAdaDemo, expect, openDemo, test } from "../helpers/app";
 import { hold, showDemoLabel } from "../helpers/labels";
 
 test("Grok research proposes, user Accepts", async ({ demoPage: page }) => {
@@ -19,6 +19,7 @@ test("Grok research proposes, user Accepts", async ({ demoPage: page }) => {
   await expect(page.locator("[data-demo-label]")).toHaveText(
     "Accept to save — nothing is written before this",
   );
+  await captureReadmeStill(page, "screenshot-research.png");
   await page.locator("[data-demo='accept']").click();
 
   await expect(page.getByRole("heading", { name: "Public park mention (demo)" })).toBeVisible();

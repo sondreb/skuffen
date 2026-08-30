@@ -1,4 +1,4 @@
-import { expect, openDemo, test } from "../helpers/app";
+import { expect, openDemo, captureReadmeStill, test } from "../helpers/app";
 import { hold, showDemoLabel } from "../helpers/labels";
 
 test("what is Skuffen / open the people drawer", async ({ demoPage: page }) => {
@@ -10,6 +10,7 @@ test("what is Skuffen / open the people drawer", async ({ demoPage: page }) => {
   await expect(page.getByText("Private drawer")).toBeVisible();
   await expect(page.getByText(/Preview cannot encrypt at rest/)).toBeVisible();
   await expect(page.locator("[data-demo-label]")).toHaveText("1. Open drawer");
+  await captureReadmeStill(page, "screenshot-drawer.png");
 
   await page.getByRole("button", { name: "Latch" }).click();
   await expect(page.getByRole("button", { name: "Providers" })).toBeVisible();

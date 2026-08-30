@@ -496,7 +496,7 @@ export class AppComponent implements OnInit, OnDestroy {
     const person = this.people.selected();
     this.fact = "suggest";
     this.notice = null;
-    if (!this.activeProvider()) {
+    if (!this.demoMode && !this.activeProvider()) {
       this.notice = "Connect Grok in Latch → Providers first.";
       this.latchOpen = true;
       return;
@@ -511,14 +511,7 @@ export class AppComponent implements OnInit, OnDestroy {
     const person = this.people.selected();
     this.fact = "suggest";
     this.notice = null;
-    if (this.demoMode) {
-      if (!person) return;
-      await this.providers.applyDemoResearch();
-      await this.follow.storeResearch(person.slug, this.providers.suggestions());
-      this.checkAllVisibleSuggestions();
-      return;
-    }
-    if (!this.activeProvider()) {
+    if (!this.demoMode && !this.activeProvider()) {
       this.notice = "Connect Grok in Latch → Providers first.";
       this.latchOpen = true;
       return;
@@ -541,7 +534,7 @@ export class AppComponent implements OnInit, OnDestroy {
     if (!name) return;
     this.notice = null;
     this.latchOpen = false;
-    if (!this.activeProvider()) {
+    if (!this.demoMode && !this.activeProvider()) {
       this.notice = "Connect Grok in Latch → Providers first. There is no Skuffen cloud account.";
       this.latchOpen = true;
       return;

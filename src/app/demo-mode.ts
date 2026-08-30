@@ -14,14 +14,14 @@ export function isDemoMode(): boolean {
 }
 
 /**
- * Synthetic Grok-shaped proposal so the Accept gate is visible without API keys.
- * Not a real person. Nothing is written until Accept.
+ * Synthetic Grok-shaped proposal so Research / Suggest / Follow can paint
+ * the Accept gate without API keys. Not a real person. Nothing is written until Accept.
  */
-export function demoResearchSuggestions(): FactSuggestion[] {
+export function demoResearchSuggestions(source: FactSuggestion["source"] = "research"): FactSuggestion[] {
   return [
     {
-      id: "demo-research-ada-note",
-      source: "research",
+      id: `demo-${source}-ada-note`,
+      source,
       kind: "note",
       title: "Public park mention (demo)",
       body: "Synthetic Grok proposal for Ada Demo. Not a real contact. Accept to save — nothing is written before this.",

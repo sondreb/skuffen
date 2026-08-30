@@ -12,23 +12,23 @@ Sole developer: Sondre Bjellås ([sondreb](https://github.com/sondreb)).
 
 ## Screenshots
 
-Labeled mock-UI demos for the website and README. They are not live signed-in recordings.
+Real Angular web preview (`npm start`) at 1280×720. Synthetic **Ada Demo** data. Grok and Gemini are mocked — no live API keys.
 
-![Hero: an open wooden drawer with a teal people-graph and the line “Your people live in a drawer”](docs/media/screenshot-drawer.png)
+![Empty people drawer in the Skuffen web preview](docs/media/screenshot-drawer.png)
 
-*Hero still. Labeled mock UI — not a live recording.*
+*Hero still. Real browser UI. Synthetic demo data. AI providers mocked.*
 
-![New person form in the People Drawer, with a LOCAL ONLY badge](docs/media/screenshot-person.png)
+![New person form for Ada Demo in the People Drawer](docs/media/screenshot-person.png)
 
-*Add a person. Labeled mock UI — not a live recording.*
+*Add a person. Real browser UI. Synthetic demo data. AI providers mocked.*
 
-![Review cards for researched facts, each with Accept or Decline](docs/media/screenshot-research.png)
+![Review cards for researched facts, with Accept selected](docs/media/screenshot-research.png)
 
-*Grok research, you accept. Labeled mock UI — not a live recording. Nothing is written until you accept.*
+*Grok research, you accept. Real browser UI. Synthetic demo data. AI providers mocked. Nothing is written until you accept.*
 
 ## Demos
 
-Short walkthroughs of the same mock UI. Voice-over may be missing. These are labeled demos, not live signed-in recordings.
+Short walkthroughs of the same real web preview. On-screen labels. Voice-over may be missing. AI providers mocked.
 
 - [What is Skuffen](docs/media/01-what-is-skuffen.mp4)
 - [Add a person and a place](docs/media/02-add-person-and-place.mp4)
@@ -70,6 +70,13 @@ npm run test:oauth
 npm run test:research
 npm run test:update
 npm run test:version
+npm run test:e2e
+```
+
+Labeled README stills and MP4s (mocked providers, `?demo=1`):
+
+```bash
+npm run demo:record
 ```
 
 Pull-request CI (`.github/workflows/ci.yml`) runs those checks plus `npm run build` on Node 22.22.3. It does **not** build the Tauri desktop app.
