@@ -114,14 +114,18 @@ test("skip-loop: bot or chore bump commit must not bump again", () => {
   );
 });
 
-test("release.yml wraps !startsWith in ${{ }} so YAML does not parse a tag", () => {
+test("release.yml quotes skip-loop if so YAML does not parse a colon mapping", () => {
   const yaml = readFileSync(join(fileURLToPath(new URL(".", import.meta.url)), "..", ".github", "workflows", "release.yml"), "utf8");
   const ifLines = yaml.split("\n").map((line) => line.trim()).filter((line) => line.startsWith("if:"));
-  assert.ok(ifLines.some((line) => line.includes("!startsWith")), "skip-loop if must keep !startsWith");
-  for (const line of ifLines) {
-    if (line.includes("!")) {
-      assert.match(line, /^if: \$\{\{ .+ \}\}$/, `unquoted ! is a YAML tag: ${line}`);
-    }
+  const skipLoopIfs = ifLines.filter((line) => line.includes("!startsWith"));
+  assert.equal(skipLoopIfs.length, 2, "version and build jobs must both have the skip-loop if");
+  // ${{ }} alone is not enough: the colon in 'chore: bump version to ' is a
+  // YAML mapping on an unquoted scalar (run 33299195969). Quote the entire if.
+  const quotedSkipLoop =
+    'if: "${{ github.event_name == \'workflow_dispatch\' || (github.actor != \'github-actions[bot]\' && !startsWith(github.event.head_commit.message, \'chore: bump version to \')) }}"';
+  for (const line of skipLoopIfs) {
+    assert.match(line, /^if: "\$\{\{ .+ \}\}"$/, `skip-loop if must be quoted if: "\${{ ... }}", not merely wrapped in \${{ }}: ${line}`);
+    assert.equal(line, quotedSkipLoop);
   }
 });
 
