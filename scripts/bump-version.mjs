@@ -4,8 +4,14 @@
  * package.json, src-tauri/tauri.conf.json, src-tauri/Cargo.toml
  * (plus package-lock.json root and the skuffen crate in Cargo.lock).
  *
- * Usage: node scripts/bump-version.mjs [--dry-run] [--root DIR] [patch|minor|major|x.y.z|vx.y.z]
+ * Usage: node scripts/bump-version.mjs [--dry-run] [--root DIR] [--from-github-event] [patch|minor|major|x.y.z|vx.y.z]
  * Default spec is patch.
+ *
+ * Release workflow (.github/workflows/release.yml) contract:
+ * - push to main: always bump patch (unless skip-loop), commit as github-actions[bot]
+ * - workflow_dispatch: optional extra, same inputs as today (semver or patch/minor/major, default patch)
+ * - tag v*: skip-safe path for tauri-action; do not bump again
+ * Skip-loop: github-actions[bot] / "chore: bump version to X.Y.Z" must not bump or start a second matrix.
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -13,6 +19,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const SEMVER = /^(\d+)\.(\d+)\.(\d+)$/;
 const IDENTIFIER = "me.grok.skuffen";
+export const GITHUB_ACTIONS_BOT = "github-actions[bot]";
+export const VERSION_BUMP_COMMIT_PREFIX = "chore: bump version to ";
 
 export function parseSemver(version) {
   const match = SEMVER.exec(version);
@@ -107,12 +115,53 @@ export function applyVersion(root, version) {
   return version;
 }
 
+export function versionBumpCommitMessage(version) {
+  parseSemver(version);
+  return `${VERSION_BUMP_COMMIT_PREFIX}${version}`;
+}
+
+export function isVersionBumpCommitMessage(message) {
+  const firstLine = String(message ?? "").split(/\r?\n/, 1)[0].trim();
+  if (!firstLine.startsWith(VERSION_BUMP_COMMIT_PREFIX)) return false;
+  return SEMVER.test(firstLine.slice(VERSION_BUMP_COMMIT_PREFIX.length));
+}
+
+/**
+ * Job-level `if` in .github/workflows/release.yml must match this.
+ * Skip the workflow's own re-entry so we do not bump twice or start a second matrix.
+ * workflow_dispatch always runs. The first run's build job uses the bump commit SHA.
+ */
+export function shouldSkipReleaseReentry({ eventName, actor, commitMessage } = {}) {
+  if (eventName === "workflow_dispatch") return false;
+  if (actor === GITHUB_ACTIONS_BOT) return true;
+  if (isVersionBumpCommitMessage(commitMessage)) return true;
+  return false;
+}
+
+/**
+ * Version spec for a release run. Merge/push to main always patches so a new
+ * draft exists (do not rebuild the same unpublished draft).
+ */
+export function releaseVersionSpec({ eventName, ref, dispatchSpec } = {}) {
+  if (eventName === "workflow_dispatch") {
+    const spec = String(dispatchSpec ?? "").trim();
+    return spec || "patch";
+  }
+  if (eventName === "push" && ref === "refs/heads/main") return "patch";
+  if (eventName === "push" && typeof ref === "string" && ref.startsWith("refs/tags/")) {
+    const tag = ref.slice("refs/tags/".length);
+    return tag.startsWith("v") ? tag.slice(1) : tag;
+  }
+  throw new Error(`Unsupported release trigger: ${eventName} ${ref ?? ""}`.trim());
+}
+
 export function parseArgs(argv) {
-  const args = { dryRun: false, root: undefined, spec: "patch" };
+  const args = { dryRun: false, fromGithubEvent: false, root: undefined, spec: "patch" };
   const rest = [];
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === "--dry-run") args.dryRun = true;
+    else if (arg === "--from-github-event") args.fromGithubEvent = true;
     else if (arg === "--root") {
       args.root = argv[i + 1];
       i += 1;
@@ -126,7 +175,14 @@ export function parseArgs(argv) {
 function main(argv) {
   const args = parseArgs(argv);
   const root = args.root ?? join(dirname(fileURLToPath(import.meta.url)), "..");
-  const next = resolveVersion(readCurrentVersion(root), args.spec);
+  const spec = args.fromGithubEvent
+    ? releaseVersionSpec({
+        eventName: process.env.GITHUB_EVENT_NAME,
+        ref: process.env.GITHUB_REF,
+        dispatchSpec: process.env.INPUT_VERSION,
+      })
+    : args.spec;
+  const next = resolveVersion(readCurrentVersion(root), spec);
   if (!args.dryRun) applyVersion(root, next);
   process.stdout.write(`${next}\n`);
 }

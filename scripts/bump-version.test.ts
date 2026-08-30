@@ -1,9 +1,19 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { applyVersion, parseArgs, resolveVersion } from "./bump-version.mjs";
+import { fileURLToPath } from "node:url";
+import {
+  applyVersion,
+  isVersionBumpCommitMessage,
+  parseArgs,
+  releaseVersionSpec,
+  resolveVersion,
+  shouldSkipReleaseReentry,
+  versionBumpCommitMessage,
+} from "./bump-version.mjs";
 
 test("resolveVersion default and keywords", () => {
   assert.equal(resolveVersion("0.1.0", "patch"), "0.1.1");
@@ -19,13 +29,89 @@ test("resolveVersion rejects junk", () => {
   assert.throws(() => resolveVersion("nope", "patch"), /Invalid semver/);
 });
 
-test("parseArgs treats empty as patch and supports dry-run/root", () => {
-  assert.deepEqual(parseArgs([]), { dryRun: false, root: undefined, spec: "patch" });
-  assert.deepEqual(parseArgs(["--dry-run", "--root", "/tmp/x", "minor"]), {
+test("parseArgs treats empty as patch and supports dry-run/root/from-github-event", () => {
+  assert.deepEqual(parseArgs([]), {
+    dryRun: false,
+    fromGithubEvent: false,
+    root: undefined,
+    spec: "patch",
+  });
+  assert.deepEqual(parseArgs(["--dry-run", "--from-github-event", "--root", "/tmp/x", "minor"]), {
     dryRun: true,
+    fromGithubEvent: true,
     root: "/tmp/x",
     spec: "minor",
   });
+});
+
+test("push to main always patches; dispatch keeps inputs; tag uses the tag", () => {
+  // After Latch merges this workflow PR, that push must mint 0.1.2. Do not bump the tree here.
+  assert.equal(
+    resolveVersion("0.1.1", releaseVersionSpec({ eventName: "push", ref: "refs/heads/main" })),
+    "0.1.2",
+  );
+  assert.equal(releaseVersionSpec({ eventName: "push", ref: "refs/heads/main" }), "patch");
+  assert.equal(releaseVersionSpec({ eventName: "workflow_dispatch" }), "patch");
+  assert.equal(releaseVersionSpec({ eventName: "workflow_dispatch", dispatchSpec: "" }), "patch");
+  assert.equal(releaseVersionSpec({ eventName: "workflow_dispatch", dispatchSpec: "minor" }), "minor");
+  assert.equal(releaseVersionSpec({ eventName: "workflow_dispatch", dispatchSpec: "0.2.0" }), "0.2.0");
+  assert.equal(releaseVersionSpec({ eventName: "push", ref: "refs/tags/v0.1.2" }), "0.1.2");
+  assert.throws(
+    () => releaseVersionSpec({ eventName: "push", ref: "refs/heads/feature" }),
+    /Unsupported release trigger/,
+  );
+
+  const root = mkdtempSync(join(tmpdir(), "skuffen-release-spec-"));
+  writeFileSync(join(root, "package.json"), `${JSON.stringify({ version: "0.1.1" }, null, 2)}\n`);
+  const script = fileURLToPath(new URL("./bump-version.mjs", import.meta.url));
+  const result = spawnSync(process.execPath, [script, "--dry-run", "--from-github-event", "--root", root], {
+    encoding: "utf8",
+    env: { ...process.env, GITHUB_EVENT_NAME: "push", GITHUB_REF: "refs/heads/main", INPUT_VERSION: "" },
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.stdout.trim(), "0.1.2");
+});
+
+test("skip-loop: bot or chore bump commit must not bump again", () => {
+  const bump = versionBumpCommitMessage("0.1.2");
+  assert.equal(bump, "chore: bump version to 0.1.2");
+  assert.equal(isVersionBumpCommitMessage(bump), true);
+  assert.equal(isVersionBumpCommitMessage(`${bump}\n\nCo-authored-by: bot`), true);
+  assert.equal(isVersionBumpCommitMessage("Draft-release on every merge to main"), false);
+
+  assert.equal(shouldSkipReleaseReentry({ eventName: "workflow_dispatch", actor: "github-actions[bot]" }), false);
+  assert.equal(
+    shouldSkipReleaseReentry({
+      eventName: "push",
+      actor: "latch",
+      commitMessage: "Merge pull request #30 from cursor/draft-release-on-main",
+    }),
+    false,
+  );
+  assert.equal(
+    shouldSkipReleaseReentry({
+      eventName: "push",
+      actor: "github-actions[bot]",
+      commitMessage: bump,
+    }),
+    true,
+  );
+  assert.equal(
+    shouldSkipReleaseReentry({
+      eventName: "push",
+      actor: "github-actions[bot]",
+      commitMessage: "chore: generate v0.1.2 tag",
+    }),
+    true,
+  );
+  assert.equal(
+    shouldSkipReleaseReentry({
+      eventName: "push",
+      actor: "someone-with-a-pat",
+      commitMessage: bump,
+    }),
+    true,
+  );
 });
 
 test("applyVersion writes lockstep files and leaves identifier alone", () => {
