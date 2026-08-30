@@ -40,7 +40,7 @@ test("local pre-meeting brief from OKF facts; no write until Accept", async ({ d
   await expect(page.getByRole("heading", { name: "Last coffee" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Pre-meeting brief — Ada Demo" })).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Latch" }).click();
+  await page.getByRole("button", { name: "Menu" }).click();
   await page.locator("[data-demo='open-brief']").click();
   await expect(page.locator("[data-demo='brief-body']")).toContainText("Ada Demo");
 

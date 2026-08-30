@@ -24,7 +24,7 @@ test("empty list copy; opening Commitments writes nothing", async ({ demoPage: p
   await expect(page.getByText("No commitments yet.")).toBeVisible();
 
   const before = await diskSnapshot(page);
-  await page.getByRole("button", { name: "Latch" }).click();
+  await page.getByRole("button", { name: "Menu" }).click();
   await page.locator("[data-demo='open-commitments']").click();
   await expect(page.getByRole("heading", { name: "Commitments" })).toBeVisible();
   await expect(page.locator("[data-demo='commitments-empty']")).toContainText("No commitments yet.");
@@ -40,7 +40,7 @@ test("Accept of a promise adds a row; dismiss does not; marking done is explicit
   await createAdaDemo(page);
   await pinNote(page, PROMISE_NOTE, DEMO.commitments.first.sourceTitle);
 
-  await page.getByRole("button", { name: "Latch" }).click();
+  await page.getByRole("button", { name: "Menu" }).click();
   await page.locator("[data-demo='open-commitments']").click();
   await expect(page.locator("[data-demo='commitments-empty']")).toContainText("No commitments yet.");
   await expect(page.locator("[data-demo='commitments-list']")).toHaveCount(0);
@@ -86,7 +86,7 @@ test("demo mode shows two synthetic Ada Demo commitments from local files; nothi
   demoPage: page,
 }) => {
   await openDemo(page);
-  await page.getByRole("button", { name: "Latch" }).click();
+  await page.getByRole("button", { name: "Menu" }).click();
   await page.locator("[data-demo='open-commitments']").click();
   await page.locator("[data-demo='commitments-seed']").click();
 

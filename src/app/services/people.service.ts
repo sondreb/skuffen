@@ -31,6 +31,7 @@ import {
   type PlaceSource,
 } from "../../../packages/okf/src/index";
 import type { PersonLocation, PersonView } from "../models";
+import { localPhotoBundlePath, localPhotoDataUrl, personListPhotoUrl } from "../list-photo";
 import type { MergePlan } from "./merge";
 import { IoService } from "./io.service";
 
@@ -537,12 +538,14 @@ export class PeopleService {
           url: optionalString(item.frontmatter.resource),
         });
       } else if (item.frontmatter.type === "Photo") {
+        const resource = optionalString(item.frontmatter.resource);
         photos.push({
           id: item.id,
           path: item.path,
           title: String(item.frontmatter.title ?? item.id),
-          resource: optionalString(item.frontmatter.resource),
+          resource,
           at: documentDatedAt(item.frontmatter),
+          listSrc: await this.localListPhotoSrc(resource),
         });
       }
     }
@@ -604,6 +607,17 @@ export class PeopleService {
       if (!taken.has(candidate)) return candidate;
     }
     return `${base}-${Date.now()}`;
+  }
+
+  /** List avatar from OKF bytes on disk. Never fetchPublicBytes / http(s). */
+  private async localListPhotoSrc(resource?: string): Promise<string | undefined> {
+    const local = personListPhotoUrl(resource);
+    if (local) return local;
+    const path = localPhotoBundlePath(resource);
+    if (!path) return undefined;
+    const bytes = await this.io.readBytes(this.bundleRoot(), path);
+    if (!bytes) return undefined;
+    return localPhotoDataUrl(bytes, path) ?? undefined;
   }
 
   private async uniquePhotoFileName(slug: string, fileName: string): Promise<string> {

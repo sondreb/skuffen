@@ -1,130 +1,90 @@
 <div
-  class="room"
+  class="app"
   [class.dragging]="dragging"
   (dragover)="onDragOver($event)"
   (dragleave)="onDragLeave($event)"
   (drop)="onDrop($event)"
 >
-  <div class="drawer" [class.shut]="people.locked()" [class.filled]="inDrawer() > 0">
-    <header class="lip">
-      <div class="bail" aria-hidden="true">
-        <span class="knob"></span>
-        <span class="arc"></span>
-        <span class="knob"></span>
+  <header class="chrome">
+    <div class="brand">
+      <img src="assets/skuffen-icon.png" alt="" />
+      <div>
+        <strong>Skuffen</strong>
+        <span>{{ people.locked() ? "Locked" : personCount() ? personCount() + (personCount() === 1 ? " person" : " people") : "People" }}</span>
       </div>
+    </div>
 
-      <div class="lip-row">
-        <div class="brand">
-          <img src="assets/skuffen-icon.png" alt="" />
-          <div>
-            <strong>Skuffen</strong>
-            <span>{{ people.locked() ? "Locked" : inDrawer() ? inDrawer() + " in the drawer" : "Private drawer" }}</span>
-          </div>
-        </div>
-
-        @if (!people.locked()) {
-          <div class="find-row">
-            <label class="find">
-              <span class="sr">Find someone</span>
-              <input
-                #findInput
-                [ngModel]="query()"
-                (ngModelChange)="query.set($event)"
-                (keyup.enter)="onFindEnter()"
-                placeholder="Find someone"
-                autocomplete="off"
-              />
-            </label>
-            <button
-              class="brass"
-              type="button"
-              (click)="researchName()"
-              [disabled]="!query().trim() || providers.busy()"
-            >
-              {{ providers.busy() && panel === "propose" ? "Searching…" : "Research" }}
-            </button>
-          </div>
-        }
-        @if (!people.locked()) {
-          <div class="tools">
-            <button
-              type="button"
-              class="tool"
-              [class.on]="panel === 'capture'"
-              (click)="openCapture()"
-              [attr.data-demo]="demoMode ? 'capture' : null"
-            >
-              Capture
-            </button>
-            @if (!empty()) {
-              <button
-                type="button"
-                class="tool"
-                (click)="startCreate()"
-                [attr.data-demo]="demoMode ? 'put-someone-in' : null"
-              >
-                Put someone in
-              </button>
-              <button type="button" class="tool" [class.on]="panel === 'map'" (click)="openMap()">Map</button>
-              <button
-                type="button"
-                class="tool"
-                [class.on]="panel === 'shuffle'"
-                (click)="openShuffle()"
-                [attr.data-demo]="demoMode ? 'shuffle' : null"
-              >
-                Shuffle
-              </button>
-              <button
-                type="button"
-                class="tool"
-                [class.on]="panel === 'commitments'"
-                (click)="openCommitments()"
-                [attr.data-demo]="demoMode ? 'commitments' : null"
-              >
-                Commitments
-              </button>
-            }
-          </div>
-        }
-
+    @if (!people.locked()) {
+      <div class="tools">
         <button
-          #latchBtn
-          class="latch-btn"
           type="button"
-          [class.on]="latchOpen"
-          (click)="toggleLatch()"
-          [attr.aria-expanded]="latchOpen"
-          aria-controls="skuffen-latch"
+          class="tool"
+          [class.on]="panel === 'capture'"
+          (click)="openCapture()"
+          [attr.data-demo]="demoMode ? 'capture' : null"
         >
-          Latch
-          @if (follow.pendingCount()) {
-            <span class="memory-count">{{ follow.pendingCount() }}</span>
-          }
+          Capture
         </button>
+        @if (!empty()) {
+          <button type="button" class="tool" [class.on]="panel === 'map'" (click)="openMap()">Map</button>
+          <button
+            type="button"
+            class="tool"
+            [class.on]="panel === 'shuffle'"
+            (click)="openShuffle()"
+            [attr.data-demo]="demoMode ? 'shuffle' : null"
+          >
+            Shuffle
+          </button>
+          <button
+            type="button"
+            class="tool"
+            [class.on]="panel === 'commitments'"
+            (click)="openCommitments()"
+            [attr.data-demo]="demoMode ? 'commitments' : null"
+          >
+            Commitments
+          </button>
+        }
       </div>
+    }
 
-      @if (latchOpen) {
-        <aside
-          #latchSheet
-          id="skuffen-latch"
-          class="latch-sheet"
-          role="dialog"
-          aria-label="Latch"
-          aria-modal="false"
-          tabindex="-1"
-        >
-          <header>
-            <div>
-              <strong>Latch</strong>
-              <span>Providers & settings</span>
-            </div>
-            <button class="ghost" type="button" (click)="closeLatch(true)">Close</button>
-          </header>
+    <button
+      #menuBtn
+      class="menu-btn"
+      type="button"
+      [class.on]="menuOpen"
+      (click)="toggleMenu()"
+      [attr.aria-expanded]="menuOpen"
+      aria-controls="skuffen-menu"
+    >
+      Menu
+      @if (follow.pendingCount()) {
+        <span class="memory-count">{{ follow.pendingCount() }}</span>
+      }
+    </button>
+
+    @if (menuOpen) {
+      <aside
+        #menuSheet
+        id="skuffen-menu"
+        class="menu-sheet"
+        role="dialog"
+        aria-label="Menu"
+        aria-modal="false"
+        tabindex="-1"
+      >
+        <header>
+          <div>
+            <strong>Menu</strong>
+            <span>Providers & settings</span>
+          </div>
+          <button class="ghost" type="button" (click)="closeMenu(true)">Close</button>
+        </header>
           <p class="provider-chip" [class.connected]="grokChipConnected()">
             Grok · {{ grokLabel() }}
           </p>
-          <p class="latch-kicker">Today</p>
+          <p class="menu-kicker">Today</p>
           <button
             type="button"
             (click)="openMemory()"
@@ -167,19 +127,19 @@
           >
             Commitments
           </button>
-          <p class="latch-kicker">Drawer</p>
+          <p class="menu-kicker">App</p>
           @if (self.owner(); as you) {
             <p class="whisper" data-self-owner>You · {{ you.title }}</p>
           }
           <button type="button" (click)="openProviders()">Providers</button>
-          <button type="button" (click)="people.chooseFolder(); latchOpen = false" [disabled]="people.locked()">
+          <button type="button" (click)="people.chooseFolder(); menuOpen = false" [disabled]="people.locked()">
             Bundle folder
           </button>
-          <button type="button" (click)="exportPlain(); latchOpen = false" [disabled]="people.locked()">
+          <button type="button" (click)="exportPlain(); menuOpen = false" [disabled]="people.locked()">
             Export plaintext OKF
           </button>
           @if (desktop && !people.locked()) {
-            <button type="button" (click)="lock()">Lock drawer</button>
+            <button type="button" (click)="lock()">Lock</button>
           }
           <button
             type="button"
@@ -220,27 +180,86 @@
       }
     </header>
 
-    <div class="well">
-      <svg class="net" viewBox="0 0 400 220" aria-hidden="true">
-        <g fill="none" stroke="currentColor" stroke-width="1.2">
-          <line x1="200" y1="40" x2="80" y2="100" />
-          <line x1="200" y1="40" x2="320" y2="100" />
-          <line x1="80" y1="100" x2="140" y2="180" />
-          <line x1="80" y1="100" x2="320" y2="100" />
-          <line x1="320" y1="100" x2="260" y2="180" />
-          <line x1="140" y1="180" x2="260" y2="180" />
-          <line x1="200" y1="40" x2="200" y2="180" />
-        </g>
-        <g fill="currentColor">
-          <circle cx="200" cy="40" r="7" />
-          <circle cx="80" cy="100" r="7" />
-          <circle cx="320" cy="100" r="7" />
-          <circle cx="140" cy="180" r="7" />
-          <circle cx="260" cy="180" r="7" />
-          <circle cx="200" cy="180" r="5" />
-        </g>
-      </svg>
+  <div class="workspace">
+    @if (!people.locked()) {
+      <aside class="sidebar" aria-label="People">
+        <div class="sidebar-head">
+          <h2>People</h2>
+          <button
+            class="ghost"
+            type="button"
+            (click)="startCreate()"
+            [attr.data-demo]="demoMode ? 'put-someone-in' : null"
+          >
+            Add person
+          </button>
+        </div>
+        <div class="find-row">
+          <label class="find">
+            <span class="sr">Find someone</span>
+            <input
+              #findInput
+              [ngModel]="query()"
+              (ngModelChange)="query.set($event)"
+              (keyup.enter)="onFindEnter()"
+              placeholder="Find someone"
+              autocomplete="off"
+            />
+          </label>
+          <button
+            class="brass"
+            type="button"
+            (click)="researchName()"
+            [disabled]="!query().trim() || providers.busy()"
+          >
+            {{ providers.busy() && panel === "propose" ? "Searching…" : "Research" }}
+          </button>
+        </div>
+        <nav class="people-list" aria-label="Everyone">
+          @if (query().trim() && filtered().length === 0) {
+            <p class="invite-line">
+              No one by that name. Press Enter or Research to propose a card from public sources.
+            </p>
+          }
+          @for (person of filtered(); track person.slug) {
+            <button
+              type="button"
+              class="person-card"
+              [class.on]="people.selected()?.slug === person.slug"
+              [class.is-self]="self.isSelf(person.slug)"
+              [attr.data-self-card]="self.isSelf(person.slug) ? person.slug : null"
+              (click)="open(person)"
+              (dragover)="onCardDragOver($event)"
+              (drop)="onDropOnPerson($event, person)"
+            >
+              <span class="node">
+                @if (personPhotoUrl(person); as src) {
+                  <img [src]="src" alt="" />
+                } @else {
+                  {{ initials(person.title) }}
+                }
+              </span>
+              <span class="person-meta">
+                <b>{{ person.title }}</b>
+                <small>{{ personCue(person) }}</small>
+              </span>
+            </button>
+          }
+          @if (demoMode && !empty()) {
+            <button
+              type="button"
+              class="demo-quiet"
+              (click)="seedDemoDuplicate()"
+              data-demo="put-matching-card"
+            >
+              Matching demo card
+            </button>
+          }
+        </nav>
+      </aside>
+    }
 
+    <main class="main well">
       @if (!desktop && !people.locked()) {
         <p class="ribbon">
           Preview cannot encrypt at rest. Tokens stay in this tab — never localStorage.
@@ -250,8 +269,8 @@
 
       @if (people.locked()) {
         <section class="invite">
-          <img src="assets/skuffen-icon.png" alt="Open wooden drawer" />
-          <h1>Unlock the drawer</h1>
+          <img src="assets/skuffen-icon.png" alt="Skuffen" />
+          <h1>Unlock</h1>
           @if (people.error()) {
             <p class="error">{{ people.error() }}</p>
           }
@@ -669,7 +688,7 @@
             </div>
             <p class="whisper">Accept writes a note on this card. Dismiss writes nothing. Never auto-sends.</p>
           } @else if (people.people().length === 0) {
-            <p class="whisper">Put someone in first. A brief is assembled from a card already on disk.</p>
+            <p class="whisper">Add a person first. A brief is assembled from a card already on disk.</p>
           }
         </section>
       } @else if (panel === "shuffle") {
@@ -795,7 +814,7 @@
             </div>
             <p class="whisper">Pick one person. The people-graph stays on this machine.</p>
           } @else if (people.people().length === 0) {
-            <p class="whisper">Put someone in first. Suggestions come from notes already on disk.</p>
+            <p class="whisper">Add a person first. Suggestions come from notes already on disk.</p>
             @if (demoMode) {
               <button
                 class="demo-quiet"
@@ -1136,7 +1155,7 @@
               [disabled]="!draft.title.trim()"
               [attr.data-demo]="demoMode ? 'save-person' : null"
             >
-              {{ panel === "create" ? "Put in the drawer" : "Save" }}
+              {{ panel === "create" ? "Add person" : "Save" }}
             </button>
             <button class="ghost" type="button" (click)="panel = 'none'">Cancel</button>
           </div>
@@ -1145,7 +1164,7 @@
         <section class="sheet propose-sheet" data-name-proposal>
           <header class="sheet-head">
             <div>
-              <p class="kicker">Proposed card — not in the drawer yet</p>
+              <p class="kicker">Proposed card — not saved yet</p>
               <h1>{{ nameProposal?.query || query() }}</h1>
             </div>
             <button class="ghost" type="button" (click)="dismissProposal()">Dismiss</button>
@@ -1306,18 +1325,18 @@
         </section>
       } @else if (empty()) {
         <section class="invite">
-          <img src="assets/skuffen-icon.png" alt="Open wooden drawer" />
-          <h1>The drawer is empty</h1>
+          <img src="assets/skuffen-icon.png" alt="Skuffen" />
+          <h1>No people yet</h1>
           <p class="lede">
-            Type a name above and press Enter. Or put a card in yourself.
+            Type a name to find someone, or add a person.
           </p>
           @if (notice) {
             <p class="notice">{{ notice }}</p>
           }
-          <p class="whisper">Need Grok or Gemini? Latch holds Providers. Ctrl+, opens Latch. / finds someone.</p>
+          <p class="whisper">Need Grok or Gemini? Menu holds Providers. Ctrl+, opens Menu. / finds someone.</p>
           <div class="invite-actions">
             <button class="brass" type="button" (click)="startCreate()" [attr.data-demo]="demoMode ? 'put-someone-in' : null">
-              Put someone in
+              Add person
             </button>
             <button type="button" (click)="openCapture()" [attr.data-demo]="demoMode ? 'capture-empty' : null">
               Capture a note
@@ -1336,20 +1355,8 @@
         </section>
       } @else if (people.selected(); as person) {
         <section class="file">
-          <nav class="dots" aria-label="People in the drawer">
-            <button class="ghost back" type="button" (click)="closeFile()">Drawer</button>
-            @for (item of filtered(); track item.slug) {
-              <button
-                type="button"
-                class="dot"
-                [class.on]="item.slug === person.slug"
-                [class.self]="self.isSelf(item.slug)"
-                (click)="open(item)"
-                [attr.title]="self.isSelf(item.slug) ? item.title + ' (this is me)' : item.title"
-              >
-                {{ initials(item.title) }}
-              </button>
-            }
+          <nav class="file-nav">
+            <button class="ghost back" type="button" (click)="closeFile()">People</button>
           </nav>
 
           <article class="card">
@@ -1618,7 +1625,7 @@
                 <p class="whisper">
                   Research searches public web info. Follow re-runs that search on a local schedule.
                   Propose only — never auto-write, never auto-send, never upload the graph.
-                  Latch → Memory lists every pending fact and what the model was told.
+                  Menu → Memory lists every pending fact and what the model was told.
                 </p>
                 <label class="follow-line">
                   <input
@@ -1835,7 +1842,7 @@
                       <label>
                         Also link to
                         <select [(ngModel)]="linkSlug" name="link-{{ doc.slug }}">
-                          <option value="">Choose a person already in the drawer</option>
+                          <option value="">Choose another person</option>
                           @for (other of unlinkedPeople(doc); track other.slug) {
                             <option [value]="other.slug">{{ other.title }}</option>
                           }
@@ -1855,7 +1862,7 @@
           </article>
         </section>
       } @else if (browsing()) {
-        <section class="tray" aria-label="People in the drawer">
+        <section class="browse">
           @if (notice) {
             <p class="notice invite-line">{{ notice }}</p>
           }
@@ -1886,54 +1893,9 @@
               </button>
             </p>
           }
-          @if (query().trim() && filtered().length === 0) {
-            <p class="invite-line">
-              No one by that name. Press Enter or Research to propose a card from public sources.
-            </p>
-          }
-          @for (person of filtered(); track person.slug) {
-            <button
-              type="button"
-              class="person-card"
-              [class.is-self]="self.isSelf(person.slug)"
-              [attr.data-self-card]="self.isSelf(person.slug) ? person.slug : null"
-              (click)="open(person)"
-              (dragover)="onCardDragOver($event)"
-              (drop)="onDropOnPerson($event, person)"
-            >
-              <span class="node">{{ initials(person.title) }}</span>
-              <b>{{ person.title }}</b>
-              <small>
-                {{ person.description || "A card in the drawer" }}
-                @if (self.isSelf(person.slug)) {
-                  · This is me
-                }
-                @if (follow.followFor(person.slug)) {
-                  · Followed
-                }
-                @if (follow.suggestionsFor(person.slug).length) {
-                  · {{ follow.suggestionsFor(person.slug).length }} proposed
-                }
-              </small>
-            </button>
-          }
-          <button type="button" class="person-card ghost-card" (click)="startCreate()" [attr.data-demo]="demoMode ? 'put-someone-in' : null">
-            <span class="node plus">+</span>
-            <b>Put someone in</b>
-            <small>A new card</small>
-          </button>
-          @if (demoMode) {
-            <button
-              type="button"
-              class="demo-quiet tray-demo"
-              (click)="seedDemoDuplicate()"
-              data-demo="put-matching-card"
-            >
-              Matching demo card
-            </button>
-          }
+          <p class="browse-empty">Select someone from the list.</p>
         </section>
       }
-    </div>
+    </main>
   </div>
 </div>

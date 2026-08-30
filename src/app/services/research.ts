@@ -444,7 +444,7 @@ export function proposalsForSlug(proposals: StoredProposal[], slug: string): Fac
 
 /** Shown on Research / Suggest when no Grok or Gemini is connected. */
 export const RESEARCH_NEEDS_PROVIDER =
-  "Connect Grok or Gemini in Latch → Providers. There is no Skuffen cloud account.";
+  "Connect Grok or Gemini in Menu → Providers. There is no Skuffen cloud account.";
 
 export function showResearchEmptyState(input: {
   requested: boolean;

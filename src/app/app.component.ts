@@ -48,6 +48,7 @@ import {
   setAllMergeFieldsKept,
   setMergeFieldKept,
 } from "./services/merge";
+import { personListPhotoUrl } from "./list-photo";
 import {
   deleteProposedFact,
   dismissNameProposal,
@@ -173,15 +174,15 @@ export class AppComponent implements OnInit, OnDestroy {
   readonly updates = inject(UpdateService);
   readonly updateWhisper = UPDATE_WHISPER;
   private readonly findInput = viewChild<ElementRef<HTMLInputElement>>("findInput");
-  private readonly latchSheet = viewChild<ElementRef<HTMLElement>>("latchSheet");
-  private readonly latchBtn = viewChild<ElementRef<HTMLButtonElement>>("latchBtn");
+  private readonly menuSheet = viewChild<ElementRef<HTMLElement>>("menuSheet");
+  private readonly menuBtn = viewChild<ElementRef<HTMLButtonElement>>("menuBtn");
   private readonly captureField = viewChild<ElementRef<HTMLTextAreaElement>>("captureField");
   private readonly nameField = viewChild<ElementRef<HTMLInputElement>>("nameField");
 
   readonly query = signal("");
   panel: Panel = "none";
   fact: FactSurface = "none";
-  latchOpen = false;
+  menuOpen = false;
   showMore = false;
   addingSocial = false;
   dragging = false;
@@ -244,7 +245,7 @@ export class AppComponent implements OnInit, OnDestroy {
   );
   readonly activeProvider = computed(() => this.providers.activeProvider());
   readonly bothProviders = computed(() => this.providers.availableProviders().length === 2);
-  readonly inDrawer = computed(() => this.people.people().length);
+  readonly personCount = computed(() => this.people.people().length);
   readonly mapPins = computed<MapPin[]>(() =>
     this.people
       .people()
@@ -341,24 +342,24 @@ export class AppComponent implements OnInit, OnDestroy {
     this.follow.stop();
   }
 
-  toggleLatch(): void {
-    if (this.latchOpen) this.closeLatch(true);
-    else this.openLatch();
+  toggleMenu(): void {
+    if (this.menuOpen) this.closeMenu(true);
+    else this.openMenu();
   }
 
-  openLatch(): void {
-    this.latchOpen = true;
+  openMenu(): void {
+    this.menuOpen = true;
     void this.providers.refresh();
     this.focusSoon(() => {
-      const sheet = this.latchSheet()?.nativeElement;
+      const sheet = this.menuSheet()?.nativeElement;
       return sheet?.querySelector<HTMLElement>("button.ghost, button") ?? sheet ?? undefined;
     });
   }
 
-  closeLatch(returnFocus = false): void {
-    if (!this.latchOpen) return;
-    this.latchOpen = false;
-    if (returnFocus) this.focusSoon(() => this.latchBtn()?.nativeElement);
+  closeMenu(returnFocus = false): void {
+    if (!this.menuOpen) return;
+    this.menuOpen = false;
+    if (returnFocus) this.focusSoon(() => this.menuBtn()?.nativeElement);
   }
 
   focusFind(): void {
@@ -372,8 +373,8 @@ export class AppComponent implements OnInit, OnDestroy {
 
   @HostListener("document:keydown.escape")
   onEscape(): void {
-    if (this.latchOpen) {
-      this.closeLatch(true);
+    if (this.menuOpen) {
+      this.closeMenu(true);
       return;
     }
     if (this.panel === "propose") {
@@ -416,7 +417,7 @@ export class AppComponent implements OnInit, OnDestroy {
     const meta = event.ctrlKey || event.metaKey;
     if (meta && event.key === ",") {
       event.preventDefault();
-      this.openLatch();
+      this.openMenu();
       return;
     }
     if (meta && event.key.toLowerCase() === "k" && !event.shiftKey) {
@@ -434,24 +435,24 @@ export class AppComponent implements OnInit, OnDestroy {
       this.focusFind();
       return;
     }
-    if (this.latchOpen && event.key === "Tab") {
-      this.cycleLatchFocus(event);
+    if (this.menuOpen && event.key === "Tab") {
+      this.cycleMenuFocus(event);
     }
   }
 
   @HostListener("document:pointerdown", ["$event"])
   onDocumentPointer(event: PointerEvent): void {
-    if (!this.latchOpen) return;
+    if (!this.menuOpen) return;
     const target = event.target;
     if (!(target instanceof Node)) return;
-    if (this.latchSheet()?.nativeElement.contains(target)) return;
-    if (this.latchBtn()?.nativeElement.contains(target)) return;
-    this.closeLatch();
+    if (this.menuSheet()?.nativeElement.contains(target)) return;
+    if (this.menuBtn()?.nativeElement.contains(target)) return;
+    this.closeMenu();
   }
 
   async open(person: PersonView): Promise<void> {
     this.panel = "none";
-    this.latchOpen = false;
+    this.menuOpen = false;
     this.fact = "none";
     this.notice = null;
     this.actionError = null;
@@ -474,7 +475,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   openMap(): void {
-    this.latchOpen = false;
+    this.menuOpen = false;
     this.panel = "map";
     this.fact = "none";
     this.mapAssignSlug = this.people.selected()?.slug ?? "";
@@ -498,7 +499,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.draft = blankDraft();
     this.showMore = false;
     this.panel = "create";
-    this.latchOpen = false;
+    this.menuOpen = false;
     this.fact = "none";
     this.nameProposal = null;
     this.people.selected.set(null);
@@ -845,7 +846,7 @@ export class AppComponent implements OnInit, OnDestroy {
       return false;
     }
     this.notice = notice;
-    this.openLatch();
+    this.openMenu();
     this.researchRequestedWithoutProvider = true;
     return true;
   }
@@ -854,7 +855,7 @@ export class AppComponent implements OnInit, OnDestroy {
     const person = this.people.selected();
     this.fact = "suggest";
     this.notice = null;
-    if (this.gateWithoutProvider("Connect Grok in Latch → Providers first.")) {
+    if (this.gateWithoutProvider("Connect Grok in Menu → Providers first.")) {
       return;
     }
     if (person) {
@@ -871,7 +872,7 @@ export class AppComponent implements OnInit, OnDestroy {
     const person = this.people.selected();
     this.fact = "suggest";
     this.notice = null;
-    if (this.gateWithoutProvider("Connect Grok in Latch → Providers first.")) {
+    if (this.gateWithoutProvider("Connect Grok in Menu → Providers first.")) {
       return;
     }
     if (!person) return;
@@ -895,13 +896,13 @@ export class AppComponent implements OnInit, OnDestroy {
     if (!name) return;
     this.notice = null;
     this.actionError = null;
-    this.latchOpen = false;
+    this.menuOpen = false;
     this.panel = "propose";
     this.people.selected.set(null);
     this.nameProposal = null;
     if (
       this.gateWithoutProvider(
-        "Connect Grok in Latch → Providers first. There is no Skuffen cloud account.",
+        "Connect Grok in Menu → Providers first. There is no Skuffen cloud account.",
       )
     ) {
       return;
@@ -988,7 +989,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private async openAcceptedNameCard(created: PersonView, photoNotice: string | null): Promise<void> {
     this.nameProposal = null;
     this.panel = "none";
-    this.latchOpen = false;
+    this.menuOpen = false;
     this.fact = "none";
     this.query.set("");
     this.researchRequestedWithoutProvider = false;
@@ -1033,7 +1034,7 @@ export class AppComponent implements OnInit, OnDestroy {
     if (!hit) return;
     this.mergeProposal = proposeMerge(hit.keeper, hit.incoming, hit.overlaps);
     this.panel = "merge";
-    this.latchOpen = false;
+    this.menuOpen = false;
     this.fact = "none";
     this.notice = null;
   }
@@ -1276,21 +1277,21 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   openProviders(): void {
-    this.latchOpen = false;
+    this.menuOpen = false;
     this.panel = "providers";
     this.people.selected.set(null);
     void this.providers.refresh();
   }
 
   openMemory(): void {
-    this.latchOpen = false;
+    this.menuOpen = false;
     this.panel = "memory";
     this.fact = "none";
     this.checkedSuggestionIds = new Set(pendingFacts(this.memoryRows()).map((item) => item.id));
   }
 
   async openBrief(slug?: string): Promise<void> {
-    this.latchOpen = false;
+    this.menuOpen = false;
     this.panel = "brief";
     this.fact = "none";
     this.notice = null;
@@ -1337,7 +1338,7 @@ export class AppComponent implements OnInit, OnDestroy {
       this.meetingBrief = polished;
       return;
     }
-    this.notice = "Local brief is ready offline. Polish needs Grok or Gemini in Latch.";
+    this.notice = "Local brief is ready offline. Polish needs Grok or Gemini in Menu.";
   }
 
   async acceptBrief(): Promise<void> {
@@ -1360,7 +1361,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   openShuffle(slug?: string): void {
-    this.latchOpen = false;
+    this.menuOpen = false;
     this.panel = "shuffle";
     this.fact = "none";
     this.notice = null;
@@ -1421,7 +1422,7 @@ export class AppComponent implements OnInit, OnDestroy {
       this.reconnectDraft = polished;
       return;
     }
-    this.notice = "Local draft is ready offline. Polish needs Grok or Gemini in Latch.";
+    this.notice = "Local draft is ready offline. Polish needs Grok or Gemini in Menu.";
   }
 
   async acceptShuffle(): Promise<void> {
@@ -1479,7 +1480,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
   openCommitments(slug?: string): void {
     commitmentsOpenWrites();
-    this.latchOpen = false;
+    this.menuOpen = false;
     this.panel = "commitments";
     this.fact = "none";
     this.notice = null;
@@ -1507,7 +1508,7 @@ export class AppComponent implements OnInit, OnDestroy {
   proposeCommitmentsFromCard(): void {
     const person = this.commitmentPerson();
     if (!person) {
-      this.notice = "Put someone in first. Promises are extracted from a card already on disk.";
+      this.notice = "Add a person first. Promises are extracted from a card already on disk.";
       return;
     }
     proposeCommitmentWrites();
@@ -1523,7 +1524,7 @@ export class AppComponent implements OnInit, OnDestroy {
     const person = this.commitmentPerson();
     const text = this.commitmentSourceNote.trim();
     if (!person) {
-      this.notice = "Put someone in first. Prompts include only that person.";
+      this.notice = "Add a person first. Prompts include only that person.";
       return;
     }
     if (!text) return;
@@ -1621,7 +1622,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   openCapture(slug?: string): void {
-    this.latchOpen = false;
+    this.menuOpen = false;
     this.panel = "capture";
     this.fact = "none";
     this.notice = null;
@@ -1654,7 +1655,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.captureProposal = null;
     if (
       this.gateWithoutProvider(
-        "Connect Grok in Latch → Providers first. There is no Skuffen cloud account.",
+        "Connect Grok in Menu → Providers first. There is no Skuffen cloud account.",
       )
     ) {
       this.captureRequestedWithoutProvider = true;
@@ -1864,7 +1865,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.follow.stop();
     await this.people.lock();
     this.panel = "none";
-    this.latchOpen = false;
+    this.menuOpen = false;
     this.fact = "none";
   }
 
@@ -1904,6 +1905,21 @@ export class AppComponent implements OnInit, OnDestroy {
     return body !== `# About\n\nNotes and social links for ${person.title} live beside this document.`;
   }
 
+  personCue(person: PersonView): string {
+    const bits: string[] = [];
+    if (person.description) bits.push(person.description);
+    if (this.self.isSelf(person.slug)) bits.push("This is me");
+    if (this.follow.followFor(person.slug)) bits.push("Followed");
+    const proposed = this.follow.suggestionsFor(person.slug).length;
+    if (proposed) bits.push(`${proposed} proposed`);
+    return bits.join(" · ");
+  }
+
+  personPhotoUrl(person: PersonView): string | null {
+    const photo = person.photos[0];
+    return personListPhotoUrl(photo?.listSrc ?? photo?.resource);
+  }
+
   initials(title: string): string {
     return title
       .split(/\s+/)
@@ -1932,8 +1948,8 @@ export class AppComponent implements OnInit, OnDestroy {
     return target.isContentEditable;
   }
 
-  private cycleLatchFocus(event: KeyboardEvent): void {
-    const sheet = this.latchSheet()?.nativeElement;
+  private cycleMenuFocus(event: KeyboardEvent): void {
+    const sheet = this.menuSheet()?.nativeElement;
     if (!sheet) return;
     const nodes = Array.from(
       sheet.querySelectorAll<HTMLElement>(

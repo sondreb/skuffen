@@ -80,7 +80,15 @@ export interface PersonView {
     handle?: string;
     url?: string;
   }>;
-  photos: Array<{ id: string; path: string; title: string; resource?: string; at?: string }>;
+  photos: Array<{
+    id: string;
+    path: string;
+    title: string;
+    resource?: string;
+    at?: string;
+    /** Local data/blob for the people list. Never http(s). */
+    listSrc?: string;
+  }>;
   location?: PersonLocation;
   documents: Array<{
     id: string;

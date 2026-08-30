@@ -37,11 +37,11 @@ test("mark This is me; only one self; unmark; persists in settings not tokens", 
   await expect(page.locator("[data-self-toggle]")).toHaveAttribute("aria-pressed", "true");
   expect(await settingsSelfSlug(page)).toBe("ada-demo");
 
-  await page.getByRole("button", { name: "Latch" }).click();
+  await page.getByRole("button", { name: "Menu" }).click();
   await expect(page.locator("[data-self-owner]")).toHaveText("You · Ada Demo");
   await page.getByRole("button", { name: "Close", exact: true }).click();
 
-  await page.getByRole("button", { name: "Drawer" }).click();
+  await page.getByRole("button", { name: "People" }).click();
   await expect(page.locator("[data-self-card='ada-demo']")).toBeVisible();
   await expect(page.locator("[data-self-card='ada-demo']")).toContainText("This is me");
 
@@ -71,7 +71,7 @@ test("mark This is me; only one self; unmark; persists in settings not tokens", 
   await page.locator("[data-self-card='ada-demo']").click();
   await expect(page.locator("[data-self-badge]")).toHaveText("This is me · this local copy");
 
-  await page.getByRole("button", { name: "Drawer" }).click();
+  await page.getByRole("button", { name: "People" }).click();
   await createBeaDemo(page);
   await expect(page.locator("[data-self-toggle]")).toHaveText("This is me");
   await expect(page.locator("[data-self-badge]")).toHaveCount(0);
@@ -80,7 +80,7 @@ test("mark This is me; only one self; unmark; persists in settings not tokens", 
   await expect(page.locator("[data-self-badge]")).toHaveText("This is me · this local copy");
   expect(await settingsSelfSlug(page)).toBe("bea-demo");
 
-  await page.getByRole("button", { name: "Drawer" }).click();
+  await page.getByRole("button", { name: "People" }).click();
   const adaCard = page.locator(".person-card").filter({ has: page.locator("b", { hasText: /^Ada Demo$/ }) });
   const beaCard = page.locator(".person-card").filter({ has: page.locator("b", { hasText: /^Bea Demo$/ }) });
   await expect(page.locator("[data-self-card='bea-demo']")).toBeVisible();
@@ -95,7 +95,7 @@ test("mark This is me; only one self; unmark; persists in settings not tokens", 
   await expect(page.locator("[data-self-toggle]")).toHaveText("This is me");
   expect(await settingsSelfSlug(page)).toBeNull();
 
-  await page.getByRole("button", { name: "Drawer" }).click();
+  await page.getByRole("button", { name: "People" }).click();
   await expect(page.locator("[data-self-card]")).toHaveCount(0);
 
   const afterUnmark = await diskSnapshot(page);

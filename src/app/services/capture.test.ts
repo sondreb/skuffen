@@ -243,7 +243,7 @@ test("capture empty state is only after a request without a provider", () => {
     }),
     false,
   );
-  assert.match(CAPTURE_NEEDS_PROVIDER, /Connect Grok or Gemini in Latch/);
+  assert.match(CAPTURE_NEEDS_PROVIDER, /Connect Grok or Gemini in Menu/);
   assert.match(CAPTURE_NEEDS_PROVIDER, /no Skuffen cloud account/);
 });
 

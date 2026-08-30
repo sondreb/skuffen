@@ -10,7 +10,7 @@ test("inspectable memory lists pending facts; Accept writes; Dismiss drops", asy
   await expect(page.getByText("Public park mention (demo)")).toBeVisible();
   await expect(page.getByText("Nothing is written until you accept.")).toBeVisible();
 
-  await page.getByRole("button", { name: "Latch" }).click();
+  await page.getByRole("button", { name: "Menu" }).click();
   await showDemoLabel(page, "Memory lists what the agent proposed");
   await page.locator("[data-demo='open-memory']").click();
 
@@ -34,7 +34,7 @@ test("inspectable memory lists pending facts; Accept writes; Dismiss drops", asy
   await page.locator("[data-demo='research']").click();
   await expect(page.getByText("Public park mention (demo)")).toBeVisible();
 
-  await page.getByRole("button", { name: "Latch" }).click();
+  await page.getByRole("button", { name: "Menu" }).click();
   await page.locator("[data-demo='open-memory']").click();
   await showDemoLabel(page, "Accept writes — dismiss wrote nothing");
   await page.locator("[data-demo='memory-accept']").click();

@@ -2,74 +2,74 @@ import { expect, test } from "../helpers/app";
 
 async function openPreview(page: import("@playwright/test").Page): Promise<void> {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "The drawer is empty" })).toBeVisible({
+  await expect(page.getByRole("heading", { name: "No people yet" })).toBeVisible({
     timeout: 30_000,
   });
 }
 
-async function expectLatchOpen(page: import("@playwright/test").Page): Promise<void> {
-  await expect(page.getByRole("dialog", { name: "Latch" })).toBeVisible();
+async function expectMenuOpen(page: import("@playwright/test").Page): Promise<void> {
+  await expect(page.getByRole("dialog", { name: "Menu" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Providers" })).toBeVisible();
 }
 
-async function expectLatchClosed(page: import("@playwright/test").Page): Promise<void> {
-  await expect(page.getByRole("dialog", { name: "Latch" })).toHaveCount(0);
+async function expectMenuClosed(page: import("@playwright/test").Page): Promise<void> {
+  await expect(page.getByRole("dialog", { name: "Menu" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Providers" })).toHaveCount(0);
 }
 
-test("no-provider research opens Latch, dismiss recovers the page", async ({ demoPage: page }) => {
+test("no-provider research opens Menu, dismiss recovers the page", async ({ demoPage: page }) => {
   await openPreview(page);
 
   await page.getByPlaceholder("Find someone").fill("Ada Lovelace");
   await page.getByRole("button", { name: "Research" }).click();
 
-  await expectLatchOpen(page);
-  await expect(page.getByText(/Connect Grok in Latch/)).toBeVisible();
+  await expectMenuOpen(page);
+  await expect(page.getByText(/Connect Grok in Menu/)).toBeVisible();
 
-  await page.getByRole("button", { name: "Latch", exact: true }).click();
-  await expectLatchClosed(page);
+  await page.getByRole("button", { name: "Menu", exact: true }).click();
+  await expectMenuClosed(page);
   await expect(page.getByRole("heading", { name: "Ada Lovelace" })).toBeVisible();
   await expect(page.locator("[data-research-empty]")).toBeVisible();
   await page.getByRole("button", { name: "Dismiss" }).click();
-  await expect(page.getByRole("heading", { name: "The drawer is empty" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "No people yet" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Put someone in" }).click();
+  await page.getByRole("button", { name: "Add person" }).first().click();
   await expect(page.getByRole("heading", { name: "Who?" })).toBeVisible();
   await page.getByRole("button", { name: "Cancel" }).click();
-  await expect(page.getByRole("heading", { name: "The drawer is empty" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "No people yet" })).toBeVisible();
 
   await page.getByRole("button", { name: "Research" }).click();
-  await expectLatchOpen(page);
+  await expectMenuOpen(page);
   await page.keyboard.press("Escape");
-  await expectLatchClosed(page);
+  await expectMenuClosed(page);
   await expect(page.getByRole("heading", { name: "Ada Lovelace" })).toBeVisible();
   await page.getByRole("button", { name: "Dismiss" }).click();
-  await expect(page.getByRole("heading", { name: "The drawer is empty" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "No people yet" })).toBeVisible();
 
   await page.getByRole("button", { name: "Research" }).click();
-  await expectLatchOpen(page);
+  await expectMenuOpen(page);
   await page.locator(".well").click({ position: { x: 16, y: 16 } });
-  await expectLatchClosed(page);
+  await expectMenuClosed(page);
   await page.getByRole("button", { name: "Dismiss" }).click();
 
   await page.getByRole("button", { name: "Research" }).click();
-  await expectLatchOpen(page);
+  await expectMenuOpen(page);
   await page.getByRole("button", { name: "Close", exact: true }).click();
-  await expectLatchClosed(page);
+  await expectMenuClosed(page);
   await page.getByRole("button", { name: "Dismiss" }).click();
 
-  await page.getByRole("button", { name: "Put someone in" }).click();
+  await page.getByRole("button", { name: "Add person" }).first().click();
   await page.locator('input[name="person-name"]').fill("Ada Demo");
-  await page.getByRole("button", { name: "Put in the drawer" }).click();
+  await page.locator(".card-form").getByRole("button", { name: "Add person" }).click();
   await expect(page.getByRole("heading", { name: "Ada Demo" })).toBeVisible();
 
   await page.getByRole("button", { name: "Suggest" }).click();
   await page.getByRole("button", { name: "Suggest facts" }).click();
-  await expectLatchOpen(page);
-  await expect(page.getByText("Connect Grok in Latch → Providers first.")).toBeVisible();
+  await expectMenuOpen(page);
+  await expect(page.getByText("Connect Grok in Menu → Providers first.")).toBeVisible();
 
-  await page.getByRole("button", { name: "Latch", exact: true }).click();
-  await expectLatchClosed(page);
+  await page.getByRole("button", { name: "Menu", exact: true }).click();
+  await expectMenuClosed(page);
   await expect(page.getByRole("heading", { name: "Ada Demo" })).toBeVisible();
 
   await page.getByRole("button", { name: "Note" }).click();
