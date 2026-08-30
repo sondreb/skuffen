@@ -4,11 +4,11 @@ import { hold, showDemoLabel } from "../helpers/labels";
 
 test("add a person and pin a place on the map", async ({ demoPage: page }) => {
   await openDemo(page);
-  await showDemoLabel(page, "2. New person");
 
   await fillAdaDemoForm(page);
   await expect(page.getByRole("heading", { name: "Who?" })).toBeVisible();
   await expect(page.locator('input[name="person-name"]')).toHaveValue(DEMO.person.title);
+  await showDemoLabel(page, "2. New person");
   await captureReadmeStill(page, "screenshot-person.png");
   await page.locator("[data-demo='save-person']").click();
   await expect(page.getByRole("heading", { name: "Ada Demo" })).toBeVisible();
