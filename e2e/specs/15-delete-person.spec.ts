@@ -2,15 +2,22 @@ import { DEMO } from "../helpers/demo-data";
 import { createAdaDemo, createBeaDemo, expect, openDemo, test } from "../helpers/app";
 
 const BUNDLE_KEY = "skuffen.bundle.files";
+const BLOBS_KEY = "skuffen.bundle.blobs";
 const SETTINGS_KEY = "skuffen.settings";
+
+const PNG = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+  "base64",
+);
 
 async function diskSnapshot(page: import("@playwright/test").Page) {
   return page.evaluate(
-    ({ filesKey, settingsKey }) => ({
+    ({ filesKey, blobsKey, settingsKey }) => ({
       files: localStorage.getItem(filesKey),
+      blobs: localStorage.getItem(blobsKey),
       settings: localStorage.getItem(settingsKey),
     }),
-    { filesKey: BUNDLE_KEY, settingsKey: SETTINGS_KEY },
+    { filesKey: BUNDLE_KEY, blobsKey: BLOBS_KEY, settingsKey: SETTINGS_KEY },
   );
 }
 
@@ -104,4 +111,45 @@ test("people-list context menu Delete opens the same confirm path", async ({ dem
   const after = await diskSnapshot(page);
   expect(personFolderGone(after.files, "ada-demo")).toBe(true);
   expect(bundlePaths(after.files)).toContain("people/bea-demo/person.md");
+});
+
+test("confirm wipe removes profile image, gallery photos, and files under the person folder", async ({
+  demoPage: page,
+}) => {
+  await openDemo(page);
+  await createAdaDemo(page);
+
+  await page.getByRole("button", { name: "Drop" }).click();
+  await page.locator("#skuffen-profile-file").setInputFiles({
+    name: "portrait.png",
+    mimeType: "image/png",
+    buffer: PNG,
+  });
+  await page.locator("#skuffen-photo-file").setInputFiles({
+    name: "park.png",
+    mimeType: "image/png",
+    buffer: PNG,
+  });
+  await page.locator("#skuffen-document-file").setInputFiles({
+    name: "notes.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("local file, not uploaded"),
+  });
+  await expect(page.locator("[data-profile-image] img")).toBeVisible();
+  await expect(page.locator("[data-photos] article")).toHaveCount(2);
+  await expect(page.locator("[data-files] article")).toHaveCount(1);
+
+  const before = await diskSnapshot(page);
+  expect(bundlePaths(before.files).some((path) => path.startsWith("people/ada-demo/photos/"))).toBe(true);
+  expect(bundlePaths(before.blobs).some((path) => path.startsWith("people/ada-demo/photos/"))).toBe(true);
+
+  await page.locator("[data-delete-person]").click();
+  await page.locator("[data-delete-confirm-write]").click();
+  await expect(page.getByRole("heading", { name: "No people yet" })).toBeVisible();
+
+  const after = await diskSnapshot(page);
+  expect(personFolderGone(after.files, "ada-demo")).toBe(true);
+  expect(personFolderGone(after.blobs, "ada-demo")).toBe(true);
+  expect(bundlePaths(after.files).some((path) => path.startsWith("people/ada-demo/"))).toBe(false);
+  expect(bundlePaths(after.blobs).some((path) => path.startsWith("people/ada-demo/"))).toBe(false);
 });

@@ -587,6 +587,7 @@ export class PeopleService {
     }
   }
 
+  /** Wipe every file under people/{slug}/ — person.md, profile image, gallery photos, notes, place, local files. */
   private async deletePersonFolder(slug: string): Promise<void> {
     const prefix = `${personDir(slug)}/`;
     const files = await this.io.listFiles(this.bundleRoot(), prefix);
