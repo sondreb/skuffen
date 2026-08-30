@@ -144,10 +144,12 @@ test("bundle stays unsigned GitHub fallback: no updater artifacts, ayatana-only 
   assert.match(onInstSuccess, /\$UpdateMode = 1/);
   assert.match(onInstSuccess, /Return/);
   assert.match(onInstSuccess, /\$\{Silent\}/);
-  assert.match(onInstSuccess, /GetOptions \$CMDLINE "\/R"/);
-  const passiveLaunch = onInstSuccess.match(/ElseIf \$PassiveMode = 1[\s\S]*?\$\{EndIf\}/)?.[0] ?? "";
+  assert.match(onInstSuccess, /\$\{GetOptions\} \$CMDLINE "\/R"/);
+  const passiveIdx = onInstSuccess.indexOf("${ElseIf} $PassiveMode = 1");
+  assert.ok(passiveIdx >= 0, "PassiveMode launch branch is missing");
+  const passiveLaunch = onInstSuccess.slice(passiveIdx);
   assert.match(passiveLaunch, /nsis_tauri_utils::RunAsUser/);
-  assert.doesNotMatch(passiveLaunch, /GetOptions \$CMDLINE "\/R"/);
+  assert.doesNotMatch(passiveLaunch, /\$\{GetOptions\} \$CMDLINE "\/R"/);
 
   const release = readFileSync(join(root, ".github", "workflows", "release.yml"), "utf8");
   assert.match(release, /releaseDraft: true/);
