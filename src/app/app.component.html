@@ -1864,7 +1864,11 @@
                   </label>
                   <div class="offers">
                     @for (item of visibleSuggestions(); track item.id) {
-                      <article class="fact-offer">
+                      <article
+                        class="fact-offer"
+                        [attr.data-suggestion-kind]="item.kind"
+                        [attr.data-suggestion-id]="item.id"
+                      >
                         <label class="follow-line">
                           <input
                             type="checkbox"

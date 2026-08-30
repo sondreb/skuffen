@@ -275,6 +275,8 @@ export class AppComponent implements OnInit, OnDestroy {
   readonly dismissedMerges = signal<string[]>([]);
   readonly droppedCommitments = signal<string[]>([]);
   checkedSuggestionIds = new Set<string>();
+  /** Delete/Reject: never write these ids, even if a leftover proposal is still stored. */
+  readonly rejectedSuggestionIds = signal(new Set<string>());
   readonly desktop = isTauri();
   readonly demoMode = isDemoMode();
 
@@ -307,8 +309,9 @@ export class AppComponent implements OnInit, OnDestroy {
     const stored = slug ? this.follow.suggestionsFor(slug) : [];
     const seen = new Set<string>();
     const out: FactSuggestion[] = [];
+    const rejected = this.rejectedSuggestionIds();
     for (const item of [...live, ...stored]) {
-      if (seen.has(item.id)) continue;
+      if (seen.has(item.id) || rejected.has(item.id)) continue;
       seen.add(item.id);
       out.push(item);
     }
@@ -1050,6 +1053,7 @@ export class AppComponent implements OnInit, OnDestroy {
       return;
     }
     if (person) {
+      this.rejectedSuggestionIds.set(new Set());
       await this.providers.suggest(person, this.relationOthers(person.slug));
       await this.follow.storeResearch(person.slug, this.providers.suggestions(), {
         source: "ask",
@@ -1067,6 +1071,7 @@ export class AppComponent implements OnInit, OnDestroy {
       return;
     }
     if (!person) return;
+    this.rejectedSuggestionIds.set(new Set());
     await this.providers.research(person, this.relationOthers(person.slug));
     await this.follow.storeResearch(person.slug, this.providers.suggestions(), {
       source: "research",
@@ -1423,13 +1428,17 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   async acceptCheckedSuggestions(): Promise<void> {
-    const selected = this.visibleSuggestions().filter((item) => this.checkedSuggestionIds.has(item.id));
+    const rejected = this.rejectedSuggestionIds();
+    const selected = this.visibleSuggestions().filter(
+      (item) => this.checkedSuggestionIds.has(item.id) && !rejected.has(item.id),
+    );
     for (const item of selected) {
       await this.accept(item);
     }
   }
 
   reject(suggestion: FactSuggestion): void {
+    this.rejectedSuggestionIds.update((ids) => new Set([...ids, suggestion.id]));
     this.providers.reject(suggestion.id);
     const next = new Set(this.checkedSuggestionIds);
     next.delete(suggestion.id);

@@ -16,7 +16,7 @@ test("add sibling shows on both cards; filter by family; delete wipes edges", as
   await createAdaDemo(page);
   await createBeaDemo(page);
 
-  await page.locator(".person-card", { hasText: DEMO.person.title }).click();
+  await page.locator("[data-person-row='ada-demo']").click();
   await expect(page.getByRole("heading", { name: "Ada Demo" })).toBeVisible();
   await expect(page.locator("[data-relations-empty]")).toBeVisible();
 
@@ -46,19 +46,19 @@ test("add sibling shows on both cards; filter by family; delete wipes edges", as
 
   await page.getByRole("button", { name: "People" }).click();
   await page.locator("[data-relation-filter='family']").click();
-  await expect(page.locator(".sidebar .person-card", { hasText: DEMO.person.title })).toBeVisible();
-  await expect(page.locator(".sidebar .person-card", { hasText: DEMO.bea.title })).toBeVisible();
+  await expect(page.locator("[data-person-row='ada-demo']")).toBeVisible();
+  await expect(page.locator("[data-person-row='bea-demo']")).toBeVisible();
   await page.locator("[data-relation-filter='business']").click();
-  await expect(page.locator(".sidebar .person-card")).toHaveCount(0);
+  await expect(page.locator(".sidebar [data-person-row]")).toHaveCount(0);
   await page.locator("[data-relation-filter='all']").click();
-  await expect(page.locator(".sidebar .person-card")).toHaveCount(2);
+  await expect(page.locator(".sidebar [data-person-row]")).toHaveCount(2);
 
-  await page.locator(".person-card", { hasText: DEMO.person.title }).click();
+  await page.locator("[data-person-row='ada-demo']").click();
   await page.locator("[data-delete-person]").click();
   await page.locator("[data-delete-confirm-write]").click();
   await expect(page.locator(".person-card b").filter({ hasText: /^Ada Demo$/ })).toHaveCount(0);
 
-  await page.locator(".person-card", { hasText: DEMO.bea.title }).click();
+  await page.locator("[data-person-row='bea-demo']").click();
   await expect(page.locator("[data-relations-empty]")).toBeVisible();
   await expect(page.locator("[data-relation-row]")).toHaveCount(0);
   const afterDelete = await bundleFiles(page);
@@ -66,18 +66,18 @@ test("add sibling shows on both cards; filter by family; delete wipes edges", as
   expect(afterDelete["people/bea-demo/relations.md"]).toBeUndefined();
 });
 
-test("uncheck and reject a proposed relation write nothing", async ({ demoPage: page }) => {
+test("uncheck a proposed relation writes nothing", async ({ demoPage: page }) => {
   await openDemo(page);
   await createAdaDemo(page);
   await createBeaDemo(page);
 
-  await page.locator(".person-card", { hasText: DEMO.person.title }).click();
+  await page.locator("[data-person-row='ada-demo']").click();
   await page.locator("[data-demo='suggest']").click();
   await page.locator("[data-demo='research']").click();
-  await expect(page.getByText("Sibling of Bea Demo (demo)")).toBeVisible();
+  const siblingOffer = page.locator("[data-suggestion-kind='relation']");
+  await expect(siblingOffer.getByText("Sibling of Bea Demo (demo)")).toBeVisible();
   await expect(page.getByText("Nothing is written until you accept.")).toBeVisible();
 
-  const siblingOffer = page.locator(".fact-offer").filter({ hasText: "Sibling of Bea Demo (demo)" });
   await siblingOffer.getByRole("checkbox").uncheck();
   await page.locator("[data-demo='accept']").click();
   await expect(page.locator("[data-relations-empty]")).toBeVisible();
@@ -85,11 +85,21 @@ test("uncheck and reject a proposed relation write nothing", async ({ demoPage: 
   const afterUncheck = await bundleFiles(page);
   expect(afterUncheck["people/ada-demo/relations.md"]).toBeUndefined();
   expect(afterUncheck["people/bea-demo/relations.md"]).toBeUndefined();
+});
 
+test("reject a proposed relation writes nothing", async ({ demoPage: page }) => {
+  await openDemo(page);
+  await createAdaDemo(page);
+  await createBeaDemo(page);
+
+  await page.locator("[data-person-row='ada-demo']").click();
+  await page.locator("[data-demo='suggest']").click();
   await page.locator("[data-demo='research']").click();
-  await expect(page.getByText("Sibling of Bea Demo (demo)")).toBeVisible();
-  await page.locator(".fact-offer").filter({ hasText: "Sibling of Bea Demo (demo)" }).getByRole("button", { name: "Delete" }).click();
-  await expect(page.getByText("Sibling of Bea Demo (demo)")).toHaveCount(0);
+  const siblingOffer = page.locator("[data-suggestion-kind='relation']");
+  await expect(siblingOffer.getByText("Sibling of Bea Demo (demo)")).toBeVisible();
+
+  await siblingOffer.getByRole("button", { name: "Delete" }).click();
+  await expect(page.locator("[data-suggestion-kind='relation']")).toHaveCount(0);
   await page.locator("[data-demo='accept']").click();
   await expect(page.locator("[data-relation-row]")).toHaveCount(0);
   const afterReject = await bundleFiles(page);
