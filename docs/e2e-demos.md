@@ -43,6 +43,7 @@ Geocode is stubbed in `?demo=1` (and again in Playwright) so the park pin is alw
 4. `e2e/specs/04-suggest-follow-mocked.spec.ts` — Suggest and Follow paint the same synthetic Ada Demo proposal. Not a README clip.
 5. `e2e/specs/04-merge-proposal.spec.ts` — two synthetic cards with the same email; proposal appears; Accept merges; dismiss leaves both. No silent merge.
 6. `e2e/specs/04-agent-memory.spec.ts` — Latch → Memory lists pending facts; dismiss drops; Accept writes.
+7. `e2e/specs/06-pre-meeting-brief.spec.ts` — local brief from notes/place/pending; dismiss writes nothing; Accept saves a note. No live AI.
 
 Curated clips:
 

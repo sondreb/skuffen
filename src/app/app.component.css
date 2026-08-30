@@ -790,3 +790,35 @@ label {
 .memory-follows small {
   display: block;
 }
+
+.brief-sheet h2 {
+  margin: 1rem 0 0.35rem;
+  font-size: 1.05rem;
+}
+
+.brief-card {
+  margin: 0.7rem 0 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid #4a3a28;
+  border-radius: 12px;
+  background: rgba(26, 22, 18, 0.65);
+}
+
+.brief-card header {
+  display: grid;
+  gap: 0.15rem;
+  margin-bottom: 0.45rem;
+}
+
+.brief-card header small {
+  color: var(--mute);
+}
+
+.brief-card ul {
+  margin: 0.2rem 0 0;
+  padding-left: 1.15rem;
+}
+
+.brief-card .prose {
+  white-space: pre-wrap;
+}

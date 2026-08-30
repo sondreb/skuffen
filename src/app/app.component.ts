@@ -49,10 +49,19 @@ import {
   setFactChecked,
   writesForAcceptedSuggestion,
 } from "./services/research";
+import {
+  applyPolishedTalkingPoints,
+  buildLocalBrief,
+  demoPolishTalkingPoints,
+  parseEventPaste,
+  writesForAcceptedBrief,
+  type MeetingBrief,
+  type MeetingEvent,
+} from "./services/brief";
 import { UPDATE_WHISPER } from "./services/update";
 import { UpdateService } from "./services/update.service";
 
-type Panel = "none" | "create" | "edit" | "providers" | "map" | "propose" | "merge" | "memory";
+type Panel = "none" | "create" | "edit" | "providers" | "map" | "propose" | "merge" | "memory" | "brief";
 type FactSurface = "none" | "drop" | "pin" | "note" | "suggest";
 
 @Component({
@@ -100,6 +109,9 @@ export class AppComponent implements OnInit, OnDestroy {
   geminiKey = "";
   nameProposal: NameResearchProposal | null = null;
   mergeProposal: MergeProposal | null = null;
+  meetingBrief: MeetingBrief | null = null;
+  briefEventPaste = "";
+  briefEvent: MeetingEvent = {};
   readonly dismissedMerges = signal<string[]>([]);
   checkedSuggestionIds = new Set<string>();
   readonly desktop = isTauri();
@@ -207,6 +219,10 @@ export class AppComponent implements OnInit, OnDestroy {
     }
     if (this.panel === "merge") {
       this.closeMergeSheet();
+      return;
+    }
+    if (this.panel === "brief") {
+      this.dismissBrief();
       return;
     }
     if (
@@ -959,6 +975,76 @@ export class AppComponent implements OnInit, OnDestroy {
     this.panel = "memory";
     this.fact = "none";
     this.checkedSuggestionIds = new Set(pendingFacts(this.memoryRows()).map((item) => item.id));
+  }
+
+  async openBrief(slug?: string): Promise<void> {
+    this.latchOpen = false;
+    this.panel = "brief";
+    this.fact = "none";
+    this.notice = null;
+    const target = slug || this.people.selected()?.slug;
+    if (target && this.people.selected()?.slug !== target) {
+      await this.people.select(target);
+    }
+    this.rebuildBrief();
+  }
+
+  onBriefEventPaste(text: string): void {
+    this.briefEventPaste = text;
+    this.briefEvent = parseEventPaste(text);
+    this.rebuildBrief();
+  }
+
+  rebuildBrief(): void {
+    const person = this.people.selected();
+    if (!person) {
+      this.meetingBrief = null;
+      return;
+    }
+    this.meetingBrief = buildLocalBrief({
+      person,
+      proposals: this.follow.proposals().filter((item) => item.slug === person.slug),
+      follow: this.follow.followFor(person.slug),
+      event: this.briefEvent,
+    });
+  }
+
+  async polishBrief(): Promise<void> {
+    if (!this.meetingBrief) return;
+    this.notice = null;
+    if (this.demoMode) {
+      this.meetingBrief = applyPolishedTalkingPoints(
+        this.meetingBrief,
+        demoPolishTalkingPoints(this.meetingBrief),
+        false,
+      );
+      return;
+    }
+    const polished = await this.providers.polishBrief(this.meetingBrief);
+    if (polished) {
+      this.meetingBrief = polished;
+      return;
+    }
+    this.notice = "Local brief is ready offline. Polish needs Grok or Gemini in Latch.";
+  }
+
+  async acceptBrief(): Promise<void> {
+    if (!this.meetingBrief) return;
+    const write = writesForAcceptedBrief(this.meetingBrief);
+    await this.people.addNote(write.slug, write.title, write.body);
+    this.meetingBrief = null;
+    this.briefEventPaste = "";
+    this.briefEvent = {};
+    this.panel = "none";
+    this.notice = null;
+  }
+
+  dismissBrief(): void {
+    this.meetingBrief = null;
+    this.briefEventPaste = "";
+    this.briefEvent = {};
+    this.panel = "none";
+    this.notice = null;
   }
 
   async acceptMemoryFact(row: PendingMemoryFact): Promise<void> {

@@ -82,6 +82,14 @@
               ({{ follow.pendingCount() }} pending)
             }
           </button>
+          <button
+            type="button"
+            (click)="openBrief()"
+            [disabled]="people.locked() || people.people().length === 0"
+            [attr.data-demo]="demoMode ? 'open-brief' : null"
+          >
+            Pre-meeting brief
+          </button>
           <button type="button" (click)="people.chooseFolder(); latchOpen = false" [disabled]="people.locked()">
             Bundle folder
           </button>
@@ -437,6 +445,151 @@
             }
           }
         </section>
+      } @else if (panel === "brief") {
+        <section class="sheet brief-sheet" data-demo="brief-panel">
+          <header class="sheet-head">
+            <div>
+              <p class="kicker">From this machine — nothing is sent</p>
+              <h1>Pre-meeting brief</h1>
+            </div>
+            <button class="ghost" type="button" (click)="dismissBrief()">Back</button>
+          </header>
+          <p class="whisper">
+            Assembled from notes, social, place, and pending proposals already on disk.
+            Paste an event if you want. Optional polish never auto-sends.
+            Nothing is written until you Accept.
+          </p>
+          @if (!people.selected()) {
+            <label>
+              Who
+              <select
+                [ngModel]="''"
+                (ngModelChange)="openBrief($event)"
+                name="brief-person"
+                data-demo="brief-pick"
+              >
+                <option value="">Choose a card</option>
+                @for (item of people.people(); track item.slug) {
+                  <option [value]="item.slug">{{ item.title }}</option>
+                }
+              </select>
+            </label>
+          }
+          <label>
+            Paste an event (optional)
+            <textarea
+              [ngModel]="briefEventPaste"
+              (ngModelChange)="onBriefEventPaste($event)"
+              name="brief-event"
+              rows="3"
+              placeholder="Coffee with Ada Demo&#10;Tuesday 10:00&#10;Golden Gate Park"
+              [attr.data-demo]="demoMode ? 'brief-event' : null"
+            ></textarea>
+          </label>
+          @if (notice) {
+            <p class="notice">{{ notice }}</p>
+          }
+          @if (providers.error()) {
+            <p class="error">{{ providers.error() }}</p>
+          }
+          @if (meetingBrief; as brief) {
+            <article class="brief-card" data-demo="brief-body">
+              <header>
+                <strong>{{ brief.personTitle }}</strong>
+                <small>{{ brief.source === "local" ? "Local OKF only" : "Polished talking points" }}</small>
+              </header>
+              <h2>Who</h2>
+              <p class="prose">{{ brief.who }}</p>
+              @if (brief.event.title || brief.event.when || brief.event.where) {
+                <h2>Event</h2>
+                <ul>
+                  @if (brief.event.title) {
+                    <li>{{ brief.event.title }}</li>
+                  }
+                  @if (brief.event.when) {
+                    <li>When: {{ brief.event.when }}</li>
+                  }
+                  @if (brief.event.where) {
+                    <li>Where: {{ brief.event.where }}</li>
+                  }
+                </ul>
+              }
+              <h2>Last notes</h2>
+              @if (brief.lastNotes.length === 0) {
+                <p class="whisper">No notes on this card yet.</p>
+              } @else {
+                <ul>
+                  @for (note of brief.lastNotes; track note.id) {
+                    <li>
+                      <strong>{{ note.title }}:</strong>
+                      {{ note.body }}
+                    </li>
+                  }
+                </ul>
+              }
+              <h2>Open follow-ups</h2>
+              @if (brief.followUps.length === 0) {
+                <p class="whisper">No pending proposals or follow schedule.</p>
+              } @else {
+                <ul>
+                  @for (item of brief.followUps; track item.id) {
+                    <li>
+                      <strong>{{ item.title }}:</strong>
+                      {{ item.body }}
+                    </li>
+                  }
+                </ul>
+              }
+              @if (brief.place) {
+                <h2>Place</h2>
+                <p>{{ brief.place.body }}</p>
+              }
+              @if (brief.social.length) {
+                <h2>Social</h2>
+                <ul>
+                  @for (item of brief.social; track item.id) {
+                    <li>{{ item.body }}</li>
+                  }
+                </ul>
+              }
+              <h2>Talking points</h2>
+              <ul>
+                @for (point of brief.talkingPoints; track point.id) {
+                  <li>{{ point.body }}</li>
+                }
+              </ul>
+            </article>
+            <div class="row">
+              <button
+                type="button"
+                (click)="polishBrief()"
+                [disabled]="providers.busy()"
+                [attr.data-demo]="demoMode ? 'brief-polish' : null"
+              >
+                {{ providers.busy() ? "Polishing…" : "Polish with " + providerLabel() }}
+              </button>
+              <button
+                class="brass"
+                type="button"
+                (click)="acceptBrief()"
+                [attr.data-demo]="demoMode ? 'brief-accept' : null"
+              >
+                Accept — save as note
+              </button>
+              <button
+                class="ghost"
+                type="button"
+                (click)="dismissBrief()"
+                [attr.data-demo]="demoMode ? 'brief-dismiss' : null"
+              >
+                Dismiss
+              </button>
+            </div>
+            <p class="whisper">Accept writes a note on this card. Dismiss writes nothing. Never auto-sends.</p>
+          } @else if (people.people().length === 0) {
+            <p class="whisper">Put someone in first. A brief is assembled from a card already on disk.</p>
+          }
+        </section>
       } @else if (panel === "create" || panel === "edit") {
         <section class="sheet card-form">
           <h1>{{ panel === "create" ? "Who?" : "Edit card" }}</h1>
@@ -715,6 +868,13 @@
                 [attr.data-demo]="demoMode ? 'suggest' : null"
               >
                 Suggest
+              </button>
+              <button
+                type="button"
+                (click)="openBrief(person.slug)"
+                [attr.data-demo]="demoMode ? 'brief' : null"
+              >
+                Brief
               </button>
             </div>
 

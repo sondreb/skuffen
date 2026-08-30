@@ -69,6 +69,7 @@ npm run test:secrets
 npm run test:oauth
 npm run test:research
 npm run test:merge
+npm run test:brief
 npm run test:update
 npm run test:version
 npm run test:e2e
@@ -166,6 +167,16 @@ Follow schedules and pending proposals live in local app settings, not in the OK
 
 ```bash
 npm run test:research
+```
+
+## Pre-meeting brief
+
+From a person card or Latch → **Pre-meeting brief**, Skuffen assembles who, last notes, open follow-ups, place, social, and talking points from what is already on disk. Paste an upcoming event if you want. No Gmail sync. No people-graph upload.
+
+The local brief works offline from the OKF card. Optional Grok/Gemini polish rewrites talking points only — it never auto-sends, and it is never required. Browser preview (`?demo=1`) mocks polish. **Accept** saves the brief as a note. Dismiss writes nothing.
+
+```bash
+npm run test:brief
 ```
 
 ## Duplicate-person merge
