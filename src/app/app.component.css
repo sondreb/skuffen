@@ -838,3 +838,11 @@ label {
 .capture-sheet textarea {
   min-height: 7rem;
 }
+
+.shuffle-sheet textarea {
+  min-height: 9rem;
+}
+
+.shuffle-sheet .fact-offer {
+  align-items: flex-start;
+}

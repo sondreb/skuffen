@@ -1,6 +1,6 @@
 import { Component, computed, HostListener, inject, OnDestroy, OnInit, signal } from "@angular/core";
 import { FormsModule } from "@angular/forms";
-import { DEMO_MERGE, isDemoMode } from "./demo-mode";
+import { DEMO_MERGE, DEMO_SHUFFLE, isDemoMode } from "./demo-mode";
 import { PeopleMapComponent, type MapPin } from "./map/people-map.component";
 import type {
   FactSuggestion,
@@ -61,6 +61,15 @@ import {
   type MeetingEvent,
 } from "./services/brief";
 import {
+  buildDailyShuffle,
+  buildLocalReconnectDraft,
+  dismissShuffleWrites,
+  skipShuffleWrites,
+  writesForAcceptedDraft,
+  type ReconnectDraft,
+  type ReconnectSuggestion,
+} from "./services/shuffle";
+import {
   CAPTURE_NEEDS_PROVIDER,
   DEMO_CAPTURE_NOTE,
   captureItemsAsSuggestions,
@@ -82,7 +91,18 @@ import {
 import { UPDATE_WHISPER } from "./services/update";
 import { UpdateService } from "./services/update.service";
 
-type Panel = "none" | "create" | "edit" | "providers" | "map" | "propose" | "merge" | "memory" | "brief" | "capture";
+type Panel =
+  | "none"
+  | "create"
+  | "edit"
+  | "providers"
+  | "map"
+  | "propose"
+  | "merge"
+  | "memory"
+  | "brief"
+  | "capture"
+  | "shuffle";
 type SpeechSession = {
   stop: () => void;
   abort?: () => void;
@@ -148,6 +168,10 @@ export class AppComponent implements OnInit, OnDestroy {
   captureNote = "";
   captureProposal: CaptureProposal | null = null;
   captureRequestedWithoutProvider = false;
+  shuffleSuggestions: ReconnectSuggestion[] = [];
+  pickedShuffle: ReconnectSuggestion | null = null;
+  reconnectDraft: ReconnectDraft | null = null;
+  private skippedShuffleSlugs = new Set<string>();
   captureRecording = false;
   private captureSpeech: SpeechSession | null = null;
   readonly dismissedMerges = signal<string[]>([]);
@@ -269,6 +293,10 @@ export class AppComponent implements OnInit, OnDestroy {
     }
     if (this.panel === "capture") {
       this.dismissCapture();
+      return;
+    }
+    if (this.panel === "shuffle") {
+      this.dismissShuffle();
       return;
     }
     if (
@@ -1122,6 +1150,124 @@ export class AppComponent implements OnInit, OnDestroy {
     this.briefEvent = {};
     this.panel = "none";
     this.notice = null;
+  }
+
+  openShuffle(slug?: string): void {
+    this.latchOpen = false;
+    this.panel = "shuffle";
+    this.fact = "none";
+    this.notice = null;
+    this.rebuildShuffle();
+    if (slug && this.shuffleSuggestions.some((item) => item.slug === slug)) {
+      this.pickShuffle(slug);
+    }
+  }
+
+  rebuildShuffle(): void {
+    const deck = buildDailyShuffle({
+      people: this.people.people().map((person) => ({
+        person,
+        follow: this.follow.followFor(person.slug),
+      })),
+      skipSlugs: this.skippedShuffleSlugs,
+    });
+    this.shuffleSuggestions = deck.suggestions;
+    if (this.pickedShuffle && !this.shuffleSuggestions.some((item) => item.slug === this.pickedShuffle?.slug)) {
+      this.pickedShuffle = null;
+      this.reconnectDraft = null;
+    }
+  }
+
+  pickShuffle(slug: string): void {
+    const hit = this.shuffleSuggestions.find((item) => item.slug === slug);
+    if (!hit) return;
+    this.pickedShuffle = hit;
+    this.reconnectDraft = buildLocalReconnectDraft(hit);
+    this.notice = null;
+    void this.people.select(slug);
+  }
+
+  skipShuffle(slug: string): void {
+    skipShuffleWrites();
+    this.skippedShuffleSlugs.add(slug);
+    this.pickedShuffle = null;
+    this.reconnectDraft = null;
+    this.notice = null;
+    this.rebuildShuffle();
+  }
+
+  dismissShuffle(): void {
+    dismissShuffleWrites();
+    this.pickedShuffle = null;
+    this.reconnectDraft = null;
+    this.skippedShuffleSlugs = new Set();
+    this.shuffleSuggestions = [];
+    this.panel = "none";
+    this.notice = null;
+  }
+
+  async polishShuffleDraft(): Promise<void> {
+    if (!this.pickedShuffle || !this.reconnectDraft) return;
+    this.notice = null;
+    const polished = await this.providers.polishReconnectDraft(this.pickedShuffle, this.reconnectDraft);
+    if (polished) {
+      this.reconnectDraft = polished;
+      return;
+    }
+    this.notice = "Local draft is ready offline. Polish needs Grok or Gemini in Latch.";
+  }
+
+  async acceptShuffle(): Promise<void> {
+    if (!this.reconnectDraft) return;
+    const write = writesForAcceptedDraft(this.reconnectDraft);
+    if (!write) return;
+    await this.people.addNote(write.slug, write.title, write.body);
+    this.pickedShuffle = null;
+    this.reconnectDraft = null;
+    this.skippedShuffleSlugs = new Set();
+    this.shuffleSuggestions = [];
+    this.panel = "none";
+    this.notice = null;
+  }
+
+  onReconnectDraftChange(text: string): void {
+    if (!this.reconnectDraft) return;
+    this.reconnectDraft = { ...this.reconnectDraft, body: text };
+  }
+
+  async seedDemoShuffle(): Promise<void> {
+    if (!this.demoMode) return;
+    const drafts = DEMO_SHUFFLE;
+    const people = this.people.people();
+    if (!people.some((item) => item.title === drafts.first.title)) {
+      const created = await this.people.createPerson({
+        title: drafts.first.title,
+        description: drafts.first.description,
+        email: drafts.first.email,
+      });
+      await this.people.addNote(created.slug, drafts.first.noteTitle, drafts.first.noteBody);
+    } else {
+      const ada = this.people.people().find((item) => item.title === drafts.first.title);
+      if (ada && ada.notes.length === 0) {
+        await this.people.addNote(ada.slug, drafts.first.noteTitle, drafts.first.noteBody);
+      }
+    }
+    const afterAda = this.people.people();
+    if (!afterAda.some((item) => item.title === drafts.second.title)) {
+      const bea = await this.people.createPerson({
+        title: drafts.second.title,
+        description: drafts.second.description,
+        email: drafts.second.email,
+      });
+      await this.people.addNote(bea.slug, drafts.second.noteTitle, drafts.second.noteBody);
+    } else {
+      const bea = afterAda.find((item) => item.title === drafts.second.title);
+      if (bea && bea.notes.length === 0) {
+        await this.people.addNote(bea.slug, drafts.second.noteTitle, drafts.second.noteBody);
+      }
+    }
+    this.skippedShuffleSlugs = new Set();
+    this.openShuffle();
   }
 
   canRecordCapture(): boolean {

@@ -79,7 +79,7 @@ npm start
 
 The browser preview **cannot encrypt the people-graph honestly** — there is no OS keychain in `npm start`. The graph stays in a localStorage stand-in (plaintext). Use `npm run tauri dev` for OS-backed encryption. Grok/Gemini API keys and OAuth tokens still stay in memory for the current tab only. They are never written to `localStorage`, `sessionStorage`, or any other durable browser storage, and they vanish on reload.
 
-OKF / vault / MCP / browser-secret / OAuth / research-follow / merge-proposal / update-check checks:
+OKF / vault / MCP / browser-secret / OAuth / research-follow / merge-proposal / brief / capture / shuffle / update-check checks:
 
 ```bash
 npm run test:okf
@@ -91,6 +91,7 @@ npm run test:research
 npm run test:merge
 npm run test:brief
 npm run test:capture
+npm run test:shuffle
 npm run test:update
 npm run test:version
 npm run test:e2e
@@ -208,6 +209,18 @@ From the people UI, Latch, or the empty drawer, **Capture** takes a pasted note 
 
 ```bash
 npm run test:capture
+```
+
+## Reconnect Shuffle
+
+Latch → **Reconnect Shuffle** (or Shuffle on the drawer) suggests up to two people a day from last notes, last accept, follow schedule, and recency **already on that card**. There is no cloud scoring of who matters, and no friend-ranker. The people-graph is not uploaded.
+
+You pick one suggestion. An optional reconnect draft is assembled on this machine from that card only. Optional Grok/Gemini polish rewrites the draft for the picked person — never sibling cards. **Never auto-send.** Never auto-DM, never auto-email, never auto-post. **Accept** saves the draft as a note. Skip and Dismiss write nothing.
+
+`?demo=1` can show two synthetic reconnect suggestions (`Ada Demo` / `Bea Demo`) without live keys. Tokens stay in the OS credential store `me.grok.skuffen`. Never `localStorage`. Never OKF.
+
+```bash
+npm run test:shuffle
 ```
 
 ## Duplicate-person merge

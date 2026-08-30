@@ -58,3 +58,21 @@ export const DEMO_MERGE = {
   },
 } as const;
 
+/** Two synthetic cards so ?demo=1 can show a daily reconnect deck without live keys. */
+export const DEMO_SHUFFLE = {
+  first: {
+    title: "Ada Demo",
+    description: "Synthetic demo card — not a real person",
+    email: "ada.demo@example.invalid",
+    noteTitle: "Last coffee (demo)",
+    noteBody: "Asked about the park pin. Synthetic last-touch — not a real contact.",
+  },
+  second: {
+    title: "Bea Demo",
+    description: "Second synthetic card — reconnect demo only",
+    email: "bea.demo@example.invalid",
+    noteTitle: "Studio visit (demo)",
+    noteBody: "Talked about the land-plot slip. Synthetic last-touch — not a real contact.",
+  },
+} as const;
+

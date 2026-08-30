@@ -12,6 +12,13 @@ export const DEMO = {
     noteTitle: "Twin card note (demo)",
     noteBody: "Synthetic note on the twin card. Accept merge to move it — nothing merges before that.",
   },
+  bea: {
+    title: "Bea Demo",
+    description: "Second synthetic card — reconnect demo only",
+    email: "bea.demo@example.invalid",
+    noteTitle: "Studio visit (demo)",
+    noteBody: "Talked about the land-plot slip. Synthetic last-touch — not a real contact.",
+  },
   park: {
     query: "Golden Gate Park, San Francisco",
     label: "Golden Gate Park, San Francisco, California, United States (demo)",
