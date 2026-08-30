@@ -1,0 +1,102 @@
+{
+  "draftOnly": [
+    {
+      "tag_name": "v0.1.6",
+      "name": "Skuffen v0.1.6",
+      "draft": true,
+      "prerelease": false,
+      "body": "Draft — Sondre has not published this yet.",
+      "assets": [
+        {
+          "name": "Skuffen_0.1.6_x64-setup.exe",
+          "browser_download_url": "https://github.com/sondreb/skuffen/releases/download/v0.1.6/Skuffen_0.1.6_x64-setup.exe"
+        }
+      ]
+    }
+  ],
+  "published": {
+    "tag_name": "v0.2.0",
+    "name": "Skuffen v0.2.0",
+    "draft": false,
+    "prerelease": false,
+    "body": "Overwrite installers. People-graph stays in app data.",
+    "assets": [
+      {
+        "name": "Skuffen_0.2.0_x64-setup.exe",
+        "browser_download_url": "https://github.com/sondreb/skuffen/releases/download/v0.2.0/Skuffen_0.2.0_x64-setup.exe"
+      },
+      {
+        "name": "Skuffen_0.2.0_x64_en-US.msi",
+        "browser_download_url": "https://github.com/sondreb/skuffen/releases/download/v0.2.0/Skuffen_0.2.0_x64_en-US.msi"
+      },
+      {
+        "name": "Skuffen_0.2.0_arm64-setup.exe",
+        "browser_download_url": "https://github.com/sondreb/skuffen/releases/download/v0.2.0/Skuffen_0.2.0_arm64-setup.exe"
+      },
+      {
+        "name": "Skuffen_0.2.0_aarch64.dmg",
+        "browser_download_url": "https://github.com/sondreb/skuffen/releases/download/v0.2.0/Skuffen_0.2.0_aarch64.dmg"
+      },
+      {
+        "name": "Skuffen_0.2.0_x64.dmg",
+        "browser_download_url": "https://github.com/sondreb/skuffen/releases/download/v0.2.0/Skuffen_0.2.0_x64.dmg"
+      },
+      {
+        "name": "Skuffen_aarch64.app.tar.gz",
+        "browser_download_url": "https://github.com/sondreb/skuffen/releases/download/v0.2.0/Skuffen_aarch64.app.tar.gz"
+      },
+      {
+        "name": "Skuffen_0.2.0_amd64.deb",
+        "browser_download_url": "https://github.com/sondreb/skuffen/releases/download/v0.2.0/Skuffen_0.2.0_amd64.deb"
+      },
+      {
+        "name": "Skuffen_0.2.0_amd64.AppImage",
+        "browser_download_url": "https://github.com/sondreb/skuffen/releases/download/v0.2.0/Skuffen_0.2.0_amd64.AppImage"
+      },
+      {
+        "name": "Skuffen_0.2.0_aarch64.deb",
+        "browser_download_url": "https://github.com/sondreb/skuffen/releases/download/v0.2.0/Skuffen_0.2.0_aarch64.deb"
+      },
+      {
+        "name": "Skuffen_0.2.0_aarch64.AppImage",
+        "browser_download_url": "https://github.com/sondreb/skuffen/releases/download/v0.2.0/Skuffen_0.2.0_aarch64.AppImage"
+      },
+      {
+        "name": "latest.json",
+        "browser_download_url": "https://github.com/sondreb/skuffen/releases/download/v0.2.0/latest.json"
+      },
+      {
+        "name": "Skuffen_0.2.0_x64-setup.exe.sig",
+        "browser_download_url": "https://github.com/sondreb/skuffen/releases/download/v0.2.0/Skuffen_0.2.0_x64-setup.exe.sig"
+      }
+    ]
+  },
+  "mixed": [
+    {
+      "tag_name": "v0.2.1-rc.1",
+      "draft": false,
+      "prerelease": true,
+      "body": "Prerelease — skip.",
+      "assets": []
+    },
+    {
+      "tag_name": "v0.1.9",
+      "draft": true,
+      "prerelease": false,
+      "body": "Still a draft.",
+      "assets": []
+    },
+    {
+      "tag_name": "v0.1.8",
+      "draft": false,
+      "prerelease": false,
+      "body": "First published.",
+      "assets": [
+        {
+          "name": "Skuffen_0.1.8_x64-setup.exe",
+          "browser_download_url": "https://github.com/sondreb/skuffen/releases/download/v0.1.8/Skuffen_0.1.8_x64-setup.exe"
+        }
+      ]
+    }
+  ]
+}

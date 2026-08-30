@@ -59,7 +59,7 @@ npm start
 
 The browser preview **cannot encrypt the people-graph honestly** — there is no OS keychain in `npm start`. The graph stays in a localStorage stand-in (plaintext). Use `npm run tauri dev` for OS-backed encryption. Grok/Gemini API keys and OAuth tokens still stay in memory for the current tab only. They are never written to `localStorage`, `sessionStorage`, or any other durable browser storage, and they vanish on reload.
 
-OKF / vault / MCP / browser-secret / OAuth / research-follow checks:
+OKF / vault / MCP / browser-secret / OAuth / research-follow / update-check checks:
 
 ```bash
 npm run test:okf
@@ -68,6 +68,7 @@ npm run test:mcp
 npm run test:secrets
 npm run test:oauth
 npm run test:research
+npm run test:update
 npm run test:version
 ```
 
@@ -82,6 +83,10 @@ Unsigned Windows, Linux, and macOS installers are built by **Draft desktop relea
 - Tag `v*` is skip-safe for tauri-action.
 
 The workflow keeps versions in lockstep: `package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`. App identifier stays `me.grok.skuffen`. Installers only — never people-graph data, tokens, or OKF fixtures.
+
+Windows NSIS is a per-user one-click overwrite (same folder, no language / directory / start-menu / component pages). macOS replaces the `.app`. Linux uses the existing `.deb` / `.AppImage` targets. The people-graph stays in app data, not next to the exe.
+
+**Check for update** (Latch) looks at the latest **published** GitHub Release for `sondreb/skuffen`. Drafts are invisible to the public API — Sondre still publishes drafts himself. The browser preview (`npm start`) cannot install updates. No GitHub token and no signing private key live in the app or the repo. Nothing from the people-graph is uploaded.
 
 ## Storage (OKF v0.2)
 

@@ -2,6 +2,7 @@ mod crypto;
 mod oauth;
 mod secrets;
 mod store;
+mod update;
 mod vault;
 
 use serde::{Deserialize, Serialize};
@@ -257,6 +258,25 @@ fn grok_oauth_logout(app: tauri::AppHandle) -> Result<(), String> {
     oauth::logout(&app)
 }
 
+#[tauri::command]
+fn desktop_runtime_info() -> update::DesktopRuntimeInfo {
+    update::runtime_info()
+}
+
+#[tauri::command]
+fn github_published_release() -> Result<Option<serde_json::Value>, String> {
+    update::fetch_published_release()
+}
+
+#[tauri::command]
+fn download_and_run_installer(
+    app: tauri::AppHandle,
+    url: String,
+    file_name: String,
+) -> Result<(), String> {
+    update::download_and_run(&app, url, file_name)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -289,7 +309,10 @@ pub fn run() {
             grok_oauth_begin,
             grok_oauth_wait,
             grok_oauth_status,
-            grok_oauth_logout
+            grok_oauth_logout,
+            desktop_runtime_info,
+            github_published_release,
+            download_and_run_installer
         ])
         .setup(|app| {
             let _ = app.path().app_data_dir().map(|dir| {

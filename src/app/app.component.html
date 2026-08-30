@@ -72,6 +72,30 @@
           @if (desktop && !people.locked()) {
             <button type="button" (click)="lock()">Lock drawer</button>
           }
+          <button
+            type="button"
+            (click)="checkForUpdate()"
+            [disabled]="updates.busy() || updates.installing()"
+          >
+            {{ updates.busy() ? "Checking…" : "Check for update" }}
+          </button>
+          @if (updates.result(); as update) {
+            <p class="whisper">{{ update.message }}</p>
+            @if (update.notes && update.kind === "available") {
+              <p class="whisper update-notes">{{ update.notes }}</p>
+            }
+            @if (update.kind === "available" && update.asset) {
+              <button
+                class="brass"
+                type="button"
+                (click)="installUpdate()"
+                [disabled]="updates.installing()"
+              >
+                {{ updates.installing() ? "Downloading…" : "Download and install " + (update.latestVersion || "") }}
+              </button>
+            }
+          }
+          <p class="whisper">{{ updateWhisper }}</p>
           <p class="whisper">{{ people.bundleRoot() }}</p>
           @if (people.vaultMessage()) {
             <p class="whisper">{{ people.vaultMessage() }}</p>
