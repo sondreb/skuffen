@@ -10,6 +10,30 @@ Homepage (later): [https://skuffen.grok.me](https://skuffen.grok.me)
 
 Sole developer: Sondre Bjellås ([sondreb](https://github.com/sondreb)).
 
+## Screenshots
+
+Labeled mock-UI demos for the website and README. They are not live signed-in recordings.
+
+![Hero: an open wooden drawer with a teal people-graph and the line “Your people live in a drawer”](docs/media/screenshot-drawer.png)
+
+*Hero still. Labeled mock UI — not a live recording.*
+
+![New person form in the People Drawer, with a LOCAL ONLY badge](docs/media/screenshot-person.png)
+
+*Add a person. Labeled mock UI — not a live recording.*
+
+![Review cards for researched facts, each with Accept or Decline](docs/media/screenshot-research.png)
+
+*Grok research, you accept. Labeled mock UI — not a live recording. Nothing is written until you accept.*
+
+## Demos
+
+Short walkthroughs of the same mock UI. Voice-over may be missing. These are labeled demos, not live signed-in recordings.
+
+- [What is Skuffen](docs/media/01-what-is-skuffen.mp4)
+- [Add a person and a place](docs/media/02-add-person-and-place.mp4)
+- [Grok research, you accept](docs/media/03-grok-research-you-accept.mp4)
+
 ## Stack
 
 - Desktop: [Tauri](https://tauri.app) 2 (latest stable), app identifier `me.grok.skuffen`
