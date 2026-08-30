@@ -31,7 +31,7 @@ import {
   type PendingMemoryGroup,
 } from "./services/memory";
 import { GeocodeService, type GeocodeHit } from "./services/geocode.service";
-import { LAND_PLOT_KIND } from "../../packages/okf/src/index";
+import { DOCUMENT_KIND } from "../../packages/okf/src/index";
 import { FollowService } from "./services/follow.service";
 import { grokConnectionLabel } from "./services/grok-oauth";
 import { IoService, isTauri } from "./services/io.service";
@@ -213,7 +213,6 @@ export class AppComponent implements OnInit, OnDestroy {
   socialUrl = "";
   docTitle = "";
   docNote = "";
-  docKind: "document" | typeof LAND_PLOT_KIND = "document";
   linkSlug = "";
   grokKey = "";
   geminiKey = "";
@@ -238,7 +237,6 @@ export class AppComponent implements OnInit, OnDestroy {
   readonly droppedCommitments = signal<string[]>([]);
   checkedSuggestionIds = new Set<string>();
   readonly desktop = isTauri();
-  readonly landPlotKind = LAND_PLOT_KIND;
   readonly demoMode = isDemoMode();
 
   readonly filtered = computed(() => {
@@ -615,14 +613,64 @@ export class AppComponent implements OnInit, OnDestroy {
   async addPhoto(): Promise<void> {
     const person = this.people.selected();
     if (!person) return;
-    if (!this.desktop) {
-      this.notice = "Photos need the desktop shell.";
+    if (this.desktop) {
+      const source = await this.people.pickPhoto();
+      if (!source) return;
+      await this.people.addPhoto(person.slug, source);
+      this.notice = null;
       return;
     }
-    const source = await this.people.pickPhoto();
-    if (!source) return;
-    await this.people.addPhoto(person.slug, source);
+    document.getElementById("skuffen-photo-file")?.click();
+  }
+
+  async pickProfileImage(): Promise<void> {
+    const person = this.people.selected();
+    if (!person) return;
+    if (this.desktop) {
+      const source = await this.people.pickPhoto();
+      if (!source) return;
+      await this.people.setProfileImage(person.slug, { sourcePath: source });
+      this.notice = null;
+      return;
+    }
+    document.getElementById("skuffen-profile-file")?.click();
+  }
+
+  async onProfileFileChosen(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    const person = this.people.selected();
+    if (person && file) {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      await this.people.setProfileImage(person.slug, { fileName: file.name, bytes });
+      this.notice = null;
+    }
+    input.value = "";
+  }
+
+  async onPhotoFileChosen(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const files = input.files;
+    const person = this.people.selected();
+    if (person && files?.length) {
+      for (const file of Array.from(files)) {
+        const bytes = new Uint8Array(await file.arrayBuffer());
+        await this.people.addPhotoBytes(person.slug, file.name, bytes);
+      }
+      this.notice = null;
+    }
+    input.value = "";
+  }
+
+  async usePhotoAsProfile(photo: PersonView["photos"][number]): Promise<void> {
+    const person = this.people.selected();
+    if (!person) return;
+    await this.people.setProfileFromPhoto(person.slug, photo);
     this.notice = null;
+  }
+
+  isProfilePhoto(person: PersonView, photo: PersonView["photos"][number]): boolean {
+    return Boolean(person.image && photo.resource && person.image === photo.resource);
   }
 
   onDragOver(event: DragEvent): void {
@@ -672,23 +720,18 @@ export class AppComponent implements OnInit, OnDestroy {
     const docs = files.filter((file) => !images.includes(file));
 
     if (docs.length) {
-      await this.attachFiles(slug, docs, this.docKind);
+      await this.attachFiles(slug, docs);
     }
 
     if (images.length) {
-      if (!this.desktop) {
-        await this.attachFiles(slug, images, this.docKind);
-      } else {
-        let wrote = 0;
-        for (const file of images) {
-          const path = (file as File & { path?: string }).path;
-          if (!path) continue;
+      for (const file of images) {
+        const path = (file as File & { path?: string }).path;
+        if (this.desktop && path) {
           await this.people.addPhoto(slug, path);
-          wrote += 1;
+          continue;
         }
-        if (!wrote) {
-          await this.attachFiles(slug, images, this.docKind);
-        }
+        const bytes = new Uint8Array(await file.arrayBuffer());
+        await this.people.addPhotoBytes(slug, file.name, bytes);
       }
     }
 
@@ -778,11 +821,9 @@ export class AppComponent implements OnInit, OnDestroy {
       : null;
   }
 
-  async pickAndAddDocument(kind?: string): Promise<void> {
+  async pickAndAddDocument(): Promise<void> {
     const person = this.people.selected();
     if (!person) return;
-    if (kind) this.docKind = kind === LAND_PLOT_KIND ? LAND_PLOT_KIND : "document";
-    const chosenKind = this.docKind;
     if (this.desktop) {
       const source = await this.people.pickDocument();
       if (!source) return;
@@ -791,7 +832,7 @@ export class AppComponent implements OnInit, OnDestroy {
         fileName,
         sourcePath: source,
         title: this.docTitle.trim() || stem(fileName),
-        kind: chosenKind,
+        kind: DOCUMENT_KIND,
         note: this.docNote.trim() || undefined,
       });
       this.clearDocDraft();
@@ -805,19 +846,19 @@ export class AppComponent implements OnInit, OnDestroy {
     const files = input.files;
     const person = this.people.selected();
     if (person && files?.length) {
-      await this.attachFiles(person.slug, files, this.docKind);
+      await this.attachFiles(person.slug, files);
     }
     input.value = "";
   }
 
-  async attachFiles(slug: string, files: FileList | File[], kind: string): Promise<void> {
+  async attachFiles(slug: string, files: FileList | File[]): Promise<void> {
     for (const file of Array.from(files)) {
       const bytes = new Uint8Array(await file.arrayBuffer());
       await this.people.addDocument(slug, {
         fileName: file.name,
         bytes,
         title: this.docTitle.trim() || stem(file.name),
-        kind,
+        kind: DOCUMENT_KIND,
         note: this.docNote.trim() || undefined,
       });
     }
@@ -834,14 +875,13 @@ export class AppComponent implements OnInit, OnDestroy {
     return this.people.people().filter((item) => !doc.subjects.includes(`people/${item.slug}/person.md`));
   }
 
-  kindLabel(kind?: string): string {
-    return kind === LAND_PLOT_KIND ? "Land plot" : "Document";
+  kindLabel(_kind?: string): string {
+    return "File";
   }
 
   private clearDocDraft(): void {
     this.docTitle = "";
     this.docNote = "";
-    this.docKind = "document";
   }
 
   showProposeEmpty(): boolean {
@@ -1925,6 +1965,8 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   personPhotoUrl(person: PersonView): string | null {
+    const fromProfile = personListPhotoUrl(person.imageSrc ?? person.image);
+    if (fromProfile) return fromProfile;
     const photo = person.photos[0];
     return personListPhotoUrl(photo?.listSrc ?? photo?.resource);
   }

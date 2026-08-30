@@ -54,7 +54,7 @@ test("MCP persists a Place pin on disk and reload keeps coordinates local", () =
 test("MCP stores a Document as file bytes plus concept markdown and can link another person", () => {
   const root = mkdtempSync(join(tmpdir(), "skuffen-mcp-doc-"));
   const pdfPath = join(root, "incoming-plot.pdf");
-  const pdf = Buffer.from("%PDF-1.4 land-plot-bytes", "utf8");
+  const pdf = Buffer.from("%PDF-1.4 document-bytes", "utf8");
   writeFileSync(pdfPath, pdf);
   const bundle = new OkfBundle(root);
   bundle.ensure();
@@ -64,7 +64,7 @@ test("MCP stores a Document as file bytes plus concept markdown and can link ano
     slug: ada.slug,
     title: "Plot 12, Hvaler",
     filePath: pdfPath,
-    kind: "land-plot",
+    kind: "document",
     note: "Survey scan.",
   });
   bundle.linkDocument("plot-12-hvaler", other.slug);
@@ -73,7 +73,7 @@ test("MCP stores a Document as file bytes plus concept markdown and can link ano
   assert.ok(reloaded);
   assert.equal(reloaded.documents.length, 1);
   assert.equal(reloaded.documents[0].title, "Plot 12, Hvaler");
-  assert.equal(reloaded.documents[0].kind, "land-plot");
+  assert.equal(reloaded.documents[0].kind, "document");
   assert.equal(reloaded.documents[0].resource, "/documents/plot-12-hvaler/incoming-plot.pdf");
   assert.deepEqual(reloaded.documents[0].subjects, [
     "people/ada-lovelace/person.md",
@@ -101,7 +101,7 @@ test("MCP writes plaintext even when a leftover vault key is present", () => {
     slug: created.slug,
     title: "Plot 12, Hvaler",
     filePath: pdfPath,
-    kind: "land-plot",
+    kind: "document",
   });
 
   const personOnDisk = readFileSync(join(root, "people/ada-lovelace/person.md"), "utf8");
@@ -118,7 +118,7 @@ test("MCP writes plaintext even when a leftover vault key is present", () => {
   assert.equal(reloaded.title, "Ada Lovelace");
   assert.equal(reloaded.notes[0].title, "Analytical Engine");
   assert.equal(reloaded.documents[0].title, "Plot 12, Hvaler");
-  assert.equal(reloaded.documents[0].kind, "land-plot");
+  assert.equal(reloaded.documents[0].kind, "document");
 });
 
 test("MCP leftover ciphertext decrypts once, then refuses without the key", () => {

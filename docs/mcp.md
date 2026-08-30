@@ -21,7 +21,7 @@ Default bundle locations (override with `SKUFFEN_BUNDLE`):
 | `update_person` | Update a `Person` concept. |
 | `add_note` | Add a `Note`. |
 | `add_social_profile` | Add a `SocialProfile`. |
-| `add_document` | Attach a local file as a `Document` (bytes + concept markdown). Use `kind: land-plot` for land plots. |
+| `add_document` | Attach a local file as a `Document` (bytes + concept markdown). Kind is `document`. |
 | `link_document` | Link an existing `Document` to another person in the bundle. |
 | `set_person_location` | Set a local `Place` pin (lat/lng/address). The graph is not uploaded. |
 | `clear_person_location` | Remove that person's `Place` pin. |

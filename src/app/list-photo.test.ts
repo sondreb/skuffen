@@ -21,9 +21,15 @@ test("people-list avatars may use local data or blob URLs already on this machin
 test("local OKF photo paths stay bundle-relative and never remote", () => {
   assert.equal(localPhotoBundlePath("/people/ada-demo/photos/park.jpg"), "people/ada-demo/photos/park.jpg");
   assert.equal(localPhotoBundlePath("people/ada-demo/photos/park.jpg"), "people/ada-demo/photos/park.jpg");
+  assert.equal(localPhotoBundlePath("/people/ada-demo/photos/portrait.jpg"), "people/ada-demo/photos/portrait.jpg");
   assert.equal(localPhotoBundlePath("https://cdn.example/ada.jpg"), null);
   assert.equal(localPhotoBundlePath("http://cdn.example/ada.jpg"), null);
   assert.equal(localPhotoBundlePath("data:image/png;base64,aa"), null);
+});
+
+test("profile image field is not a list src until local bytes are read", () => {
+  assert.equal(personListPhotoUrl("/people/ada-demo/photos/portrait.jpg"), null);
+  assert.equal(personListPhotoUrl("https://cdn.example/portrait.jpg"), null);
 });
 
 test("local photo bytes become a data URL — no host to fetch", () => {

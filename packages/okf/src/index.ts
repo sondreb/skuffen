@@ -7,7 +7,7 @@ export const PHOTO_TYPE = "Photo";
 export const SOCIAL_TYPE = "SocialProfile";
 export const PLACE_TYPE = "Place";
 export const DOCUMENT_TYPE = "Document";
-export const LAND_PLOT_KIND = "land-plot";
+export const DOCUMENT_KIND = "document";
 
 export type OkfType =
   | typeof PERSON_TYPE
@@ -54,6 +54,8 @@ export interface OkfFrontmatter {
   source?: string;
   kind?: string;
   subjects?: string[];
+  /** Bundle-relative profile image. Never http(s). */
+  image?: string;
 }
 
 export interface OkfDocument {
@@ -322,6 +324,22 @@ export function sanitizeFileName(fileName: string): string {
   return cleaned || "file";
 }
 
+const REMOTE_OR_SCRIPT = /^(https?:|\/\/|javascript:|data:|blob:)/i;
+
+/**
+ * Person profile image: local bundle path only.
+ * Remote or script URLs are dropped so the people list never fetches them.
+ */
+export function personImageResource(value?: string | null): string | undefined {
+  const raw = value?.trim() ?? "";
+  if (!raw || REMOTE_OR_SCRIPT.test(raw) || raw.includes("://") || raw.includes("..")) {
+    return undefined;
+  }
+  const path = raw.replace(/^\//, "");
+  if (!path) return undefined;
+  return `/${path}`;
+}
+
 export function subjectPaths(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return [...new Set(value.filter((item): item is string => typeof item === "string" && item.trim().length > 0))];
@@ -369,6 +387,7 @@ export function createPersonDocument(input: {
   familyName?: string;
   email?: string;
   phone?: string;
+  image?: string;
   body?: string;
   generatedBy?: string;
   verifiedBy?: string;
@@ -382,6 +401,7 @@ export function createPersonDocument(input: {
     family_name: input.familyName || undefined,
     email: input.email || undefined,
     phone: input.phone || undefined,
+    image: personImageResource(input.image),
     generated: { by: input.generatedBy ?? actorHuman(), at },
     verified: { by: input.verifiedBy ?? actorHuman(), at },
   };
@@ -529,7 +549,7 @@ export function createDocumentDocument(input: {
   }
   const at = nowUtc();
   const resource = `/${documentFilePath(input.docSlug, fileName)}`;
-  const kind = (input.kind?.trim() || "document") || "document";
+  const kind = input.kind?.trim() || DOCUMENT_KIND;
   const note = input.note?.trim();
   const links = subjects
     .map((path) => {
@@ -537,10 +557,9 @@ export function createDocumentDocument(input: {
       return `- [${slug}](/${path})`;
     })
     .join("\n");
-  const label = kind === LAND_PLOT_KIND ? "Land-plot document" : "Document";
   const parts = [
     note,
-    `${label} file stored beside this concept at \`${resource}\`. Not inlined as a markdown blob.`,
+    `Document file stored beside this concept at \`${resource}\`. Not inlined as a markdown blob.`,
     `Subjects:\n${links}`,
   ].filter((part): part is string => Boolean(part));
   return {

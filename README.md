@@ -130,18 +130,18 @@ Default bundle: the app data directory `people-graph` folder, or a folder you ch
 index.md                 # okf_version: "0.2"
 log.md
 people/
-  <slug>/person.md       # type: Person
+  <slug>/person.md       # type: Person; optional image: local photo path
   <slug>/notes/*.md      # type: Note
   <slug>/social/*.md     # type: SocialProfile
-  <slug>/photos/<file>   # photo bytes
+  <slug>/photos/<file>   # photo bytes (profile + gallery)
   <slug>/photos/<file>.md # type: Photo, resource points at the file
   <slug>/place.md        # type: Place (lat/lng/address pin)
 documents/
-  <slug>/<file>          # document bytes (PDF, images, other docs)
-  <slug>/document.md     # type: Document; required title + resource; optional kind / note
+  <slug>/<file>          # file bytes (PDF, images, other docs)
+  <slug>/document.md     # type: Document; kind: document; required title + resource
 ```
 
-Photos and documents are files, not markdown blobs. A Document has required `type`, `title`, and `resource` pointing at the file. File path is identity. Land plots are documents (`kind: land-plot`) with a title, file, optional note, and `subjects` linking one or more people. Drop a file onto a person or use Add document — nothing is uploaded.
+Photos and documents are files, not markdown blobs. A Person may set `image` to a local bundle path under that person's folder — the people list uses those bytes only and never fetches `http(s)`. Extra photos live beside the person as Photo concepts. A Document has required `type`, `title`, and `resource` pointing at the file (`kind: document`). File path is identity. `subjects` link one or more people. Drop a file onto a person or use Add file — nothing is uploaded.
 
 A person's map pin is a linked `Place` concept (`people/<slug>/place.md`). Suggested facts from Grok or Gemini are written only after you accept them. On desktop, those files are plaintext markdown+YAML (photos and documents stay as their own files).
 

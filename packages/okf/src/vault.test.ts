@@ -61,17 +61,17 @@ test("leftover ciphertext is not plaintext markdown, YAML, or the email", () => 
 test("document files (binary) and photos still decrypt leftover ciphertext; concept path stays identity", () => {
   const key = generateKey();
   const filePath = "documents/plot-12-hvaler/plot-12.pdf";
-  const pdf = Buffer.from("%PDF-1.4 secret-land-plot", "utf8");
+  const pdf = Buffer.from("%PDF-1.4 secret-document", "utf8");
   const sealed = encryptBytes(key, filePath, pdf);
   assert.ok(isEncrypted(sealed));
-  assert.doesNotMatch(Buffer.from(sealed).toString("latin1"), /secret-land-plot/);
+  assert.doesNotMatch(Buffer.from(sealed).toString("latin1"), /secret-document/);
   assert.deepEqual(Buffer.from(decryptBytes(key, filePath, sealed)), pdf);
 
   const concept = createDocumentDocument({
     docSlug: "plot-12-hvaler",
     fileName: "plot-12.pdf",
     title: "Plot 12, Hvaler",
-    kind: "land-plot",
+    kind: "document",
     subjectSlugs: ["ada-lovelace"],
   });
   assert.equal(concept.path, "documents/plot-12-hvaler/document.md");

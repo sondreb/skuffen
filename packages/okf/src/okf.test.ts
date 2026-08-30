@@ -4,21 +4,24 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import {
+  DOCUMENT_KIND,
   DOCUMENT_TYPE,
-  LAND_PLOT_KIND,
   OKF_VERSION,
   addDocumentSubject,
   appendLog,
   createDocumentDocument,
   createNoteDocument,
   createPersonDocument,
+  createPhotoDocument,
   createSocialDocument,
   documentConceptPath,
   documentFilePath,
   documentLinkedToPerson,
   parseDocument,
   parseIndex,
+  personImageResource,
   personPath,
+  photoFilePath,
   redactSensitiveRecord,
   serializeBundleIndex,
   serializeDocument,
@@ -115,24 +118,51 @@ test("appendLog groups by ISO date newest-first", () => {
 
 test("Document concept: file path is identity and resource points at the file", () => {
   const doc = createDocumentDocument({
-    docSlug: "plot-12-hvaler",
-    fileName: "plot-12.pdf",
-    title: "Plot 12, Hvaler",
-    kind: LAND_PLOT_KIND,
+    docSlug: "survey-scan",
+    fileName: "survey.pdf",
+    title: "Survey scan",
+    kind: DOCUMENT_KIND,
     note: "Survey scan. Not uploaded.",
     subjectSlugs: ["ada-lovelace"],
   });
-  assert.equal(doc.path, "documents/plot-12-hvaler/document.md");
-  assert.equal(doc.id, "documents/plot-12-hvaler/document");
-  assert.equal(documentConceptPath("plot-12-hvaler"), doc.path);
-  assert.equal(documentFilePath("plot-12-hvaler", "plot-12.pdf"), "documents/plot-12-hvaler/plot-12.pdf");
+  assert.equal(doc.path, "documents/survey-scan/document.md");
+  assert.equal(doc.id, "documents/survey-scan/document");
+  assert.equal(documentConceptPath("survey-scan"), doc.path);
+  assert.equal(documentFilePath("survey-scan", "survey.pdf"), "documents/survey-scan/survey.pdf");
   assert.equal(doc.frontmatter.type, DOCUMENT_TYPE);
-  assert.equal(doc.frontmatter.title, "Plot 12, Hvaler");
-  assert.equal(doc.frontmatter.resource, "/documents/plot-12-hvaler/plot-12.pdf");
-  assert.equal(doc.frontmatter.kind, LAND_PLOT_KIND);
+  assert.equal(doc.frontmatter.title, "Survey scan");
+  assert.equal(doc.frontmatter.resource, "/documents/survey-scan/survey.pdf");
+  assert.equal(doc.frontmatter.kind, DOCUMENT_KIND);
+  assert.doesNotMatch(doc.body, /land-plot/i);
   assert.deepEqual(doc.frontmatter.subjects, ["people/ada-lovelace/person.md"]);
   assert.match(doc.body, /Survey scan/);
   assert.ok(documentLinkedToPerson(doc.frontmatter, "ada-lovelace"));
+});
+
+test("Person profile image is a local bundle path — never http(s)", () => {
+  const photo = createPhotoDocument({ slug: "ada-lovelace", fileName: "portrait.jpg" });
+  assert.equal(photo.path, "people/ada-lovelace/photos/portrait.md");
+  assert.equal(photo.frontmatter.resource, "/people/ada-lovelace/photos/portrait.jpg");
+  assert.equal(photoFilePath("ada-lovelace", "portrait.jpg"), "people/ada-lovelace/photos/portrait.jpg");
+
+  const person = createPersonDocument({
+    slug: "ada-lovelace",
+    title: "Ada Lovelace",
+    image: photo.frontmatter.resource,
+  });
+  assert.equal(person.frontmatter.image, "/people/ada-lovelace/photos/portrait.jpg");
+  assert.equal(personImageResource(person.frontmatter.image), "/people/ada-lovelace/photos/portrait.jpg");
+  assert.equal(personImageResource("https://cdn.example/ada.jpg"), undefined);
+  assert.equal(personImageResource("http://cdn.example/ada.jpg"), undefined);
+  assert.equal(personImageResource("//cdn.example/ada.jpg"), undefined);
+  assert.equal(personImageResource("javascript:alert(1)"), undefined);
+
+  const remote = createPersonDocument({
+    slug: "remote-ada",
+    title: "Remote Ada",
+    image: "https://cdn.example/ada.jpg",
+  });
+  assert.equal(remote.frontmatter.image, undefined);
 });
 
 test("Document requires type, title, and resource; file bytes stay beside the concept", () => {
@@ -142,8 +172,8 @@ test("Document requires type, title, and resource; file bytes stay beside the co
     docSlug: "plot-12-hvaler",
     fileName: "nested/plot-12.pdf",
     title: "Plot 12, Hvaler",
-    kind: LAND_PLOT_KIND,
-    note: "Optional land-plot note.",
+    kind: DOCUMENT_KIND,
+    note: "Optional file note.",
     subjectSlugs: ["ada-lovelace"],
   });
   const other = createPersonDocument({ slug: "other-contact", title: "Other Contact" });
@@ -154,7 +184,7 @@ test("Document requires type, title, and resource; file bytes stay beside the co
     mkdirSync(join(abs, ".."), { recursive: true });
     writeFileSync(abs, serializeDocument(doc), "utf8");
   }
-  const pdf = Buffer.from("%PDF-1.4 land-plot-bytes", "utf8");
+  const pdf = Buffer.from("%PDF-1.4 document-bytes", "utf8");
   const fileRel = documentFilePath("plot-12-hvaler", "plot-12.pdf");
   writeFileSync(join(root, fileRel), pdf);
 

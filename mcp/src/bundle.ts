@@ -17,6 +17,7 @@ import {
   emptyLog,
   locationFromDocument,
   parseDocument,
+  personImageResource,
   personPath,
   placePath,
   serializeBundleIndex,
@@ -44,6 +45,8 @@ export interface PersonView {
   body: string;
   notes: Array<{ id: string; path: string; title: string; body: string }>;
   social: Array<{ id: string; path: string; title: string; network?: string; handle?: string; url?: string }>;
+  /** Local bundle path for the profile image. Never http(s). */
+  image?: string;
   photos: Array<{ id: string; path: string; title: string; resource?: string }>;
   location?: PlaceLocation;
   documents: Array<{
@@ -145,6 +148,7 @@ export class OkfBundle {
       familyName: optionalString(doc.frontmatter["family_name"]),
       email: optionalString(doc.frontmatter["email"]),
       phone: optionalString(doc.frontmatter["phone"]),
+      image: personImageResource(doc.frontmatter.image),
       body: doc.body,
       notes,
       social,

@@ -1,5 +1,6 @@
 import { Injectable, signal } from "@angular/core";
 import {
+  DOCUMENT_KIND,
   DOCUMENT_TYPE,
   addDocumentSubject,
   appendLog,
@@ -16,6 +17,7 @@ import {
   locationFromDocument,
   parseDocument,
   personDir,
+  personImageResource,
   personPath,
   photoFilePath,
   placePath,
@@ -239,12 +241,57 @@ export class PeopleService {
   }
 
   async addPhoto(slug: string, sourcePath: string): Promise<void> {
-    const fileName = sourcePath.split(/[\\/]/).pop() || `photo-${Date.now()}.jpg`;
+    const fileName = await this.uniquePhotoFileName(
+      slug,
+      sanitizeFileName(sourcePath.split(/[\\/]/).pop() || `photo-${Date.now()}.jpg`),
+    );
     const dest = photoFilePath(slug, fileName);
     await this.io.copyFileIntoBundle(this.bundleRoot(), sourcePath, dest);
     const doc = createPhotoDocument({ slug, fileName });
     await this.writeDoc(doc);
     await this.log("Creation", `Added photo [${fileName}](/${doc.path}).`);
+    await this.reload();
+    await this.select(slug);
+  }
+
+  async setProfileImage(
+    slug: string,
+    input: { sourcePath?: string; bytes?: Uint8Array; fileName?: string },
+  ): Promise<void> {
+    let resource: string | undefined;
+    if (input.sourcePath) {
+      const fileName = await this.uniquePhotoFileName(
+        slug,
+        sanitizeFileName(input.sourcePath.split(/[\\/]/).pop() || `photo-${Date.now()}.jpg`),
+      );
+      const dest = photoFilePath(slug, fileName);
+      await this.io.copyFileIntoBundle(this.bundleRoot(), input.sourcePath, dest);
+      const doc = createPhotoDocument({ slug, fileName });
+      await this.writeDoc(doc);
+      resource = `/${dest}`;
+      await this.log("Creation", `Added photo [${fileName}](/${doc.path}).`);
+    } else if (input.bytes && input.fileName) {
+      const safe = await this.uniquePhotoFileName(slug, sanitizeFileName(input.fileName));
+      const dest = photoFilePath(slug, safe);
+      await this.io.writeBytes(this.bundleRoot(), dest, input.bytes);
+      const doc = createPhotoDocument({ slug, fileName: safe });
+      await this.writeDoc(doc);
+      resource = `/${dest}`;
+      await this.log("Creation", `Added photo [${safe}](/${doc.path}).`);
+    } else {
+      throw new Error("Profile image needs a local file");
+    }
+    await this.writePersonImage(slug, resource);
+    await this.log("Update", `Set profile image [/${resource?.replace(/^\//, "")}].`);
+    await this.reload();
+    await this.select(slug);
+  }
+
+  async setProfileFromPhoto(slug: string, photo: { resource?: string }): Promise<void> {
+    const resource = personImageResource(photo.resource);
+    if (!resource) throw new Error("Profile image must be a local OKF file");
+    await this.writePersonImage(slug, resource);
+    await this.log("Update", `Set profile image [${resource}].`);
     await this.reload();
     await this.select(slug);
   }
@@ -280,6 +327,7 @@ export class PeopleService {
     await this.io.deleteFile(this.bundleRoot(), photo.path);
     const file = photo.resource?.replace(/^\//, "");
     if (file) await this.io.deleteFile(this.bundleRoot(), file);
+    await this.clearPersonImageIfMatches(slug, photo.resource);
     await this.log("Update", `Removed photo [/${photo.path}].`);
     await this.reload();
     await this.select(slug);
@@ -313,7 +361,7 @@ export class PeopleService {
       docSlug,
       fileName: input.fileName,
       title: input.title,
-      kind: input.kind || "document",
+      kind: input.kind?.trim() || DOCUMENT_KIND,
       note: input.note,
       subjectSlugs: [slug],
     });
@@ -534,6 +582,7 @@ export class PeopleService {
         });
       }
     }
+    const image = personImageResource(doc.frontmatter.image);
     return {
       id: doc.id,
       slug,
@@ -544,6 +593,8 @@ export class PeopleService {
       familyName: optionalString(doc.frontmatter.family_name),
       email: optionalString(doc.frontmatter.email),
       phone: optionalString(doc.frontmatter.phone),
+      image,
+      imageSrc: image ? await this.localListPhotoSrc(image) : undefined,
       body: doc.body,
       notes,
       social,
@@ -551,6 +602,29 @@ export class PeopleService {
       location,
       documents: await this.loadDocumentsForPerson(slug),
     };
+  }
+
+  private async writePersonImage(slug: string, resource?: string): Promise<void> {
+    const path = personPath(slug);
+    const raw = await this.io.readText(this.bundleRoot(), path);
+    if (!raw) throw new Error("Person not found");
+    const doc = parseDocument(path, raw);
+    const local = personImageResource(resource);
+    if (local) doc.frontmatter.image = local;
+    else delete doc.frontmatter.image;
+    await this.writeDoc(doc);
+  }
+
+  private async clearPersonImageIfMatches(slug: string, resource?: string): Promise<void> {
+    const path = personPath(slug);
+    const raw = await this.io.readText(this.bundleRoot(), path);
+    if (!raw) return;
+    const doc = parseDocument(path, raw);
+    const current = personImageResource(doc.frontmatter.image);
+    const removed = personImageResource(resource);
+    if (!current || !removed || current !== removed) return;
+    delete doc.frontmatter.image;
+    await this.writeDoc(doc);
   }
 
   private async loadDocumentsForPerson(slug: string): Promise<PersonView["documents"]> {

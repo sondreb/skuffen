@@ -49,6 +49,8 @@ Geocode is stubbed in `?demo=1` (and again in Playwright) so the park pin is alw
 10. `e2e/specs/10-person-timeline.spec.ts` — empty card shows empty timeline copy; opening Timeline writes nothing; Accept of a note adds a row; demo Ada tape has more than one kind. Live AI hosts blocked.
 11. `e2e/specs/11-commitments.spec.ts` — empty copy; Accept of a promise adds a row; dismiss does not; marking done is explicit; demo Ada shows 1–2 synthetic commitments from local files. Nothing is sent. Live AI hosts blocked.
 12. `e2e/specs/12-ui-keyboard.spec.ts` — Ctrl/Cmd+, opens Menu; / focuses find; Capture is instant; no full-page scrim trap. Live AI hosts blocked.
+13. `e2e/specs/13-self-owner.spec.ts` — mark one person as the local owner. Live AI hosts blocked.
+14. `e2e/specs/14-person-card-files.spec.ts` — set a local profile image, add/remove gallery photos, attach a generic file. No land-plot kind. List avatar stays a local data URL.
 
 Curated clips:
 
