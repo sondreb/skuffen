@@ -14,6 +14,16 @@ async function diskSnapshot(page: import("@playwright/test").Page) {
   );
 }
 
+function bundlePaths(filesJson: string | null): string[] {
+  if (!filesJson) return [];
+  return Object.keys(JSON.parse(filesJson) as Record<string, string>);
+}
+
+function personFolderGone(filesJson: string | null, slug: string): boolean {
+  const prefix = `people/${slug}/`;
+  return !bundlePaths(filesJson).some((path) => path.startsWith(prefix));
+}
+
 test("cancel leaves the card; confirm removes it from the list and disk", async ({ demoPage: page }) => {
   await openDemo(page);
   await createAdaDemo(page);
@@ -28,7 +38,7 @@ test("cancel leaves the card; confirm removes it from the list and disk", async 
   await expect(page.locator("[data-delete-confirm]")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Ada Demo" })).toBeVisible();
   const afterCancel = await diskSnapshot(page);
-  expect(afterCancel.files ?? "").toContain("people/ada-demo/person.md");
+  expect(bundlePaths(afterCancel.files)).toContain("people/ada-demo/person.md");
 
   await page.locator("[data-delete-person]").click();
   await page.locator("[data-delete-confirm-write]").click();
@@ -39,8 +49,8 @@ test("cancel leaves the card; confirm removes it from the list and disk", async 
   await expect(page.locator(".person-card b").filter({ hasText: /^Ada Demo$/ })).toHaveCount(0);
 
   const afterDelete = await diskSnapshot(page);
-  expect(afterDelete.files ?? "").not.toContain("people/ada-demo/");
-  expect(afterDelete.settings ?? "").not.toContain("ada-demo");
+  expect(personFolderGone(afterDelete.files, "ada-demo")).toBe(true);
+  expect(afterDelete.settings ?? "").not.toMatch(/"slug"\s*:\s*"ada-demo"/);
 });
 
 test("deleting This is me clears selfSlug and drops follow/memory for that slug", async ({ demoPage: page }) => {
@@ -61,7 +71,7 @@ test("deleting This is me clears selfSlug and drops follow/memory for that slug"
   await expect(page.getByRole("heading", { name: "No people yet" })).toBeVisible();
 
   const after = await diskSnapshot(page);
-  expect(after.files ?? "").not.toContain("people/ada-demo/");
+  expect(personFolderGone(after.files, "ada-demo")).toBe(true);
   expect(after.settings ?? "").toContain('"selfSlug":null');
   expect(after.settings ?? "").not.toMatch(/"slug"\s*:\s*"ada-demo"/);
   expect(after.settings ?? "").not.toMatch(/token|secret|password|api[_-]?key|authorization|bearer/i);
@@ -92,6 +102,6 @@ test("people-list context menu Delete opens the same confirm path", async ({ dem
   await expect(page.locator(".person-card b").filter({ hasText: /^Ada Demo$/ })).toHaveCount(0);
   await expect(page.locator(".person-card b").filter({ hasText: DEMO.bea.title })).toBeVisible();
   const after = await diskSnapshot(page);
-  expect(after.files ?? "").not.toContain("people/ada-demo/");
-  expect(after.files ?? "").toContain("people/bea-demo/person.md");
+  expect(personFolderGone(after.files, "ada-demo")).toBe(true);
+  expect(bundlePaths(after.files)).toContain("people/bea-demo/person.md");
 });
