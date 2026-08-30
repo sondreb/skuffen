@@ -25,9 +25,11 @@ import {
   proposeOnly,
   recordFollowRun,
   removeSuggestion,
+  RESEARCH_NEEDS_PROVIDER,
   setAllFactsChecked,
   setFactChecked,
   settingsWithoutSecrets,
+  showResearchEmptyState,
   unfollow,
   upsertProposal,
   writesForAcceptedSuggestion,
@@ -316,6 +318,76 @@ test("photo bytes stay off disk until Accept, and a failed fetch is skipped", ()
   assert.equal(stored?.bytes.byteLength, 3);
   assert.equal(isPublicHttpUrl("javascript:alert(1)"), false);
   assert.equal(photoFileNameFromUrl("https://cdn.example/pic.PNG", "research-1"), "research-1.png");
+});
+
+test("research empty state is only after a request without a provider", () => {
+  assert.equal(
+    showResearchEmptyState({
+      requested: true,
+      demoMode: false,
+      hasProvider: false,
+      busy: false,
+      proposalCount: 0,
+    }),
+    true,
+  );
+  assert.equal(
+    showResearchEmptyState({
+      requested: false,
+      demoMode: false,
+      hasProvider: false,
+      busy: false,
+      proposalCount: 0,
+    }),
+    false,
+  );
+  assert.equal(
+    showResearchEmptyState({
+      requested: true,
+      demoMode: true,
+      hasProvider: false,
+      busy: false,
+      proposalCount: 0,
+    }),
+    false,
+  );
+  assert.equal(
+    showResearchEmptyState({
+      requested: true,
+      demoMode: false,
+      hasProvider: true,
+      busy: false,
+      proposalCount: 0,
+    }),
+    false,
+  );
+  assert.equal(
+    showResearchEmptyState({
+      requested: true,
+      demoMode: false,
+      hasProvider: false,
+      busy: true,
+      proposalCount: 0,
+    }),
+    false,
+  );
+  assert.equal(
+    showResearchEmptyState({
+      requested: true,
+      demoMode: false,
+      hasProvider: false,
+      busy: false,
+      proposalCount: 1,
+    }),
+    false,
+  );
+});
+
+test("research empty copy tells the visitor to connect a provider in Latch", () => {
+  assert.match(RESEARCH_NEEDS_PROVIDER, /Connect Grok or Gemini in Latch/);
+  assert.match(RESEARCH_NEEDS_PROVIDER, /no Skuffen cloud account/);
+  assert.doesNotMatch(RESEARCH_NEEDS_PROVIDER, /No proposals yet/);
+  assert.doesNotMatch(RESEARCH_NEEDS_PROVIDER, /voice|shuffle|brief/i);
 });
 
 test("extractModelText reads Responses API and chat completions", () => {

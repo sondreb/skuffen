@@ -397,6 +397,26 @@ export function proposalsForSlug(proposals: StoredProposal[], slug: string): Fac
   return proposals.filter((item) => item.slug === slug).flatMap((item) => item.suggestions);
 }
 
+/** Shown on Research / Suggest when no Grok or Gemini is connected. */
+export const RESEARCH_NEEDS_PROVIDER =
+  "Connect Grok or Gemini in Latch → Providers. There is no Skuffen cloud account.";
+
+export function showResearchEmptyState(input: {
+  requested: boolean;
+  demoMode: boolean;
+  hasProvider: boolean;
+  busy: boolean;
+  proposalCount: number;
+}): boolean {
+  return (
+    input.requested &&
+    !input.demoMode &&
+    !input.hasProvider &&
+    !input.busy &&
+    input.proposalCount === 0
+  );
+}
+
 export function assertNoAutoWrite(writes: unknown[]): void {
   if (writes.length > 0) {
     throw new Error("research/follow must not auto-write");

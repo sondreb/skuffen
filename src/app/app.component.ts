@@ -45,8 +45,10 @@ import {
   photoFileNameFromUrl,
   planAcceptedNameProposal,
   proposeNameResearch,
+  RESEARCH_NEEDS_PROVIDER,
   setAllFactsChecked,
   setFactChecked,
+  showResearchEmptyState,
   writesForAcceptedSuggestion,
 } from "./services/research";
 import {
@@ -108,6 +110,7 @@ export class AppComponent implements OnInit, OnDestroy {
   grokKey = "";
   geminiKey = "";
   nameProposal: NameResearchProposal | null = null;
+  researchRequestedWithoutProvider = false;
   mergeProposal: MergeProposal | null = null;
   meetingBrief: MeetingBrief | null = null;
   briefEventPaste = "";
@@ -181,6 +184,7 @@ export class AppComponent implements OnInit, OnDestroy {
   readonly pendingMemoryGroups = computed(() => groupPendingFacts(pendingFacts(this.memoryRows())));
   readonly followMemoryRows = computed(() => followRows(this.memoryRows()));
   readonly toldMemoryRows = computed(() => toldRows(this.memoryRows()));
+  readonly researchNeedsProvider = RESEARCH_NEEDS_PROVIDER;
 
   async ngOnInit(): Promise<void> {
     await this.people.bootstrap();
@@ -253,6 +257,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.addingSocial = false;
     this.providers.clearSuggestions();
     this.nameProposal = null;
+    this.researchRequestedWithoutProvider = false;
     this.resetLocationDraft(person);
     await this.people.select(person.slug);
     if (this.follow.suggestionsFor(person.slug).length) {
@@ -585,13 +590,42 @@ export class AppComponent implements OnInit, OnDestroy {
     this.docKind = "document";
   }
 
+  showProposeEmpty(): boolean {
+    return showResearchEmptyState({
+      requested: this.researchRequestedWithoutProvider,
+      demoMode: this.demoMode,
+      hasProvider: Boolean(this.activeProvider()),
+      busy: this.providers.busy(),
+      proposalCount: this.nameProposal?.facts.length ?? 0,
+    });
+  }
+
+  showSuggestEmpty(): boolean {
+    return showResearchEmptyState({
+      requested: this.researchRequestedWithoutProvider,
+      demoMode: this.demoMode,
+      hasProvider: Boolean(this.activeProvider()),
+      busy: this.providers.busy(),
+      proposalCount: this.visibleSuggestions().length,
+    });
+  }
+
+  private gateWithoutProvider(notice: string): boolean {
+    if (this.demoMode || this.activeProvider()) {
+      this.researchRequestedWithoutProvider = false;
+      return false;
+    }
+    this.notice = notice;
+    this.latchOpen = true;
+    this.researchRequestedWithoutProvider = true;
+    return true;
+  }
+
   async ask(): Promise<void> {
     const person = this.people.selected();
     this.fact = "suggest";
     this.notice = null;
-    if (!this.demoMode && !this.activeProvider()) {
-      this.notice = "Connect Grok in Latch → Providers first.";
-      this.latchOpen = true;
+    if (this.gateWithoutProvider("Connect Grok in Latch → Providers first.")) {
       return;
     }
     if (person) {
@@ -608,9 +642,7 @@ export class AppComponent implements OnInit, OnDestroy {
     const person = this.people.selected();
     this.fact = "suggest";
     this.notice = null;
-    if (!this.demoMode && !this.activeProvider()) {
-      this.notice = "Connect Grok in Latch → Providers first.";
-      this.latchOpen = true;
+    if (this.gateWithoutProvider("Connect Grok in Latch → Providers first.")) {
       return;
     }
     if (!person) return;
@@ -634,14 +666,16 @@ export class AppComponent implements OnInit, OnDestroy {
     if (!name) return;
     this.notice = null;
     this.latchOpen = false;
-    if (!this.demoMode && !this.activeProvider()) {
-      this.notice = "Connect Grok in Latch → Providers first. There is no Skuffen cloud account.";
-      this.latchOpen = true;
-      return;
-    }
     this.panel = "propose";
     this.people.selected.set(null);
     this.nameProposal = null;
+    if (
+      this.gateWithoutProvider(
+        "Connect Grok in Latch → Providers first. There is no Skuffen cloud account.",
+      )
+    ) {
+      return;
+    }
     const suggestions = await this.providers.researchName(name);
     this.nameProposal = proposeNameResearch(name, suggestions);
     await this.follow.storeResearch(
@@ -675,6 +709,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.nameProposal = null;
     this.panel = "none";
     this.notice = null;
+    this.researchRequestedWithoutProvider = false;
     void dismissNameProposal();
     if (pending) {
       for (const fact of pending.facts) {

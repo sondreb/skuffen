@@ -28,8 +28,10 @@ test("no-provider research opens Latch, dismiss recovers the page", async ({ dem
 
   await page.getByRole("button", { name: "Latch", exact: true }).click();
   await expectLatchClosed(page);
+  await expect(page.getByRole("heading", { name: "Ada Lovelace" })).toBeVisible();
+  await expect(page.locator("[data-research-empty]")).toBeVisible();
+  await page.getByRole("button", { name: "Dismiss" }).click();
   await expect(page.getByRole("heading", { name: "The drawer is empty" })).toBeVisible();
-  await expect(page.getByText(/Connect Grok in Latch/)).toBeVisible();
 
   await page.getByRole("button", { name: "Put someone in" }).click();
   await expect(page.getByRole("heading", { name: "Who?" })).toBeVisible();
@@ -40,17 +42,21 @@ test("no-provider research opens Latch, dismiss recovers the page", async ({ dem
   await expectLatchOpen(page);
   await page.keyboard.press("Escape");
   await expectLatchClosed(page);
+  await expect(page.getByRole("heading", { name: "Ada Lovelace" })).toBeVisible();
+  await page.getByRole("button", { name: "Dismiss" }).click();
   await expect(page.getByRole("heading", { name: "The drawer is empty" })).toBeVisible();
 
   await page.getByRole("button", { name: "Research" }).click();
   await expectLatchOpen(page);
   await page.getByRole("button", { name: "Close latch" }).click();
   await expectLatchClosed(page);
+  await page.getByRole("button", { name: "Dismiss" }).click();
 
   await page.getByRole("button", { name: "Research" }).click();
   await expectLatchOpen(page);
   await page.getByRole("button", { name: "Close", exact: true }).click();
   await expectLatchClosed(page);
+  await page.getByRole("button", { name: "Dismiss" }).click();
 
   await page.getByRole("button", { name: "Put someone in" }).click();
   await page.locator('input[name="person-name"]').fill("Ada Demo");

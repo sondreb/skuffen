@@ -640,6 +640,11 @@
           }
           @if (providers.busy() && !nameProposal) {
             <p class="whisper">Searching public sources…</p>
+          } @else if (showProposeEmpty()) {
+            <div class="research-empty" data-research-empty>
+              <p class="whisper">{{ researchNeedsProvider }}</p>
+              <p class="whisper">Nothing is written until you accept.</p>
+            </div>
           } @else if (nameProposal) {
             <label class="follow-line">
               <input
@@ -1090,6 +1095,11 @@
                     >
                       Accept selected
                     </button>
+                  </div>
+                } @else if (showSuggestEmpty()) {
+                  <div class="research-empty" data-research-empty>
+                    <p class="whisper">{{ researchNeedsProvider }}</p>
+                    <p class="whisper">Nothing is written until you accept.</p>
                   </div>
                 } @else if (!providers.busy()) {
                   <p class="whisper">No proposals yet.</p>
