@@ -24,7 +24,7 @@ async function settingsSelfSlug(page: import("@playwright/test").Page): Promise<
   }, SETTINGS_KEY);
 }
 
-test("mark This is me; only one self; unmark; persists in settings not tokens", async ({ demoPage: page }) => {
+test("mark This is me; only one self; persists in settings not tokens", async ({ demoPage: page }) => {
   await openDemo(page);
   await createAdaDemo(page);
 
@@ -33,8 +33,7 @@ test("mark This is me; only one self; unmark; persists in settings not tokens", 
 
   await page.locator("[data-self-toggle]").click();
   await expect(page.locator("[data-self-badge]")).toHaveText("This is me · this local copy");
-  await expect(page.locator("[data-self-toggle]")).toHaveText("Not me");
-  await expect(page.locator("[data-self-toggle]")).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator("[data-self-toggle]")).toHaveCount(0);
   expect(await settingsSelfSlug(page)).toBe("ada-demo");
 
   await page.getByRole("button", { name: "Menu" }).click();
@@ -70,35 +69,21 @@ test("mark This is me; only one self; unmark; persists in settings not tokens", 
 
   await page.locator("[data-self-card='ada-demo']").click();
   await expect(page.locator("[data-self-badge]")).toHaveText("This is me · this local copy");
+  await expect(page.locator("[data-self-toggle]")).toHaveCount(0);
 
   await page.getByRole("button", { name: "People" }).click();
   await createBeaDemo(page);
-  await expect(page.locator("[data-self-toggle]")).toHaveText("This is me");
+  await expect(page.locator("[data-self-toggle]")).toHaveCount(0);
   await expect(page.locator("[data-self-badge]")).toHaveCount(0);
-
-  await page.locator("[data-self-toggle]").click();
-  await expect(page.locator("[data-self-badge]")).toHaveText("This is me · this local copy");
-  expect(await settingsSelfSlug(page)).toBe("bea-demo");
+  expect(await settingsSelfSlug(page)).toBe("ada-demo");
 
   await page.getByRole("button", { name: "People" }).click();
   const adaCard = page.locator(".person-card").filter({ has: page.locator("b", { hasText: /^Ada Demo$/ }) });
   const beaCard = page.locator(".person-card").filter({ has: page.locator("b", { hasText: /^Bea Demo$/ }) });
-  await expect(page.locator("[data-self-card='bea-demo']")).toBeVisible();
-  await expect(page.locator("[data-self-card='ada-demo']")).toHaveCount(0);
+  await expect(page.locator("[data-self-card='ada-demo']")).toBeVisible();
+  await expect(page.locator("[data-self-card='bea-demo']")).toHaveCount(0);
   await expect(adaCard).toBeVisible();
-  await expect(adaCard).not.toContainText("This is me");
-  await expect(beaCard).toContainText("This is me");
-
-  await beaCard.click();
-  await page.locator("[data-self-toggle]").click();
-  await expect(page.locator("[data-self-badge]")).toHaveCount(0);
-  await expect(page.locator("[data-self-toggle]")).toHaveText("This is me");
-  expect(await settingsSelfSlug(page)).toBeNull();
-
-  await page.getByRole("button", { name: "People" }).click();
-  await expect(page.locator("[data-self-card]")).toHaveCount(0);
-
-  const afterUnmark = await diskSnapshot(page);
-  expect(afterUnmark.settings ?? "").toContain('"selfSlug":null');
-  expect(afterUnmark.settings ?? "").not.toMatch(/token|secret|password|api[_-]?key|authorization|bearer/i);
+  await expect(adaCard).toContainText("This is me");
+  await expect(beaCard).toBeVisible();
+  await expect(beaCard).not.toContainText("This is me");
 });

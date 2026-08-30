@@ -9,8 +9,10 @@ export function normalizeSelfSlug(value: unknown): string | null {
   return slug ? slug : null;
 }
 
-/** Marking a second person replaces the first. One self only. */
-export function markSelf(_current: string | null, slug: string): string | null {
+/** One self only. A second mark is ignored until the current self is cleared. */
+export function markSelf(current: string | null, slug: string): string | null {
+  const existing = normalizeSelfSlug(current);
+  if (existing) return existing;
   return normalizeSelfSlug(slug);
 }
 

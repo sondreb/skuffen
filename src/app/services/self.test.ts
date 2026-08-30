@@ -21,14 +21,16 @@ test("normalizeSelfSlug trims and treats blank as unset", () => {
   assert.equal(normalizeSelfSlug(12), null);
 });
 
-test("markSelf keeps only one owner and moves the mark", () => {
+test("markSelf keeps only one owner and refuses a second mark", () => {
   assert.equal(markSelf(null, "ada-demo"), "ada-demo");
-  assert.equal(markSelf("ada-demo", "bea-demo"), "bea-demo");
-  assert.equal(markSelf("bea-demo", "  "), null);
+  assert.equal(markSelf("ada-demo", "bea-demo"), "ada-demo");
+  assert.equal(markSelf("bea-demo", "  "), "bea-demo");
+  assert.equal(markSelf(null, "  "), null);
 });
 
-test("unmarkSelf clears the local owner", () => {
+test("unmarkSelf clears the local owner so a later mark can land", () => {
   assert.equal(unmarkSelf(), null);
+  assert.equal(markSelf(unmarkSelf(), "bea-demo"), "bea-demo");
   assert.equal(isSelf("ada-demo", "ada-demo"), true);
   assert.equal(isSelf("ada-demo", "bea-demo"), false);
   assert.equal(isSelf(null, "ada-demo"), false);
