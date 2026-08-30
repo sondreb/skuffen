@@ -60,7 +60,9 @@ import {
   DIORAMA_NEEDS_PHOTO,
   DIORAMA_PHOTO_TITLE,
   DIORAMA_PROGRESS,
+  dioramaPhotoFileName,
   extensionForMime,
+  personHasDiorama,
   sniffImageMime,
 } from "./services/imagine";
 import {
@@ -2067,17 +2069,21 @@ export class AppComponent implements OnInit, OnDestroy {
     return Boolean(person.image && personListPhotoUrl(person.imageSrc));
   }
 
+  canOfferDiorama(person: PersonView): boolean {
+    return this.hasProfilePhoto(person) && !personHasDiorama(person);
+  }
+
   openProfilePreview(person: PersonView): void {
     this.openImagePreview(this.personPhotoUrl(person), {
       title: person.title,
-      diorama: this.hasProfilePhoto(person),
+      diorama: this.canOfferDiorama(person),
     });
   }
 
   openPhotoPreview(person: PersonView, photo: PersonView["photos"][number]): void {
     this.openImagePreview(photo.listSrc, {
       title: photo.title,
-      diorama: this.isProfilePhoto(person, photo),
+      diorama: this.isProfilePhoto(person, photo) && this.canOfferDiorama(person),
     });
   }
 
@@ -2131,6 +2137,7 @@ export class AppComponent implements OnInit, OnDestroy {
       this.actionError = "Could not open that card.";
       return;
     }
+    if (personHasDiorama(person)) return;
     const sourceResource = person.image;
     const source = sourceResource ? await this.people.readPhotoBytes(sourceResource) : null;
     if (!source) {
@@ -2151,7 +2158,7 @@ export class AppComponent implements OnInit, OnDestroy {
       }
       const ext = extensionForMime(sniffImageMime(bytes) ?? mime ?? "image/png");
       await this.people.setProfileImage(slug, {
-        fileName: `diorama-${Date.now().toString(36)}.${ext}`,
+        fileName: dioramaPhotoFileName(ext),
         bytes,
         title: DIORAMA_PHOTO_TITLE,
         generatedBy: this.providers.actorForImagine(),

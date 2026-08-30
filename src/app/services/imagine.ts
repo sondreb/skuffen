@@ -9,9 +9,43 @@ export const DIORAMA_PROMPT =
   "3D clay diorama of this person, same likeness, clay miniature / diorama look.";
 export const DIORAMA_MENU_LABEL = "3D clay diorama";
 export const DIORAMA_PHOTO_TITLE = "3D clay diorama";
+/** Imagine writes this filename prefix so we can hide the control without guessing pixels. */
+export const DIORAMA_FILE_PREFIX = "diorama-";
 export const DIORAMA_NEEDS_GROK = "Connect Grok in Menu → Providers first.";
 export const DIORAMA_NEEDS_PHOTO = "Add a profile photo first.";
 export const DIORAMA_PROGRESS = "Making 3D clay diorama…";
+
+export type DioramaPhotoMark = {
+  title?: string | null;
+  resource?: string | null;
+  path?: string | null;
+  fileName?: string | null;
+};
+
+export function dioramaPhotoFileName(ext: string): string {
+  const safe = ext.replace(/^\./, "").toLowerCase() || "png";
+  return `${DIORAMA_FILE_PREFIX}${Date.now().toString(36)}.${safe}`;
+}
+
+/** True when Imagine marked this photo as a diorama. Filename or title — never pixels. */
+export function isDioramaPhoto(photo: DioramaPhotoMark): boolean {
+  if ((photo.title ?? "").trim() === DIORAMA_PHOTO_TITLE) return true;
+  for (const value of [photo.fileName, photo.resource, photo.path]) {
+    if (!value) continue;
+    const name = value.replace(/\\/g, "/").split("/").pop() ?? "";
+    const stem = name.replace(/\.md$/i, "");
+    if (stem.toLowerCase().startsWith(DIORAMA_FILE_PREFIX)) return true;
+  }
+  return false;
+}
+
+export function personHasDiorama(person: {
+  image?: string | null;
+  photos?: DioramaPhotoMark[] | null;
+}): boolean {
+  if (person.photos?.some((photo) => isDioramaPhoto(photo))) return true;
+  return Boolean(person.image && isDioramaPhoto({ resource: person.image }));
+}
 
 /** 1×1 teal PNG so ?demo=1 can finish offline. Not a real Imagine render. */
 export const DEMO_DIORAMA_PNG = Uint8Array.from(

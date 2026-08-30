@@ -3,13 +3,18 @@ import { test } from "node:test";
 import { personListPhotoUrl } from "../list-photo.ts";
 import {
   DEMO_DIORAMA_PNG,
+  DIORAMA_FILE_PREFIX,
+  DIORAMA_PHOTO_TITLE,
   DIORAMA_PROMPT,
   IMAGINE_EDITS_URL,
   IMAGINE_MODEL,
   decodeBase64Image,
+  dioramaPhotoFileName,
   grokImagineEditRequest,
   imageBytesToDataUrl,
+  isDioramaPhoto,
   parseImagineEditResponse,
+  personHasDiorama,
   sniffImageMime,
 } from "./imagine.ts";
 
@@ -83,4 +88,41 @@ test("data-URI Imagine results decode without becoming a list src host", () => {
 test("empty Imagine payload is an error — nothing to write", () => {
   assert.throws(() => parseImagineEditResponse({ data: [{}] }), /did not return an image/);
   assert.throws(() => parseImagineEditResponse({}), /did not return an image/);
+});
+
+test("diorama mark is filename or title — never guessed from pixels", () => {
+  const written = dioramaPhotoFileName("png");
+  assert.match(written, new RegExp(`^${DIORAMA_FILE_PREFIX}[a-z0-9]+\\.png$`));
+  assert.equal(isDioramaPhoto({ fileName: written, title: DIORAMA_PHOTO_TITLE }), true);
+  assert.equal(isDioramaPhoto({ title: DIORAMA_PHOTO_TITLE }), true);
+  assert.equal(
+    isDioramaPhoto({ resource: "/people/ada-demo/photos/diorama-m1n2.png" }),
+    true,
+  );
+  assert.equal(isDioramaPhoto({ path: "people/ada-demo/photos/diorama-m1n2.md" }), true);
+  assert.equal(isDioramaPhoto({ fileName: "portrait.png", title: "portrait.png" }), false);
+  assert.equal(isDioramaPhoto({ title: "Park day", resource: "/people/ada-demo/photos/park.png" }), false);
+  assert.equal(isDioramaPhoto({ title: "", fileName: "clay-look.png" }), false);
+  assert.equal(
+    personHasDiorama({
+      image: "/people/ada-demo/photos/portrait.png",
+      photos: [{ title: "portrait.png", resource: "/people/ada-demo/photos/portrait.png" }],
+    }),
+    false,
+  );
+  assert.equal(
+    personHasDiorama({
+      image: "/people/ada-demo/photos/other.png",
+      photos: [
+        { title: "other.png", resource: "/people/ada-demo/photos/other.png" },
+        { title: DIORAMA_PHOTO_TITLE, resource: `/people/ada-demo/photos/${written}` },
+      ],
+    }),
+    true,
+  );
+  assert.equal(
+    personHasDiorama({ image: "/people/ada-demo/photos/diorama-abc.png", photos: [] }),
+    true,
+  );
+  assert.equal(personHasDiorama({ photos: [] }), false);
 });

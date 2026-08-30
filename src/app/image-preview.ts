@@ -25,7 +25,7 @@ export type PreviewRect = {
 export type ImagePreview = {
   src: string;
   title?: string;
-  /** True only when this is the opened profile's profile photo. */
+  /** True only when this is the opened profile's profile photo and no diorama exists yet. */
   diorama?: boolean;
 };
 
