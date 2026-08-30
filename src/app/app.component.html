@@ -1476,16 +1476,17 @@
               </div>
               <div class="nameplate-actions">
                 <button type="button" (click)="startEdit()">Edit</button>
-                <button
-                  type="button"
-                  class="self-toggle"
-                  [class.on]="self.isSelf(person.slug)"
-                  [attr.aria-pressed]="self.isSelf(person.slug)"
-                  (click)="toggleSelf(person.slug)"
-                  data-self-toggle
-                >
-                  {{ self.isSelf(person.slug) ? "Not me" : "This is me" }}
-                </button>
+                @if (!self.selfSlug()) {
+                  <button
+                    type="button"
+                    class="self-toggle"
+                    aria-pressed="false"
+                    (click)="toggleSelf(person.slug)"
+                    data-self-toggle
+                  >
+                    This is me
+                  </button>
+                }
                 <button
                   type="button"
                   class="danger"

@@ -26,6 +26,7 @@ export class SelfService {
   }
 
   async mark(slug: string): Promise<void> {
+    if (this.selfSlug()) return;
     const next = markSelf(this.selfSlug(), slug);
     if (next === this.selfSlug()) return;
     this.selfSlug.set(next);
@@ -39,8 +40,8 @@ export class SelfService {
   }
 
   async toggle(slug: string): Promise<void> {
-    if (this.isSelf(slug)) await this.unmark();
-    else await this.mark(slug);
+    if (this.selfSlug()) return;
+    await this.mark(slug);
   }
 
   async retarget(fromSlug: string, toSlug: string): Promise<void> {
