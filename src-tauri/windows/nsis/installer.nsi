@@ -1,8 +1,9 @@
 ; Skuffen one-click overwrite installer.
 ; Based on Tauri 2.11.5 crates/tauri-bundler/.../nsis/installer.nsi
 ; Changes: default PassiveMode (progress page only; no language / directory /
-; start-menu / welcome / finish / reinstall radios). Passive upgrades overwrite
-; in place. People-graph lives in app data (me.grok.skuffen), not next to the exe.
+; start-menu / welcome / finish / reinstall radios). Do not GetOptions into
+; $PassiveMode (FileFunc clears dest when /P is absent). Passive upgrades
+; overwrite in place. People-graph lives in app data (me.grok.skuffen), not next to the exe.
 ; Identifier stays me.grok.skuffen. Keep handlebars placeholders in sync with Tauri 2.11.
 
 Unicode true
@@ -265,15 +266,25 @@ Function PageReinstall
  Abort
  ${EndIf}
 
- ; Skip showing the page if passive
+ ; Skip showing the page if passive or /UPDATE.
  ;
  ; Note that we don't call this earlier at the begining
  ; of this function because we need to populate some variables
  ; related to current installed version if detected and whether
  ; we are downgrading or not.
+ ;
+ ; Normal NSIS upgrade: abort this page and overwrite the same $INSTDIR.
+ ; Do not ExecWait the uninstaller (that can wipe shortcuts).
+ ; People-graph lives in app data (me.grok.skuffen), not $INSTDIR.
+ ; WiX leftover: uninstall that MSI once, then NSIS owns the install.
  ${If} $PassiveMode = 1
+ ${OrIf} $UpdateMode = 1
+ ${If} $WixMode = 1
  Call PageLeaveReinstall
- ${Else}
+ ${EndIf}
+ Abort
+ ${EndIf}
+
  nsDialogs::Create 1018
  Pop $R4
  ${IfThen} $(^RTL) = 1 ${|} nsDialogs::SetRTL $(^RTL) ${|}
@@ -304,7 +315,6 @@ Function PageReinstall
 
  ${NSD_SetFocus} $R2
  nsDialogs::Show
- ${EndIf}
 FunctionEnd
 Function PageReinstallUpdateSelection
  ${NSD_GetState} $R2 $R1
@@ -489,11 +499,10 @@ FunctionEnd
 
 Function .onInit
  ; Skuffen: one-click. Skip wizard pages. /P /S /UPDATE still work.
+ ; Never ${GetOptions} into $PassiveMode. FileFunc GetOptions CLEARS the dest
+ ; var when /P is absent, so a double-click would empty PassiveMode and
+ ; PageReinstall would show Already Installed (first radio: uninstall-then-install).
  StrCpy $PassiveMode 1
- ${GetOptions} $CMDLINE "/P" $PassiveMode
- ${IfNot} ${Errors}
- StrCpy $PassiveMode 1
- ${EndIf}
 
  ${GetOptions} $CMDLINE "/NS" $NoShortcutMode
  ${IfNot} ${Errors}
