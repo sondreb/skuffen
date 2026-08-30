@@ -48,7 +48,7 @@ test("no-provider research opens Latch, dismiss recovers the page", async ({ dem
 
   await page.getByRole("button", { name: "Research" }).click();
   await expectLatchOpen(page);
-  await page.getByRole("button", { name: "Close latch" }).click();
+  await page.locator(".well").click({ position: { x: 16, y: 16 } });
   await expectLatchClosed(page);
   await page.getByRole("button", { name: "Dismiss" }).click();
 
