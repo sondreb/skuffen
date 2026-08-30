@@ -24,6 +24,8 @@ export interface Settings {
   preferredProvider?: ProviderId | null;
   follows?: FollowRecord[];
   proposals?: StoredProposal[];
+  /** Sorted `slug-a|slug-b` pairs the user dismissed or kept both. */
+  dismissedMerges?: string[];
 }
 
 export interface VaultStatus {
@@ -101,6 +103,46 @@ export interface ProposedFact {
 export interface NameResearchProposal {
   query: string;
   facts: ProposedFact[];
+}
+
+export type MergeOverlapKind = "email" | "phone" | "social";
+
+export interface MergeOverlap {
+  kind: MergeOverlapKind;
+  value: string;
+  label: string;
+}
+
+export type MergeChoiceKind = "field" | "note" | "social" | "photo" | "place" | "document";
+
+export interface MergeFieldChoice {
+  id: string;
+  keep: boolean;
+  kind: MergeChoiceKind;
+  field?: PersonField;
+  label: string;
+  value: string;
+  sourceSlug: string;
+  noteTitle?: string;
+  noteBody?: string;
+  network?: string;
+  url?: string;
+  handle?: string;
+  photoPath?: string;
+  photoResource?: string;
+  photoTitle?: string;
+  place?: PersonLocation;
+  documentSlug?: string;
+}
+
+export interface MergeProposal {
+  id: string;
+  keeperSlug: string;
+  incomingSlug: string;
+  keeperTitle: string;
+  incomingTitle: string;
+  overlaps: MergeOverlap[];
+  fields: MergeFieldChoice[];
 }
 
 export interface ProviderStatus {

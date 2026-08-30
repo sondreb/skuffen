@@ -15,6 +15,7 @@ import {
   emptyLog,
   locationFromDocument,
   parseDocument,
+  personDir,
   personPath,
   photoFilePath,
   placePath,
@@ -28,6 +29,7 @@ import {
   type PlaceSource,
 } from "../../../packages/okf/src/index";
 import type { PersonLocation, PersonView } from "../models";
+import type { MergePlan } from "./merge";
 import { IoService } from "./io.service";
 
 @Injectable({ providedIn: "root" })
@@ -339,6 +341,159 @@ export class PeopleService {
     await this.log("Update", `Linked [${doc.frontmatter.title}](/${doc.path}) to [${slug}](/${personPath(slug)}).`);
     await this.reload();
     await this.select(slug);
+  }
+
+  /**
+   * Apply an accepted merge plan. Detection and review never call this.
+   * The incoming person folder is removed only here.
+   */
+  async applyMerge(plan: MergePlan): Promise<PersonView> {
+    if (plan.keeperSlug === plan.incomingSlug) {
+      throw new Error("Cannot merge a person into itself");
+    }
+    const keeper = this.people().find((item) => item.slug === plan.keeperSlug);
+    const incoming = this.people().find((item) => item.slug === plan.incomingSlug);
+    if (!keeper || !incoming) throw new Error("Merge needs both person cards");
+
+    if (Object.keys(plan.fields).length) {
+      const path = personPath(plan.keeperSlug);
+      const raw = await this.io.readText(this.bundleRoot(), path);
+      if (!raw) throw new Error("Person not found");
+      const doc = parseDocument(path, raw);
+      const patch = plan.fields;
+      if (patch.title !== undefined) doc.frontmatter.title = patch.title;
+      if (patch.description !== undefined) doc.frontmatter.description = patch.description;
+      if (patch.givenName !== undefined) doc.frontmatter.given_name = patch.givenName;
+      if (patch.familyName !== undefined) doc.frontmatter.family_name = patch.familyName;
+      if (patch.email !== undefined) doc.frontmatter.email = patch.email || undefined;
+      if (patch.phone !== undefined) doc.frontmatter.phone = patch.phone || undefined;
+      if (patch.body !== undefined) doc.body = patch.body;
+      await this.writeDoc(doc);
+    }
+
+    for (const note of plan.notes) {
+      const doc = createNoteDocument({
+        slug: plan.keeperSlug,
+        noteSlug: `${slugify(note.title)}-${Date.now().toString(36)}`,
+        title: note.title,
+        body: note.body,
+        generatedBy: "human:user",
+      });
+      await this.writeDoc(doc);
+    }
+
+    const takenSocial = new Set(
+      (await this.io.listFiles(this.bundleRoot(), `people/${plan.keeperSlug}/social/`)).map((path) =>
+        path.slice(`people/${plan.keeperSlug}/social/`.length, -".md".length),
+      ),
+    );
+    for (const item of plan.social) {
+      let network = item.network || "web";
+      let networkSlug = slugify(network);
+      if (takenSocial.has(networkSlug)) {
+        network = `${network} (merged)`;
+        networkSlug = slugify(network);
+        let n = 2;
+        while (takenSocial.has(networkSlug)) {
+          network = `${item.network || "web"} (merged ${n})`;
+          networkSlug = slugify(network);
+          n += 1;
+        }
+      }
+      takenSocial.add(networkSlug);
+      const doc = createSocialDocument({
+        slug: plan.keeperSlug,
+        network,
+        url: item.url,
+        handle: item.handle,
+        generatedBy: "human:user",
+      });
+      doc.frontmatter.verified = { by: "human:user", at: new Date().toISOString().replace(/\.\d{3}Z$/, "Z") };
+      await this.writeDoc(doc);
+    }
+
+    for (const photo of plan.photos) {
+      const file = photo.resource?.replace(/^\//, "");
+      if (!file) continue;
+      const bytes = await this.io.readBytes(this.bundleRoot(), file);
+      if (!bytes || bytes.byteLength === 0) continue;
+      const fileName = file.split("/").pop() || `merged-${Date.now()}.jpg`;
+      const safe = await this.uniquePhotoFileName(plan.keeperSlug, sanitizeFileName(fileName));
+      const dest = photoFilePath(plan.keeperSlug, safe);
+      await this.io.writeBytes(this.bundleRoot(), dest, bytes);
+      const doc = createPhotoDocument({
+        slug: plan.keeperSlug,
+        fileName: safe,
+        title: photo.title,
+        generatedBy: "human:user",
+      });
+      doc.frontmatter.verified = { by: "human:user", at: new Date().toISOString().replace(/\.\d{3}Z$/, "Z") };
+      await this.writeDoc(doc);
+    }
+
+    if (plan.place) {
+      const doc = createPlaceDocument({
+        slug: plan.keeperSlug,
+        title: plan.place.title,
+        address: plan.place.address,
+        latitude: plan.place.latitude,
+        longitude: plan.place.longitude,
+        source: (plan.place.source as PlaceSource | undefined) ?? "pin",
+      });
+      await this.writeDoc(doc);
+    }
+
+    for (const document of plan.documents) {
+      await this.retargetDocument(document.slug, plan.incomingSlug, plan.keeperSlug);
+    }
+    await this.retargetRemainingDocuments(plan.incomingSlug, plan.keeperSlug);
+
+    await this.deletePersonFolder(plan.incomingSlug);
+    await this.log(
+      "Update",
+      `Merged [${incoming.title}](/${personPath(plan.incomingSlug)}) into [${keeper.title}](/${personPath(plan.keeperSlug)}).`,
+    );
+    await this.reload();
+    await this.rebuildIndexes();
+    await this.select(plan.keeperSlug);
+    const merged = this.people().find((item) => item.slug === plan.keeperSlug);
+    if (!merged) throw new Error("Merged person missing after Accept");
+    return merged;
+  }
+
+  private async retargetDocument(docSlug: string, fromSlug: string, toSlug: string): Promise<void> {
+    const path = documentConceptPath(docSlug);
+    const raw = await this.io.readText(this.bundleRoot(), path);
+    if (!raw) return;
+    const doc = addDocumentSubject(parseDocument(path, raw), toSlug);
+    const from = personPath(fromSlug);
+    doc.frontmatter.subjects = subjectPaths(doc.frontmatter.subjects).filter((item) => item !== from);
+    if ((doc.frontmatter.subjects ?? []).length === 0) {
+      doc.frontmatter.subjects = [personPath(toSlug)];
+    }
+    await this.writeDoc(doc);
+  }
+
+  private async retargetRemainingDocuments(fromSlug: string, toSlug: string): Promise<void> {
+    const files = await this.io.listFiles(this.bundleRoot(), "documents/");
+    for (const file of files) {
+      if (!file.endsWith("/document.md")) continue;
+      const text = await this.io.readText(this.bundleRoot(), file);
+      if (!text) continue;
+      const item = parseDocument(file, text);
+      if (item.frontmatter.type !== DOCUMENT_TYPE) continue;
+      if (!documentLinkedToPerson(item.frontmatter, fromSlug)) continue;
+      const docSlug = file.slice("documents/".length, -"/document.md".length);
+      await this.retargetDocument(docSlug, fromSlug, toSlug);
+    }
+  }
+
+  private async deletePersonFolder(slug: string): Promise<void> {
+    const prefix = `${personDir(slug)}/`;
+    const files = await this.io.listFiles(this.bundleRoot(), prefix);
+    for (const file of files) {
+      await this.io.deleteFile(this.bundleRoot(), file);
+    }
   }
 
   private async loadPerson(slug: string): Promise<PersonView | null> {

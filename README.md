@@ -59,7 +59,7 @@ npm start
 
 The browser preview **cannot encrypt the people-graph honestly** — there is no OS keychain in `npm start`. The graph stays in a localStorage stand-in (plaintext). Use `npm run tauri dev` for OS-backed encryption. Grok/Gemini API keys and OAuth tokens still stay in memory for the current tab only. They are never written to `localStorage`, `sessionStorage`, or any other durable browser storage, and they vanish on reload.
 
-OKF / vault / MCP / browser-secret / OAuth / research-follow / update-check checks:
+OKF / vault / MCP / browser-secret / OAuth / research-follow / merge-proposal / update-check checks:
 
 ```bash
 npm run test:okf
@@ -68,6 +68,7 @@ npm run test:mcp
 npm run test:secrets
 npm run test:oauth
 npm run test:research
+npm run test:merge
 npm run test:update
 npm run test:version
 npm run test:e2e
@@ -165,6 +166,16 @@ Follow schedules and pending proposals live in local app settings, not in the OK
 
 ```bash
 npm run test:research
+```
+
+## Duplicate-person merge
+
+When two cards share a hard identity signal — the same email, phone, or social URL/handle — Skuffen proposes a merge. **Name string alone is never enough.** You review fields from the other card (keep or drop), then Accept, Dismiss, or Keep both.
+
+Nothing is written until you Accept. There is no auto-merge. Dismiss leaves both cards. The browser preview (`npm start ?demo=1`) uses two synthetic cards (`Ada Demo` / `Ada Demo Twin`) so the same gate is visible without API keys.
+
+```bash
+npm run test:merge
 ```
 
 ## Local MCP

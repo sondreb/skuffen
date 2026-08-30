@@ -28,3 +28,21 @@ export function demoResearchSuggestions(source: FactSuggestion["source"] = "rese
     },
   ];
 }
+
+/** Obviously synthetic. Shared email is the identity overlap — name alone is never enough. */
+export const DEMO_MERGE = {
+  email: "ada.demo@example.invalid",
+  keeper: {
+    title: "Ada Demo",
+    description: "Synthetic demo card — not a real person",
+    email: "ada.demo@example.invalid",
+  },
+  incoming: {
+    title: "Ada Demo Twin",
+    description: "Second synthetic card — email overlap only",
+    email: "ada.demo@example.invalid",
+    noteTitle: "Twin card note (demo)",
+    noteBody: "Synthetic note on the twin card. Accept merge to move it — nothing merges before that.",
+  },
+} as const;
+
