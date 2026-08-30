@@ -38,7 +38,8 @@ jobs:
   version:
     # Skip bot/tag re-entry and the version-bump commit push. Dispatch always runs.
     # Must match shouldSkipReleaseReentry() in scripts/bump-version.mjs.
-    if: github.event_name == 'workflow_dispatch' || (github.actor != 'github-actions[bot]' && !startsWith(github.event.head_commit.message, 'chore: bump version to '))
+    # Wrap in ${{ }} so YAML does not treat !startsWith as a tag (run 33299042489).
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.actor != 'github-actions[bot]' && !startsWith(github.event.head_commit.message, 'chore: bump version to ')) }}
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.resolve.outputs.version }}
@@ -88,7 +89,8 @@ jobs:
   build:
     needs: version
     # Same skip-loop as version: no second Win/Linux/macOS matrix on the bump push.
-    if: github.event_name == 'workflow_dispatch' || (github.actor != 'github-actions[bot]' && !startsWith(github.event.head_commit.message, 'chore: bump version to '))
+    # ${{ }} required: unquoted !startsWith is a YAML tag and fails the workflow file.
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.actor != 'github-actions[bot]' && !startsWith(github.event.head_commit.message, 'chore: bump version to ')) }}
     permissions:
       contents: write
     strategy:
