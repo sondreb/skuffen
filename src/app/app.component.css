@@ -395,6 +395,7 @@ button:disabled {
 .surface,
 .slips article,
 .slips .timeline-row,
+.slips .commitment-row,
 .threads article,
 .prints article,
 .offers article {
@@ -404,7 +405,8 @@ button:disabled {
   padding: 1.15rem 1.2rem;
 }
 
-.slips .timeline-row {
+.slips .timeline-row,
+.slips .commitment-row {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
@@ -413,8 +415,14 @@ button:disabled {
   text-align: left;
 }
 
+.slips .commitment-row {
+  flex-wrap: wrap;
+}
+
 .slips .timeline-row strong,
-.slips .timeline-row small {
+.slips .timeline-row small,
+.slips .commitment-row strong,
+.slips .commitment-row small {
   margin: 0;
 }
 
@@ -859,6 +867,16 @@ label {
   min-height: 9rem;
 }
 
-.shuffle-sheet .fact-offer {
+.shuffle-sheet .fact-offer,
+.commitments-sheet .fact-offer {
   align-items: flex-start;
+}
+
+.commitments-sheet textarea {
+  min-height: 6rem;
+}
+
+.commitments-sheet h2 {
+  margin: 1.2rem 0 0.35rem;
+  font-size: 1rem;
 }

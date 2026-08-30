@@ -19,6 +19,19 @@ export const DEMO = {
     noteTitle: "Studio visit (demo)",
     noteBody: "Talked about the land-plot slip. Synthetic last-touch — not a real contact.",
   },
+  commitments: {
+    first: {
+      what: "send the park slip",
+      dueDate: "2026-09-06",
+      sourceTitle: "Coffee at the park (demo)",
+      sourceBody: "I promised to send the park slip by 2026-09-06. Synthetic — not a real contact.",
+    },
+    second: {
+      what: "return the land-plot copy",
+      sourceTitle: "Studio visit (demo)",
+      sourceBody: "I said I'd return the land-plot copy. Synthetic — not a real contact.",
+    },
+  },
   park: {
     query: "Golden Gate Park, San Francisco",
     label: "Golden Gate Park, San Francisco, California, United States (demo)",

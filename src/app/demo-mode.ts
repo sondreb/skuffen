@@ -58,6 +58,28 @@ export const DEMO_MERGE = {
   },
 } as const;
 
+/** 1–2 synthetic Ada Demo promises so ?demo=1 can show Commitments from local files. */
+export const DEMO_COMMITMENTS = {
+  person: {
+    title: "Ada Demo",
+    description: "Synthetic demo card — not a real person",
+    email: "ada.demo@example.invalid",
+  },
+  items: [
+    {
+      what: "send the park slip",
+      dueDate: "2026-09-06",
+      sourceTitle: "Coffee at the park (demo)",
+      sourceBody: "I promised to send the park slip by 2026-09-06. Synthetic — not a real contact.",
+    },
+    {
+      what: "return the land-plot copy",
+      sourceTitle: "Studio visit (demo)",
+      sourceBody: "I said I'd return the land-plot copy. Synthetic — not a real contact.",
+    },
+  ],
+} as const;
+
 /** Two synthetic cards so ?demo=1 can show a daily reconnect deck without live keys. */
 export const DEMO_SHUFFLE = {
   first: {

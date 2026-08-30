@@ -30,6 +30,8 @@ export interface Settings {
   proposals?: StoredProposal[];
   /** Sorted `slug-a|slug-b` pairs the user dismissed or kept both. */
   dismissedMerges?: string[];
+  /** OKF paths of commitments the user dropped. Not OKF. Never stores tokens. */
+  droppedCommitments?: string[];
   /** Inspectable log of what the model was told. Not OKF. Never stores tokens. */
   memoryLog?: AgentMemoryTurn[];
 }

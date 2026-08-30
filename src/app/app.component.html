@@ -66,6 +66,14 @@
           >
             Shuffle
           </button>
+          <button
+            type="button"
+            [class.on]="panel === 'commitments'"
+            (click)="openCommitments()"
+            [attr.data-demo]="demoMode ? 'commitments' : null"
+          >
+            Commitments
+          </button>
         }
 
         <button class="latch-btn" type="button" [class.on]="latchOpen" (click)="toggleLatch()">
@@ -123,6 +131,14 @@
             [attr.data-demo]="demoMode ? 'open-shuffle' : null"
           >
             Reconnect Shuffle
+          </button>
+          <button
+            type="button"
+            (click)="openCommitments()"
+            [disabled]="people.locked()"
+            [attr.data-demo]="demoMode ? 'open-commitments' : null"
+          >
+            Commitments
           </button>
           <button type="button" (click)="people.chooseFolder(); latchOpen = false" [disabled]="people.locked()">
             Bundle folder
@@ -772,6 +788,176 @@
             }
           }
         </section>
+      } @else if (panel === "commitments") {
+        <section class="sheet commitments-sheet" data-demo="commitments-panel">
+          <header class="sheet-head">
+            <div>
+              <p class="kicker">From this machine — nothing is sent</p>
+              <h1>Commitments</h1>
+            </div>
+            <button
+              class="ghost"
+              type="button"
+              (click)="closeCommitments()"
+              [attr.data-demo]="demoMode ? 'commitments-back' : null"
+            >
+              Back
+            </button>
+          </header>
+          <p class="whisper">
+            What you promised, across people, from notes and captures you already Accepted.
+            Local dates only. Never auto-sends. Never email or SMS. Mark done or drop is explicit.
+            Propose from a note or capture: check or uncheck, Accept writes. Dismiss writes nothing.
+          </p>
+          @if (notice) {
+            <p class="notice">{{ notice }}</p>
+          }
+          @if (allCommitments().length) {
+            <div class="offers" data-demo="commitments-list">
+              @for (row of allCommitments(); track row.id) {
+                <article
+                  class="fact-offer"
+                  [attr.data-commitment-path]="row.sourcePath"
+                  [attr.data-commitment-slug]="row.slug"
+                >
+                  <span>
+                    <strong>{{ row.personTitle }}</strong>
+                    <small>
+                      {{ row.what }}
+                      @if (row.dueDate) {
+                        · due {{ row.dueDate }}
+                      }
+                    </small>
+                    <p>On this machine. Nothing was sent.</p>
+                  </span>
+                  <div class="row">
+                    <button
+                      class="brass"
+                      type="button"
+                      (click)="markCommitmentDone(row)"
+                      [attr.data-demo]="demoMode ? 'commitment-done-' + row.slug : null"
+                    >
+                      Mark done
+                    </button>
+                    <button
+                      class="ghost"
+                      type="button"
+                      (click)="dropCommitment(row)"
+                      [attr.data-demo]="demoMode ? 'commitment-drop-' + row.slug : null"
+                    >
+                      Drop
+                    </button>
+                  </div>
+                </article>
+              }
+            </div>
+          } @else {
+            <p class="whisper" data-demo="commitments-empty">{{ commitmentsEmpty }}</p>
+            @if (demoMode) {
+              <button
+                class="brass"
+                type="button"
+                (click)="seedDemoCommitments()"
+                data-demo="commitments-seed"
+              >
+                Put Ada Demo commitments in
+              </button>
+            }
+          }
+          <h2>Propose from a note or capture</h2>
+          <p class="whisper">
+            Extraction stays on
+            {{ commitmentPerson()?.title || "one person" }}
+            — never the full graph. Accept is the only OKF write.
+          </p>
+          <label>
+            Capture or note
+            <textarea
+              [ngModel]="commitmentSourceNote"
+              (ngModelChange)="commitmentSourceNote = $event"
+              name="commitment-source"
+              rows="4"
+              placeholder="I promised to send the park slip by 2026-09-06."
+              [attr.data-demo]="demoMode ? 'commitment-source' : null"
+            ></textarea>
+          </label>
+          <div class="row">
+            <button
+              type="button"
+              (click)="proposeCommitmentsFromSource()"
+              [disabled]="!commitmentSourceNote.trim() || !commitmentPerson()"
+              [attr.data-demo]="demoMode ? 'commitment-propose-source' : null"
+            >
+              Propose from this note
+            </button>
+            <button
+              type="button"
+              (click)="proposeCommitmentsFromCard()"
+              [disabled]="!commitmentPerson()"
+              [attr.data-demo]="demoMode ? 'commitment-propose-notes' : null"
+            >
+              Propose from this card's notes
+            </button>
+          </div>
+          @if (commitmentProposal) {
+            <p class="whisper">Check promises. Dismiss writes nothing. Never auto-sends.</p>
+            @if (commitmentProposal.items.length) {
+              <label class="follow-line">
+                <input
+                  type="checkbox"
+                  [ngModel]="allCommitmentsChecked()"
+                  (ngModelChange)="selectAllCommitmentItems($event)"
+                />
+                Select all
+              </label>
+              <div class="offers" data-demo="commitment-proposal">
+                @for (entry of commitmentProposal.items; track entry.id) {
+                  <article class="fact-offer">
+                    <label class="follow-line">
+                      <input
+                        type="checkbox"
+                        [ngModel]="entry.checked"
+                        (ngModelChange)="toggleCommitmentItem(entry.id, $event)"
+                        [attr.data-demo]="demoMode ? 'commitment-check-' + entry.id : null"
+                      />
+                      <span>
+                        <strong>{{ entry.personTitle }}</strong>
+                        <small>
+                          {{ entry.what }}
+                          @if (entry.dueDate) {
+                            · due {{ entry.dueDate }}
+                          }
+                        </small>
+                      </span>
+                    </label>
+                  </article>
+                }
+              </div>
+            } @else {
+              <p class="whisper">No promises in that note. Dismiss writes nothing.</p>
+            }
+            <div class="row">
+              <button
+                class="brass"
+                type="button"
+                (click)="acceptCommitments()"
+                [disabled]="!commitmentHasChecked()"
+                [attr.data-demo]="demoMode ? 'commitment-accept' : null"
+              >
+                Accept — save commitments
+              </button>
+              <button
+                class="ghost"
+                type="button"
+                (click)="dismissCommitmentProposal()"
+                [attr.data-demo]="demoMode ? 'commitment-dismiss' : null"
+              >
+                Dismiss
+              </button>
+            </div>
+            <p class="whisper">Accept writes a commitment note on that card. Dismiss writes nothing. Never auto-sends.</p>
+          }
+        </section>
       } @else if (panel === "capture") {
         <section class="sheet capture-sheet" data-demo="capture-panel">
           <header class="sheet-head">
@@ -1190,6 +1376,14 @@
               </button>
               <button
                 type="button"
+                [class.on]="fact === 'commitments'"
+                (click)="openCardCommitments()"
+                [attr.data-demo]="demoMode ? 'card-commitments' : null"
+              >
+                Commitments
+              </button>
+              <button
+                type="button"
                 (click)="openBrief(person.slug)"
                 [attr.data-demo]="demoMode ? 'brief' : null"
               >
@@ -1440,7 +1634,44 @@
                   opening Timeline.
                 </p>
               </div>
+            } @else if (fact === "commitments") {
+              <div class="surface" data-commitments-surface>
+                <p class="whisper">
+                  Promises on this card. File path stays identity. Opening this list writes nothing.
+                  Mark done writes a note. Drop stores a local skip. Nothing is sent.
+                </p>
+                <div class="row">
+                  <button
+                    type="button"
+                    (click)="openCommitments(person.slug)"
+                    [attr.data-demo]="demoMode ? 'card-open-commitments' : null"
+                  >
+                    Propose from a note
+                  </button>
+                </div>
+              </div>
             }
+
+            <section class="slips" id="person-commitments" data-commitments>
+              <h2>Commitments</h2>
+              @for (row of selectedCommitments(); track row.id) {
+                <article
+                  class="commitment-row"
+                  [attr.data-commitment-path]="row.sourcePath"
+                  [attr.data-okf-path]="row.sourcePath"
+                >
+                  <strong>{{ row.what }}</strong>
+                  <small>{{ row.dueDate || "no due date" }}</small>
+                  <div class="row">
+                    <button class="brass" type="button" (click)="markCommitmentDone(row)">Mark done</button>
+                    <button class="ghost" type="button" (click)="dropCommitment(row)">Drop</button>
+                  </div>
+                </article>
+              }
+              @if (!selectedCommitments().length) {
+                <p class="whisper">{{ commitmentsEmpty }}</p>
+              }
+            </section>
 
             <section class="slips" id="person-timeline" data-timeline>
               <h2>Timeline</h2>
