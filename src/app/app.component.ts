@@ -1397,6 +1397,7 @@ export class AppComponent implements OnInit, OnDestroy {
           stored.bytes,
           write.title,
           generatedBy,
+          { asProfileIfEmpty: true },
         );
       } else if (write.type === "social") {
         await this.people.addSocial(write.slug, write.network, write.url, write.handle, generatedBy);

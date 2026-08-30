@@ -7,6 +7,7 @@ import {
   buildNameResearchPrompt,
   buildResearchPrompt,
   WEBSITE_CONTACT_INSTRUCTION,
+  WEBSITE_PHOTO_INSTRUCTION,
   checkedSuggestions,
   deleteProposedFact,
   dismissNameProposal,
@@ -103,7 +104,11 @@ test("research prompt asks for website email and phone as field facts", () => {
     }),
   );
   assert.equal(prompt.includes(WEBSITE_CONTACT_INSTRUCTION), true);
+  assert.equal(prompt.includes(WEBSITE_PHOTO_INSTRUCTION), true);
   assert.match(prompt, /kind field, field email or phone/);
+  assert.match(prompt, /kind photo/);
+  assert.match(prompt, /og:image/);
+  assert.match(prompt, /Do not invent a face/);
   assert.match(prompt, /Do not invent contact details that are not on the page/);
   assert.match(prompt, /Existing email: \(none\)/);
   assert.match(prompt, /Existing phone: \(none\)/);
@@ -312,6 +317,9 @@ test("name research prompt includes only the typed name and never the graph", ()
   assert.match(prompt, /If search finds a personal or main website/);
   assert.match(prompt, /Do not invent contact details that are not published on a public page/);
   assert.equal(prompt.includes(WEBSITE_CONTACT_INSTRUCTION), true);
+  assert.equal(prompt.includes(WEBSITE_PHOTO_INSTRUCTION), true);
+  assert.match(prompt, /og:image/);
+  assert.match(prompt, /Do not invent a face/);
   assert.doesNotMatch(prompt, /Existing notes|Existing social|Given name:|Family name:|Description:/);
   assert.doesNotMatch(prompt, /Bob Example|reconnect shuffle|meeting brief/i);
   assert.doesNotMatch(prompt, /people\//);

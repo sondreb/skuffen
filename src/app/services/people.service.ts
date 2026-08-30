@@ -325,6 +325,7 @@ export class PeopleService {
     bytes: Uint8Array,
     title?: string,
     generatedBy?: string,
+    options?: { asProfileIfEmpty?: boolean },
   ): Promise<void> {
     const safe = await this.uniquePhotoFileName(slug, sanitizeFileName(fileName));
     const dest = photoFilePath(slug, safe);
@@ -334,9 +335,27 @@ export class PeopleService {
       doc.frontmatter.verified = { by: "human:user", at: new Date().toISOString().replace(/\.\d{3}Z$/, "Z") };
     }
     await this.writeDoc(doc);
+    const resource = `/${dest}`;
+    if (options?.asProfileIfEmpty) {
+      await this.setProfileIfEmpty(slug, resource);
+    }
     await this.log("Creation", `Added photo [${safe}](/${doc.path}).`);
     await this.reload();
     await this.select(slug);
+  }
+
+  /** First accepted photo becomes the list profile when the card has none. */
+  private async setProfileIfEmpty(slug: string, resource: string): Promise<void> {
+    const path = personPath(slug);
+    const raw = await this.io.readText(this.bundleRoot(), path);
+    if (!raw) return;
+    const doc = parseDocument(path, raw);
+    if (personImageResource(doc.frontmatter.image)) return;
+    const local = personImageResource(resource);
+    if (!local) return;
+    doc.frontmatter.image = local;
+    await this.writeDoc(doc);
+    await this.log("Update", `Set profile image [${local}].`);
   }
 
   async readPhotoBytes(resource?: string): Promise<Uint8Array | null> {

@@ -1743,7 +1743,18 @@
                                 · {{ item.field }}
                               }
                             </small>
-                            <p>{{ suggestionLabel(item) }}</p>
+                            @if (photoPreviewUrl(item); as preview) {
+                              <img
+                                class="fact-photo"
+                                data-photo-preview
+                                [src]="preview"
+                                [alt]="item.title"
+                                referrerpolicy="no-referrer"
+                                loading="lazy"
+                              />
+                            } @else {
+                              <p>{{ suggestionLabel(item) }}</p>
+                            }
                           </span>
                         </label>
                         <button class="ghost" type="button" (click)="reject(item)">Delete</button>

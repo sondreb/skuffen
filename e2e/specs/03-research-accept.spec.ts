@@ -18,6 +18,10 @@ test("Grok research proposes, user Accepts", async ({ demoPage: page }) => {
   await expect(offers.getByText("+1 555 0100")).toBeVisible();
   await expect(offers.getByText("field · email")).toBeVisible();
   await expect(offers.getByText("field · phone")).toBeVisible();
+  await expect(offers.getByText("Public portrait (demo)")).toBeVisible();
+  const preview = offers.locator("[data-photo-preview]");
+  await expect(preview).toBeVisible();
+  await expect(preview).toHaveAttribute("src", /\/assets\/skuffen-icon\.png$/);
   await page.locator("[data-demo='accept']").scrollIntoViewIfNeeded();
 
   await showDemoLabel(page, "Accept to save — nothing is written before this");
@@ -30,6 +34,9 @@ test("Grok research proposes, user Accepts", async ({ demoPage: page }) => {
   await expect(page.getByRole("heading", { name: "Public park mention (demo)" })).toBeVisible();
   await expect(page.getByText(/Synthetic Grok proposal for Ada Demo/)).toBeVisible();
   await expect(page.getByText("+1 555 0100")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Public portrait (demo)" })).toBeVisible();
+  await expect(page.getByText("No photos yet.")).toHaveCount(0);
+  await expect(page.locator("[data-photos] [data-photo-profile]")).toBeVisible();
   await expect(page.locator("[data-demo='accept']")).toHaveCount(0);
   await hold(page);
 });
