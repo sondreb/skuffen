@@ -38,7 +38,7 @@ Short walkthroughs of the same mock UI. Voice-over may be missing. These are lab
 
 - Desktop: [Tauri](https://tauri.app) 2 (latest stable), app identifier `me.grok.skuffen`
 - UI: [Angular](https://angular.dev) 22 standalone components, TypeScript
-- Rust only in the Tauri shell (filesystem, OS keyring, Grok OAuth loopback)
+- Rust only in the Tauri shell (filesystem, OS keyring, Grok OAuth device flow)
 - Gemini via [`@google/genai`](https://github.com/googleapis/js-genai) — Grok is never routed through that SDK
 - Package manager: **npm** (`packageManager` in `package.json`)
 
@@ -59,13 +59,14 @@ npm start
 
 The browser preview **cannot encrypt the people-graph honestly** — there is no OS keychain in `npm start`. The graph stays in a localStorage stand-in (plaintext). Use `npm run tauri dev` for OS-backed encryption. Grok/Gemini API keys and OAuth tokens still stay in memory for the current tab only. They are never written to `localStorage`, `sessionStorage`, or any other durable browser storage, and they vanish on reload.
 
-OKF / vault / MCP / browser-secret / research-follow checks:
+OKF / vault / MCP / browser-secret / OAuth / research-follow checks:
 
 ```bash
 npm run test:okf
 npm run test:vault
 npm run test:mcp
 npm run test:secrets
+npm run test:oauth
 npm run test:research
 npm run test:version
 ```
@@ -137,7 +138,7 @@ Unlock uses your OS login session (the keychain). There is no Skuffen password, 
 
 ## Providers
 
-- **Grok**: OIDC at `https://auth.x.ai` (PKCE, loopback `http://127.0.0.1:56121/callback`) plus an API-key fallback. Calls `https://api.x.ai/v1`.
+- **Grok**: RFC 8628 device authorization at `https://auth.x.ai` (public Grok CLI client, OS keychain `me.grok.skuffen` / `grok_oauth`) plus an API-key fallback for `console.x.ai` developer keys. Calls `https://api.x.ai/v1`. The access token is never shown in the UI.
 - **Gemini**: API key + `@google/genai`.
 - If both are connected, pick one in the UI. Default is Grok.
 - Prompts include only the person you asked about — never the full graph.

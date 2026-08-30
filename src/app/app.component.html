@@ -123,24 +123,34 @@
           <div class="split">
             <article class="plate">
               <h2>Grok</h2>
-              <p>
-                @if (providers.status().grokOauth) {
-                  Signed in
-                } @else if (providers.status().grokApiKey) {
-                  API key saved
-                } @else {
-                  Not connected
-                }
-              </p>
-              @if (desktop) {
-                <button class="brass" type="button" (click)="providers.signInGrok()">Sign in with Grok</button>
-              } @else {
-                <p class="whisper">OAuth needs the desktop shell.</p>
+              <p>{{ grokLabel() }}</p>
+              @if (providers.devicePending(); as pending) {
+                <div class="device-pending">
+                  <p class="whisper">Enter this code in the browser, then return here.</p>
+                  <p class="user-code">{{ pending.userCode }}</p>
+                  <p class="whisper">Waiting for Grok approval…</p>
+                </div>
               }
-              <label>API key fallback <input [(ngModel)]="grokKey" type="password" placeholder="xai-..." /></label>
+              @if (desktop) {
+                @if (!providers.status().grokOauth) {
+                  <button
+                    class="brass"
+                    type="button"
+                    (click)="providers.signInGrok()"
+                    [disabled]="providers.signingIn()"
+                  >
+                    {{ providers.signingIn() ? "Waiting for Grok…" : "Sign in with Grok" }}
+                  </button>
+                }
+              } @else {
+                <p class="whisper">OAuth needs the desktop shell. Paste a console.x.ai key below.</p>
+              }
+              <label>API key fallback <input [(ngModel)]="grokKey" type="password" placeholder="xai-..." autocomplete="off" /></label>
               <div class="row">
                 <button type="button" (click)="saveGrokKey()">Save Grok key</button>
-                <button type="button" class="ghost" (click)="providers.clearGrok()">Forget</button>
+                <button type="button" class="ghost" (click)="providers.clearGrok()">
+                  {{ providers.status().grokOauth ? "Sign out" : "Forget" }}
+                </button>
               </div>
             </article>
             <article class="plate">

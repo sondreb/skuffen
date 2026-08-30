@@ -195,8 +195,13 @@ fn secret_delete(app: tauri::AppHandle, key: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn grok_oauth_login(app: tauri::AppHandle) -> Result<oauth::OAuthStatus, String> {
-    oauth::login(&app)
+fn grok_oauth_begin(app: tauri::AppHandle) -> Result<oauth::DevicePending, String> {
+    oauth::begin(&app)
+}
+
+#[tauri::command]
+fn grok_oauth_wait(app: tauri::AppHandle) -> Result<oauth::OAuthStatus, String> {
+    oauth::wait(&app)
 }
 
 #[tauri::command]
@@ -237,7 +242,8 @@ pub fn run() {
             secret_get,
             secret_set,
             secret_delete,
-            grok_oauth_login,
+            grok_oauth_begin,
+            grok_oauth_wait,
             grok_oauth_status,
             grok_oauth_logout
         ])
