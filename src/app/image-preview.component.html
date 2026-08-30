@@ -28,6 +28,7 @@
     <div
       #stage
       class="preview-stage"
+      data-image-preview-stage
       (dblclick)="onDblClick($event)"
       (pointerdown)="onPointerDown($event)"
       (pointermove)="onPointerMove($event)"
@@ -36,6 +37,9 @@
     >
       <img
         data-image-preview-photo
+        [attr.data-preview-scale]="transform.scale"
+        [attr.data-preview-x]="transform.x"
+        [attr.data-preview-y]="transform.y"
         [src]="photo"
         alt=""
         draggable="false"
