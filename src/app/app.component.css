@@ -411,6 +411,12 @@ button:disabled {
   animation: rise 180ms ease both;
 }
 
+.card-form {
+  position: relative;
+  z-index: 1;
+  display: block;
+}
+
 .file-nav {
   margin-bottom: 0.75rem;
 }

@@ -1,4 +1,5 @@
 import {
+  ChangeDetectorRef,
   Component,
   computed,
   ElementRef,
@@ -171,6 +172,7 @@ export class AppComponent implements OnInit, OnDestroy {
   readonly follow = inject(FollowService);
   readonly self = inject(SelfService);
   private readonly io = inject(IoService);
+  private readonly cdr = inject(ChangeDetectorRef);
   readonly updates = inject(UpdateService);
   readonly updateWhisper = UPDATE_WHISPER;
   private readonly findInput = viewChild<ElementRef<HTMLInputElement>>("findInput");
@@ -180,7 +182,14 @@ export class AppComponent implements OnInit, OnDestroy {
   private readonly nameField = viewChild<ElementRef<HTMLInputElement>>("nameField");
 
   readonly query = signal("");
-  panel: Panel = "none";
+  /** Signal-backed so `@if (panel === "create")` and `browsing` stay in sync after Add person. */
+  private readonly panelState = signal<Panel>("none");
+  get panel(): Panel {
+    return this.panelState();
+  }
+  set panel(value: Panel) {
+    this.panelState.set(value);
+  }
   fact: FactSurface = "none";
   menuOpen = false;
   showMore = false;
@@ -241,7 +250,12 @@ export class AppComponent implements OnInit, OnDestroy {
 
   readonly empty = computed(() => this.people.ready() && !this.people.locked() && this.people.people().length === 0);
   readonly browsing = computed(
-    () => this.people.ready() && !this.people.locked() && this.panel === "none" && !this.people.selected() && this.people.people().length > 0,
+    () =>
+      this.people.ready() &&
+      !this.people.locked() &&
+      this.panelState() === "none" &&
+      !this.people.selected() &&
+      this.people.people().length > 0,
   );
   readonly activeProvider = computed(() => this.providers.activeProvider());
   readonly bothProviders = computed(() => this.providers.availableProviders().length === 2);
@@ -498,12 +512,21 @@ export class AppComponent implements OnInit, OnDestroy {
   startCreate(): void {
     this.draft = blankDraft();
     this.showMore = false;
+    this.notice = null;
+    this.actionError = null;
     this.panel = "create";
     this.menuOpen = false;
     this.fact = "none";
     this.nameProposal = null;
     this.people.selected.set(null);
     this.resetLocationDraft(null);
+    this.cdr.detectChanges();
+    const name = this.nameField()?.nativeElement;
+    if (name) {
+      name.focus();
+      name.scrollIntoView({ block: "nearest" });
+      return;
+    }
     this.focusSoon(() => this.nameField()?.nativeElement);
   }
 
@@ -525,14 +548,19 @@ export class AppComponent implements OnInit, OnDestroy {
 
   async saveDraft(): Promise<void> {
     if (!this.draft.title.trim()) return;
-    if (this.panel === "create") {
-      await this.people.createPerson({ ...this.draft });
-    } else if (this.panel === "edit" && this.people.selected()) {
-      await this.people.updatePerson(this.people.selected()!.slug, { ...this.draft });
+    this.actionError = null;
+    try {
+      if (this.panel === "create") {
+        await this.people.createPerson({ ...this.draft });
+      } else if (this.panel === "edit" && this.people.selected()) {
+        await this.people.updatePerson(this.people.selected()!.slug, { ...this.draft });
+      }
+      this.panel = "none";
+      this.fact = "none";
+      this.offerMergeIfNeeded(true);
+    } catch (err) {
+      this.actionError = err instanceof Error ? err.message : "Could not save this person.";
     }
-    this.panel = "none";
-    this.fact = "none";
-    this.offerMergeIfNeeded(true);
   }
 
   setFact(next: FactSurface): void {
