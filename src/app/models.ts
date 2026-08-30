@@ -34,6 +34,11 @@ export interface Settings {
   droppedCommitments?: string[];
   /** Inspectable log of what the model was told. Not OKF. Never stores tokens. */
   memoryLog?: AgentMemoryTurn[];
+  /**
+   * Local owner of this app copy. Person slug, not a Skuffen account.
+   * Desktop source of truth is OS-backed settings.json — never localStorage, never tokens.
+   */
+  selfSlug?: string | null;
 }
 
 export interface AgentMemoryTurn {

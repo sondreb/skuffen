@@ -412,6 +412,11 @@ button:disabled {
   transform: translateY(-2px);
 }
 
+.person-card.is-self {
+  border-color: var(--brass);
+  box-shadow: inset 0 1px 0 rgba(232, 201, 122, 0.22), 0 0 0 1px rgba(198, 161, 91, 0.35);
+}
+
 .ghost-card {
   border-style: dashed;
   background: transparent;
@@ -478,6 +483,10 @@ button:disabled {
   border-color: var(--teal);
 }
 
+.dot.self {
+  box-shadow: 0 0 0 2px rgba(198, 161, 91, 0.55);
+}
+
 .card,
 .sheet,
 .plate,
@@ -524,6 +533,24 @@ button:disabled {
   justify-content: space-between;
   gap: 1rem;
   align-items: flex-start;
+}
+
+.nameplate-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  align-items: stretch;
+}
+
+.self-line {
+  margin: 0.2rem 0 0;
+  color: var(--brass-bright);
+  font-size: 0.86rem;
+}
+
+.self-toggle.on {
+  border-color: var(--brass);
+  color: var(--brass-bright);
 }
 
 .kicker {

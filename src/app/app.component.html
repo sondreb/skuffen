@@ -168,6 +168,9 @@
             Commitments
           </button>
           <p class="latch-kicker">Drawer</p>
+          @if (self.owner(); as you) {
+            <p class="whisper" data-self-owner>You · {{ you.title }}</p>
+          }
           <button type="button" (click)="openProviders()">Providers</button>
           <button type="button" (click)="people.chooseFolder(); latchOpen = false" [disabled]="people.locked()">
             Bundle folder
@@ -1340,8 +1343,9 @@
                 type="button"
                 class="dot"
                 [class.on]="item.slug === person.slug"
+                [class.self]="self.isSelf(item.slug)"
                 (click)="open(item)"
-                [attr.title]="item.title"
+                [attr.title]="self.isSelf(item.slug) ? item.title + ' (this is me)' : item.title"
               >
                 {{ initials(item.title) }}
               </button>
@@ -1369,6 +1373,9 @@
               <div>
                 <p class="kicker">{{ person.path }}</p>
                 <h1>{{ person.title }}</h1>
+                @if (self.isSelf(person.slug)) {
+                  <p class="self-line" data-self-badge>This is me · this local copy</p>
+                }
                 @if (person.description) {
                   <p class="lede">{{ person.description }}</p>
                 }
@@ -1391,7 +1398,19 @@
                   }
                 </p>
               </div>
-              <button type="button" (click)="startEdit()">Edit</button>
+              <div class="nameplate-actions">
+                <button type="button" (click)="startEdit()">Edit</button>
+                <button
+                  type="button"
+                  class="self-toggle"
+                  [class.on]="self.isSelf(person.slug)"
+                  [attr.aria-pressed]="self.isSelf(person.slug)"
+                  (click)="toggleSelf(person.slug)"
+                  data-self-toggle
+                >
+                  {{ self.isSelf(person.slug) ? "Not me" : "This is me" }}
+                </button>
+              </div>
             </header>
 
             @if (hasAbout(person)) {
@@ -1876,6 +1895,8 @@
             <button
               type="button"
               class="person-card"
+              [class.is-self]="self.isSelf(person.slug)"
+              [attr.data-self-card]="self.isSelf(person.slug) ? person.slug : null"
               (click)="open(person)"
               (dragover)="onCardDragOver($event)"
               (drop)="onDropOnPerson($event, person)"
@@ -1884,6 +1905,9 @@
               <b>{{ person.title }}</b>
               <small>
                 {{ person.description || "A card in the drawer" }}
+                @if (self.isSelf(person.slug)) {
+                  · This is me
+                }
                 @if (follow.followFor(person.slug)) {
                   · Followed
                 }

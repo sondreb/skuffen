@@ -88,6 +88,7 @@ npm run test:mcp
 npm run test:secrets
 npm run test:oauth
 npm run test:research
+npm run test:self
 npm run test:merge
 npm run test:brief
 npm run test:capture
