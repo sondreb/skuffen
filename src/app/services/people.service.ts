@@ -18,6 +18,7 @@ import {
   personPath,
   photoFilePath,
   placePath,
+  sanitizeFileName,
   serializeBundleIndex,
   serializeDocument,
   serializePeopleIndex,
@@ -138,9 +139,11 @@ export class PeopleService {
     email?: string;
     phone?: string;
     body?: string;
+    generatedBy?: string;
   }): Promise<PersonView> {
     const slug = await this.uniqueSlug(slugify(input.title));
-    const doc = createPersonDocument({ slug, ...input });
+    const { generatedBy, ...fields } = input;
+    const doc = createPersonDocument({ slug, ...fields, generatedBy });
     await this.writeDoc(doc);
     await this.log("Creation", `Added [${doc.frontmatter.title}](/${doc.path}).`);
     await this.reload();
@@ -251,6 +254,46 @@ export class PeopleService {
     await this.log("Creation", `Added photo [${fileName}](/${doc.path}).`);
     await this.reload();
     await this.select(slug);
+  }
+
+  async addPhotoBytes(
+    slug: string,
+    fileName: string,
+    bytes: Uint8Array,
+    title?: string,
+    generatedBy?: string,
+  ): Promise<void> {
+    const safe = await this.uniquePhotoFileName(slug, sanitizeFileName(fileName));
+    const dest = photoFilePath(slug, safe);
+    await this.io.writeBytes(this.bundleRoot(), dest, bytes);
+    const doc = createPhotoDocument({ slug, fileName: safe, title, generatedBy });
+    if (generatedBy) {
+      doc.frontmatter.verified = { by: "human:user", at: new Date().toISOString().replace(/\.\d{3}Z$/, "Z") };
+    }
+    await this.writeDoc(doc);
+    await this.log("Creation", `Added photo [${safe}](/${doc.path}).`);
+    await this.reload();
+    await this.select(slug);
+  }
+
+  async removeSocial(slug: string, path: string): Promise<void> {
+    await this.io.deleteFile(this.bundleRoot(), path);
+    await this.log("Update", `Removed social profile [/${path}].`);
+    await this.reload();
+    await this.select(slug);
+  }
+
+  async removePhoto(slug: string, photo: { path: string; resource?: string }): Promise<void> {
+    await this.io.deleteFile(this.bundleRoot(), photo.path);
+    const file = photo.resource?.replace(/^\//, "");
+    if (file) await this.io.deleteFile(this.bundleRoot(), file);
+    await this.log("Update", `Removed photo [/${photo.path}].`);
+    await this.reload();
+    await this.select(slug);
+  }
+
+  async clearContactField(slug: string, field: "email" | "phone"): Promise<void> {
+    await this.updatePerson(slug, { [field]: "" });
   }
 
   async addDocument(
@@ -397,6 +440,20 @@ export class PeopleService {
       if (!taken.has(candidate)) return candidate;
     }
     return `${base}-${Date.now()}`;
+  }
+
+  private async uniquePhotoFileName(slug: string, fileName: string): Promise<string> {
+    const files = await this.io.listFiles(this.bundleRoot(), `people/${slug}/photos/`);
+    const dest = photoFilePath(slug, fileName);
+    if (!files.includes(dest)) return fileName;
+    const dot = fileName.lastIndexOf(".");
+    const stem = dot > 0 ? fileName.slice(0, dot) : fileName;
+    const ext = dot > 0 ? fileName.slice(dot) : "";
+    for (let i = 2; i < 1000; i++) {
+      const candidate = `${stem}-${i}${ext}`;
+      if (!files.includes(photoFilePath(slug, candidate))) return candidate;
+    }
+    return `${stem}-${Date.now()}${ext}`;
   }
 
   private async uniqueSlug(base: string): Promise<string> {

@@ -77,17 +77,30 @@ export interface PersonLocation {
   source?: string;
 }
 
+export type PersonField = "title" | "description" | "body" | "email" | "phone" | "givenName" | "familyName";
+
 export interface FactSuggestion {
   id: string;
   source?: SuggestionSource;
-  kind: "note" | "social" | "field";
+  kind: "note" | "social" | "field" | "photo";
   title: string;
   body?: string;
   network?: string;
   url?: string;
   handle?: string;
-  field?: "description" | "body";
+  field?: PersonField;
   value?: string;
+}
+
+export interface ProposedFact {
+  id: string;
+  checked: boolean;
+  suggestion: FactSuggestion;
+}
+
+export interface NameResearchProposal {
+  query: string;
+  facts: ProposedFact[];
 }
 
 export interface ProviderStatus {

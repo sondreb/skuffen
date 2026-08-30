@@ -115,6 +115,11 @@ export class IoService {
     const files = this.webFiles();
     delete files[path];
     this.setWebFiles(files);
+    const blobs = this.webBlobs();
+    if (path in blobs) {
+      delete blobs[path];
+      this.setWebBlobs(blobs);
+    }
   }
 
   async copyFileIntoBundle(root: string, source: string, dest: string): Promise<void> {
@@ -149,6 +154,14 @@ export class IoService {
     if (blob) return base64ToBytes(blob);
     const text = this.webFiles()[path];
     return text === undefined ? null : new TextEncoder().encode(text);
+  }
+
+  async fetchPublicBytes(url: string): Promise<Uint8Array | null> {
+    if (isTauri()) {
+      const raw = await this.invoke<number[] | null>("fetch_public_bytes", { url });
+      return raw ? Uint8Array.from(raw) : null;
+    }
+    return fetchPublicPhotoBytes(url);
   }
 
   async secretGet(key: string): Promise<string | null> {
@@ -250,6 +263,24 @@ export class IoService {
 
   private setWebBlobs(blobs: Record<string, string>): void {
     localStorage.setItem(BLOBS_KEY, JSON.stringify(blobs));
+  }
+}
+
+async function fetchPublicPhotoBytes(url: string): Promise<Uint8Array | null> {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return null;
+    const response = await fetch(url, { redirect: "follow", credentials: "omit" });
+    if (!response.ok) return null;
+    const type = response.headers.get("content-type") ?? "";
+    if (type && !type.startsWith("image/") && !type.startsWith("application/octet-stream")) {
+      return null;
+    }
+    const buffer = await response.arrayBuffer();
+    if (buffer.byteLength === 0 || buffer.byteLength > 8 * 1024 * 1024) return null;
+    return new Uint8Array(buffer);
+  } catch {
+    return null;
   }
 }
 

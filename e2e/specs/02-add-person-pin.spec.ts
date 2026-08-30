@@ -14,7 +14,7 @@ test("add a person and pin a place on the map", async ({ demoPage: page }) => {
   await page.locator("[data-demo='pin']").click();
   await page.locator('input[name="person-address"]').scrollIntoViewIfNeeded();
   await page.locator('input[name="person-address"]').fill(DEMO.park.query);
-  await page.getByRole("button", { name: "Search" }).click();
+  await page.getByRole("button", { name: "Search", exact: true }).click();
   await page.getByRole("button", { name: DEMO.park.label }).click();
   await expect(page.locator("[data-demo='save-pin']")).toBeEnabled();
   await page.locator("[data-demo='save-pin']").click();

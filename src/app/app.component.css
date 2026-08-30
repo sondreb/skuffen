@@ -102,6 +102,14 @@ small {
   color: var(--mute);
 }
 
+.find-row {
+  flex: 1;
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+  min-width: 14rem;
+}
+
 .find {
   flex: 1;
   margin: 0;
@@ -165,6 +173,20 @@ button:disabled {
   border: 1px solid var(--brass);
   border-radius: 12px;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+}
+
+.latch-sheet header {
+  margin: 0 0 0.2rem;
+}
+
+.latch-sheet header strong,
+.latch-sheet header span {
+  display: block;
+}
+
+.latch-sheet header span {
+  color: var(--mute);
+  font-size: 0.85rem;
 }
 
 .latch-sheet .whisper {
@@ -446,6 +468,42 @@ button:disabled {
   margin-top: 0.7rem;
 }
 
+.fact-offer {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.65rem;
+  align-items: start;
+}
+
+.fact-offer .follow-line {
+  margin: 0;
+  align-items: flex-start;
+}
+
+.fact-offer .follow-line span {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.fact-offer small,
+.fact-offer p {
+  display: block;
+  margin: 0;
+}
+
+.chip-x {
+  border: 0;
+  background: transparent;
+  padding: 0 0.15rem;
+  color: var(--mute);
+  width: auto;
+  min-width: 0;
+}
+
+.propose-sheet .offers {
+  margin-bottom: 0.85rem;
+}
+
 .slips,
 .threads,
 .prints {
@@ -527,10 +585,15 @@ label {
     grid-template-columns: 1fr 1fr;
   }
 
+  .find-row,
   .find,
   .latch-btn,
   .brass {
     width: 100%;
+  }
+
+  .find-row {
+    flex-wrap: wrap;
   }
 
   .latch-btn {

@@ -22,11 +22,28 @@
           </div>
         </div>
 
+        @if (!people.locked()) {
+          <div class="find-row">
+            <label class="find">
+              <span class="sr">Find someone</span>
+              <input
+                [ngModel]="query()"
+                (ngModelChange)="query.set($event)"
+                (keyup.enter)="onFindEnter()"
+                placeholder="Find someone"
+              />
+            </label>
+            <button
+              class="brass"
+              type="button"
+              (click)="researchName()"
+              [disabled]="!query().trim() || providers.busy()"
+            >
+              {{ providers.busy() && panel === "propose" ? "Searching…" : "Research" }}
+            </button>
+          </div>
+        }
         @if (!people.locked() && !empty()) {
-          <label class="find">
-            <span class="sr">Find someone</span>
-            <input [ngModel]="query()" (ngModelChange)="query.set($event)" placeholder="Find someone" />
-          </label>
           <button class="brass" type="button" (click)="startCreate()" [attr.data-demo]="demoMode ? 'put-someone-in' : null">
             Put someone in
           </button>
@@ -41,6 +58,10 @@
       @if (latchOpen) {
         <button class="scrim" type="button" (click)="latchOpen = false" aria-label="Close latch"></button>
         <aside class="latch-sheet">
+          <header>
+            <strong>Latch</strong>
+            <span>Providers & settings</span>
+          </header>
           <button type="button" (click)="openProviders()">Providers</button>
           <button type="button" (click)="people.chooseFolder(); latchOpen = false" [disabled]="people.locked()">
             Bundle folder
@@ -285,10 +306,87 @@
             <button class="ghost" type="button" (click)="panel = 'none'">Cancel</button>
           </div>
         </section>
+      } @else if (panel === "propose") {
+        <section class="sheet propose-sheet">
+          <header class="sheet-head">
+            <div>
+              <p class="kicker">Proposed card — not in the drawer yet</p>
+              <h1>{{ nameProposal?.query || query() }}</h1>
+            </div>
+            <button class="ghost" type="button" (click)="dismissProposal()">Dismiss</button>
+          </header>
+          <p class="whisper">
+            Public facts only. Check what belongs, delete what is wrong, then Accept selected.
+            Nothing is written until you accept.
+          </p>
+          @if (notice) {
+            <p class="notice">{{ notice }}</p>
+          }
+          @if (providers.error()) {
+            <p class="error">{{ providers.error() }}</p>
+          }
+          @if (providers.busy() && !nameProposal) {
+            <p class="whisper">Searching public sources…</p>
+          } @else if (nameProposal) {
+            <label class="follow-line">
+              <input
+                type="checkbox"
+                [ngModel]="allProposalChecked()"
+                (ngModelChange)="selectAllProposalFacts($event)"
+              />
+              Select all
+            </label>
+            <div class="offers">
+              @for (fact of nameProposal.facts; track fact.id) {
+                <article class="fact-offer">
+                  <label class="follow-line">
+                    <input
+                      type="checkbox"
+                      [ngModel]="fact.checked"
+                      (ngModelChange)="toggleProposalFact(fact.id, $event)"
+                    />
+                    <span>
+                      <strong>{{ fact.suggestion.title }}</strong>
+                      <small>
+                        {{ fact.suggestion.kind }}
+                        @if (fact.suggestion.field) {
+                          · {{ fact.suggestion.field }}
+                        }
+                      </small>
+                      <p>{{ suggestionLabel(fact.suggestion) }}</p>
+                    </span>
+                  </label>
+                  <button class="ghost" type="button" (click)="deleteProposalFact(fact.id)">Delete</button>
+                </article>
+              }
+            </div>
+            @if (nameProposal.facts.length === 0) {
+              <p class="whisper">Every proposed fact was deleted. Dismiss writes nothing.</p>
+            }
+            <div class="row">
+              <button
+                class="brass"
+                type="button"
+                (click)="acceptNameProposal()"
+                [disabled]="!proposalHasChecked() || providers.busy()"
+              >
+                Accept selected
+              </button>
+              <button class="ghost" type="button" (click)="dismissProposal()">Reject</button>
+            </div>
+          }
+        </section>
       } @else if (empty()) {
         <section class="invite">
           <img src="assets/skuffen-icon.png" alt="Open wooden drawer" />
           <h1>The drawer is empty</h1>
+          <p class="lede">
+            Type a name above and press Enter or Research. Or put someone in yourself.
+          </p>
+          @if (notice) {
+            <p class="notice">{{ notice }}</p>
+          }
+          <p class="whisper">Need Grok or Gemini? Open Latch for Providers & settings. Ctrl+, also opens Latch.</p>
           <button class="brass" type="button" (click)="startCreate()" [attr.data-demo]="demoMode ? 'put-someone-in' : null">
             Put someone in
           </button>
@@ -320,10 +418,20 @@
                 }
                 <p class="chips">
                   @if (person.email) {
-                    <span>{{ person.email }}</span>
+                    <span>
+                      {{ person.email }}
+                      <button class="chip-x" type="button" (click)="clearContact('email')" aria-label="Remove email">
+                        ×
+                      </button>
+                    </span>
                   }
                   @if (person.phone) {
-                    <span>{{ person.phone }}</span>
+                    <span>
+                      {{ person.phone }}
+                      <button class="chip-x" type="button" (click)="clearContact('phone')" aria-label="Remove phone">
+                        ×
+                      </button>
+                    </span>
                   }
                 </p>
               </div>
@@ -524,20 +632,43 @@
                 }
                 @if (visibleSuggestions().length) {
                   <p class="whisper">Nothing is written until you accept.</p>
+                  <label class="follow-line">
+                    <input
+                      type="checkbox"
+                      [ngModel]="allVisibleSuggestionsChecked()"
+                      (ngModelChange)="selectAllVisibleSuggestions($event)"
+                    />
+                    Select all
+                  </label>
                   <div class="offers">
                     @for (item of visibleSuggestions(); track item.id) {
-                      <article>
-                        <strong>{{ item.title }}</strong>
-                        <small>{{ item.source || "ask" }} · {{ item.kind }}</small>
-                        <p>{{ item.body || item.value || item.url }}</p>
-                        <div class="row">
-                          <button class="brass" type="button" (click)="accept(item)" [attr.data-demo]="demoMode ? 'accept' : null">
-                            Accept
-                          </button>
-                          <button class="ghost" type="button" (click)="reject(item)">Reject</button>
-                        </div>
+                      <article class="fact-offer">
+                        <label class="follow-line">
+                          <input
+                            type="checkbox"
+                            [ngModel]="checkedSuggestionIds.has(item.id)"
+                            (ngModelChange)="toggleSuggestionCheck(item.id, $event)"
+                          />
+                          <span>
+                            <strong>{{ item.title }}</strong>
+                            <small>{{ item.source || "ask" }} · {{ item.kind }}</small>
+                            <p>{{ suggestionLabel(item) }}</p>
+                          </span>
+                        </label>
+                        <button class="ghost" type="button" (click)="reject(item)">Delete</button>
                       </article>
                     }
+                  </div>
+                  <div class="row">
+                    <button
+                      class="brass"
+                      type="button"
+                      (click)="acceptCheckedSuggestions()"
+                      [disabled]="!hasCheckedSuggestions()"
+                      [attr.data-demo]="demoMode ? 'accept' : null"
+                    >
+                      Accept selected
+                    </button>
                   </div>
                 }
               </div>
@@ -564,6 +695,7 @@
                   @if (item.url) {
                     <a [href]="item.url" target="_blank" rel="noreferrer">{{ item.url }}</a>
                   }
+                  <button class="ghost" type="button" (click)="removeSocial(item.path)">Delete</button>
                 </article>
               }
               @if (addingSocial) {
@@ -588,6 +720,7 @@
                   <article>
                     <h3>{{ photo.title }}</h3>
                     <code>{{ photo.resource }}</code>
+                    <button class="ghost" type="button" (click)="removePhoto(photo)">Delete</button>
                   </article>
                 }
               </section>
@@ -629,8 +762,13 @@
         </section>
       } @else if (browsing()) {
         <section class="tray" aria-label="People in the drawer">
+          @if (notice) {
+            <p class="notice invite-line">{{ notice }}</p>
+          }
           @if (query().trim() && filtered().length === 0) {
-            <p class="invite-line">No one by that name.</p>
+            <p class="invite-line">
+              No one by that name. Press Enter or Research to propose a card from public sources.
+            </p>
           }
           @for (person of filtered(); track person.slug) {
             <button
