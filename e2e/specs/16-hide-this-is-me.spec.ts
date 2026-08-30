@@ -35,9 +35,7 @@ test("This is me hides after mark and returns after self is cleared", async ({ d
   await page.locator("[data-delete-confirm-write]").click();
   expect(await settingsSelfSlug(page)).toBeNull();
 
-  await page.getByRole("button", { name: "People" }).click();
-  const beaCard = page.locator(".person-card").filter({ has: page.locator("b", { hasText: /^Bea Demo$/ }) });
-  await beaCard.click();
+  await page.locator("[data-person-row='bea-demo']").click();
   await expect(page.locator("[data-self-toggle]")).toHaveText("This is me");
   await expect(page.locator("[data-self-badge]")).toHaveCount(0);
 });
