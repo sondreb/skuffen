@@ -168,6 +168,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
   toggleLatch(): void {
     this.latchOpen = !this.latchOpen;
+    if (this.latchOpen) void this.providers.refresh();
   }
 
   closeLatch(): void {
@@ -964,11 +965,6 @@ export class AppComponent implements OnInit, OnDestroy {
 
   providerLabel(): string {
     return this.activeProvider() === "gemini" ? "Gemini" : "Grok";
-  }
-
-  toggleLatch(): void {
-    this.latchOpen = !this.latchOpen;
-    if (this.latchOpen) void this.providers.refresh();
   }
 
   grokChipConnected(): boolean {
