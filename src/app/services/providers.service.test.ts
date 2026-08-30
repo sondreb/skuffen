@@ -10,6 +10,7 @@ import {
   publicOauthStatus,
 } from "./grok-oauth.ts";
 import { ProvidersService } from "./providers.service.ts";
+import { DEMO_DIORAMA_PNG, IMAGINE_EDITS_URL, imageBytesToDataUrl } from "./imagine.ts";
 import { resetWebSecretsForTests } from "./web-secrets.ts";
 
 function mockStorage(): Storage {
@@ -164,6 +165,50 @@ test("browser preview refresh shows API key saved from in-memory key", async () 
   assert.equal(grokConnectionLabel(providers.status()), "API key saved");
   assert.equal(payloadHasSecretFields(providers.status()), false);
   assert.doesNotMatch(JSON.stringify(providers.status()), /xai-console-developer-key/);
+});
+
+test("imagineDiorama without Grok writes nothing", async () => {
+  const providers = new ProvidersService(mockIo());
+  const out = await providers.imagineDiorama(Uint8Array.from([0x89, 0x50, 0x4e, 0x47]));
+  assert.equal(out, null);
+  assert.match(providers.error() ?? "", /Connect Grok in Menu → Providers first/);
+  assert.equal(providers.busy(), false);
+});
+
+test("imagineDiorama posts local b64_json edits and never keeps a remote URL", async () => {
+  const png = DEMO_DIORAMA_PNG;
+  const io = mockIo({
+    secretGet: async (key: string) => (key === GROK_API_KEY_SECRET_KEY ? "xai-test-key" : null),
+    fetchPublicBytes: async () => {
+      throw new Error("b64_json should not fall back to a URL download");
+    },
+  });
+  const providers = new ProvidersService(io);
+  await providers.refresh();
+  assert.equal(providers.grokConnected(), true);
+
+  const previousFetch = globalThis.fetch;
+  const bodies: string[] = [];
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    assert.equal(String(input), IMAGINE_EDITS_URL);
+    bodies.push(String(init?.body ?? ""));
+    return {
+      ok: true,
+      json: async () => ({ data: [{ b64_json: Buffer.from(png).toString("base64") }] }),
+    } as Response;
+  }) as typeof fetch;
+  try {
+    const out = await providers.imagineDiorama(png, "image/png");
+    assert.ok(out);
+    assert.deepEqual(out, png);
+    assert.match(bodies[0] ?? "", /b64_json/);
+    assert.match(bodies[0] ?? "", /grok-imagine-image-2.0/);
+    assert.doesNotMatch(bodies[0] ?? "", /xai-test-key|access_token|people\/|Ada Demo Twin/);
+    assert.match(bodies[0] ?? "", /^\{.*"image":\{.*"url":"data:image\/png;base64,/);
+    assert.equal(imageBytesToDataUrl(png, "image/png").startsWith("data:image/png;base64,"), true);
+  } finally {
+    globalThis.fetch = previousFetch;
+  }
 });
 
 test("sign out clears grokOauth after a mocked poll", async () => {

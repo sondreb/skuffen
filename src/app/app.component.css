@@ -491,6 +491,10 @@ button:disabled {
   object-fit: cover;
 }
 
+.portrait.busy {
+  opacity: 0.55;
+}
+
 .portrait button {
   font-size: 0.78rem;
   padding: 0.3rem 0.55rem;
@@ -510,6 +514,30 @@ button:disabled {
   object-fit: cover;
   border-radius: 8px;
   background: rgba(16, 24, 26, 0.45);
+}
+
+.person-menu {
+  position: fixed;
+  z-index: 8;
+  min-width: 12.5rem;
+  padding: 0.3rem;
+  background: #121c1e;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+}
+
+.person-menu button {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border-color: transparent;
+}
+
+.person-menu button:hover,
+.person-menu button:focus-visible {
+  background: rgba(46, 196, 182, 0.12);
+  border-color: var(--line);
 }
 
 .nameplate-actions {

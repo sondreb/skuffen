@@ -233,8 +233,10 @@
               class="person-card"
               [class.on]="people.selected()?.slug === person.slug"
               [class.is-self]="self.isSelf(person.slug)"
+              [attr.data-person-row]="person.slug"
               [attr.data-self-card]="self.isSelf(person.slug) ? person.slug : null"
               (click)="open(person)"
+              (contextmenu)="openPersonMenu($event, person)"
               (dragover)="onCardDragOver($event)"
               (drop)="onDropOnPerson($event, person)"
             >
@@ -291,6 +293,9 @@
             Grok talks to <code>https://api.x.ai/v1</code>. Gemini uses
             <code>@google/genai</code>. Grok is never routed through js-genai.
           </p>
+          @if (notice) {
+            <p class="notice">{{ notice }}</p>
+          }
 
           <div class="split">
             <article class="plate">
@@ -1385,7 +1390,12 @@
               </p>
             }
             <header class="nameplate">
-              <div class="portrait" data-profile-image>
+              <div
+                class="portrait"
+                data-profile-image
+                [class.busy]="dioramaBusy"
+                (contextmenu)="openPersonMenu($event, person)"
+              >
                 <span class="portrait-frame">
                   @if (personPhotoUrl(person); as src) {
                     <img [src]="src" alt="" />
@@ -1837,7 +1847,11 @@
                 </button>
               </div>
               @for (photo of person.photos; track photo.id) {
-                <article [attr.data-okf-path]="photo.path" class="photo-slip">
+                <article
+                  [attr.data-okf-path]="photo.path"
+                  class="photo-slip"
+                  [attr.data-photo-profile]="isProfilePhoto(person, photo) ? photo.path : null"
+                >
                   @if (photo.listSrc; as src) {
                     <img class="photo-thumb" [src]="src" alt="" />
                   }
@@ -1962,4 +1976,24 @@
       }
     </main>
   </div>
+
+  @if (personMenu; as menu) {
+    <div
+      class="person-menu"
+      data-diorama-menu
+      role="menu"
+      [style.left.px]="menu.x"
+      [style.top.px]="menu.y"
+    >
+      <button
+        type="button"
+        role="menuitem"
+        data-diorama-action
+        (click)="makeDiorama(menu.slug)"
+        [disabled]="dioramaBusy"
+      >
+        {{ dioramaBusy ? "Making diorama…" : dioramaMenuLabel }}
+      </button>
+    </div>
+  }
 </div>

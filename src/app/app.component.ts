@@ -51,6 +51,15 @@ import {
 } from "./services/merge";
 import { personListPhotoUrl } from "./list-photo";
 import {
+  DIORAMA_MENU_LABEL,
+  DIORAMA_NEEDS_GROK,
+  DIORAMA_NEEDS_PHOTO,
+  DIORAMA_PHOTO_TITLE,
+  DIORAMA_PROGRESS,
+  extensionForMime,
+  sniffImageMime,
+} from "./services/imagine";
+import {
   deleteProposedFact,
   dismissNameProposal,
   keepFetchedPhoto,
@@ -192,6 +201,9 @@ export class AppComponent implements OnInit, OnDestroy {
   }
   fact: FactSurface = "none";
   menuOpen = false;
+  personMenu: { slug: string; x: number; y: number } | null = null;
+  dioramaBusy = false;
+  readonly dioramaMenuLabel = DIORAMA_MENU_LABEL;
   showMore = false;
   addingSocial = false;
   dragging = false;
@@ -381,6 +393,10 @@ export class AppComponent implements OnInit, OnDestroy {
 
   @HostListener("document:keydown.escape")
   onEscape(): void {
+    if (this.personMenu) {
+      this.closePersonMenu();
+      return;
+    }
     if (this.menuOpen) {
       this.closeMenu(true);
       return;
@@ -450,8 +466,12 @@ export class AppComponent implements OnInit, OnDestroy {
 
   @HostListener("document:pointerdown", ["$event"])
   onDocumentPointer(event: PointerEvent): void {
-    if (!this.menuOpen) return;
     const target = event.target;
+    if (this.personMenu) {
+      if (target instanceof Element && target.closest("[data-diorama-menu]")) return;
+      this.closePersonMenu();
+    }
+    if (!this.menuOpen) return;
     if (!(target instanceof Node)) return;
     if (this.menuSheet()?.nativeElement.contains(target)) return;
     if (this.menuBtn()?.nativeElement.contains(target)) return;
@@ -1969,6 +1989,69 @@ export class AppComponent implements OnInit, OnDestroy {
     if (fromProfile) return fromProfile;
     const photo = person.photos[0];
     return personListPhotoUrl(photo?.listSrc ?? photo?.resource);
+  }
+
+  openPersonMenu(event: MouseEvent, person: PersonView): void {
+    event.preventDefault();
+    event.stopPropagation();
+    const width = 220;
+    const height = 52;
+    const pad = 8;
+    const x = Math.max(pad, Math.min(event.clientX, window.innerWidth - width - pad));
+    const y = Math.max(pad, Math.min(event.clientY, window.innerHeight - height - pad));
+    this.personMenu = { slug: person.slug, x, y };
+  }
+
+  closePersonMenu(): void {
+    this.personMenu = null;
+  }
+
+  async makeDiorama(slug: string): Promise<void> {
+    this.closePersonMenu();
+    if (this.dioramaBusy) return;
+    if (!this.demoMode && !this.providers.grokConnected()) {
+      this.notice = DIORAMA_NEEDS_GROK;
+      this.openProviders();
+      return;
+    }
+    await this.openBySlug(slug);
+    const person = this.people.selected();
+    if (!person || person.slug !== slug) {
+      this.actionError = "Could not open that card.";
+      return;
+    }
+    const sourceResource = person.image ?? person.photos[0]?.resource;
+    const source = sourceResource ? await this.people.readPhotoBytes(sourceResource) : null;
+    if (!source) {
+      this.actionError = DIORAMA_NEEDS_PHOTO;
+      this.notice = null;
+      return;
+    }
+    this.actionError = null;
+    this.notice = DIORAMA_PROGRESS;
+    this.dioramaBusy = true;
+    try {
+      const mime = sniffImageMime(source) ?? undefined;
+      const bytes = await this.providers.imagineDiorama(source, mime);
+      if (!bytes) {
+        this.actionError = this.providers.error() || "Could not make a 3D clay diorama.";
+        this.notice = null;
+        return;
+      }
+      const ext = extensionForMime(sniffImageMime(bytes) ?? mime ?? "image/png");
+      await this.people.setProfileImage(slug, {
+        fileName: `diorama-${Date.now().toString(36)}.${ext}`,
+        bytes,
+        title: DIORAMA_PHOTO_TITLE,
+        generatedBy: this.providers.actorForImagine(),
+      });
+      this.notice = null;
+    } catch (error) {
+      this.actionError = error instanceof Error ? error.message : "Could not save the diorama.";
+      this.notice = null;
+    } finally {
+      this.dioramaBusy = false;
+    }
   }
 
   initials(title: string): string {

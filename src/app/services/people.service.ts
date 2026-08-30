@@ -256,7 +256,13 @@ export class PeopleService {
 
   async setProfileImage(
     slug: string,
-    input: { sourcePath?: string; bytes?: Uint8Array; fileName?: string },
+    input: {
+      sourcePath?: string;
+      bytes?: Uint8Array;
+      fileName?: string;
+      title?: string;
+      generatedBy?: string;
+    },
   ): Promise<void> {
     let resource: string | undefined;
     if (input.sourcePath) {
@@ -266,7 +272,12 @@ export class PeopleService {
       );
       const dest = photoFilePath(slug, fileName);
       await this.io.copyFileIntoBundle(this.bundleRoot(), input.sourcePath, dest);
-      const doc = createPhotoDocument({ slug, fileName });
+      const doc = createPhotoDocument({
+        slug,
+        fileName,
+        title: input.title,
+        generatedBy: input.generatedBy,
+      });
       await this.writeDoc(doc);
       resource = `/${dest}`;
       await this.log("Creation", `Added photo [${fileName}](/${doc.path}).`);
@@ -274,7 +285,18 @@ export class PeopleService {
       const safe = await this.uniquePhotoFileName(slug, sanitizeFileName(input.fileName));
       const dest = photoFilePath(slug, safe);
       await this.io.writeBytes(this.bundleRoot(), dest, input.bytes);
-      const doc = createPhotoDocument({ slug, fileName: safe });
+      const doc = createPhotoDocument({
+        slug,
+        fileName: safe,
+        title: input.title,
+        generatedBy: input.generatedBy,
+      });
+      if (input.generatedBy) {
+        doc.frontmatter.verified = {
+          by: "human:user",
+          at: new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
+        };
+      }
       await this.writeDoc(doc);
       resource = `/${dest}`;
       await this.log("Creation", `Added photo [${safe}](/${doc.path}).`);
@@ -314,6 +336,13 @@ export class PeopleService {
     await this.log("Creation", `Added photo [${safe}](/${doc.path}).`);
     await this.reload();
     await this.select(slug);
+  }
+
+  async readPhotoBytes(resource?: string): Promise<Uint8Array | null> {
+    const path = localPhotoBundlePath(resource);
+    if (!path) return null;
+    const bytes = await this.io.readBytes(this.bundleRoot(), path);
+    return bytes && bytes.byteLength > 0 ? bytes : null;
   }
 
   async removeSocial(slug: string, path: string): Promise<void> {

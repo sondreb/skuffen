@@ -51,6 +51,15 @@ import {
   grokResearchRequest,
   parseSuggestions,
 } from "./research";
+import {
+  DEMO_DIORAMA_PNG,
+  DIORAMA_PROMPT,
+  IMAGINE_MODEL,
+  grokImagineEditRequest,
+  imageBytesToDataUrl,
+  parseImagineEditResponse,
+  sniffImageMime,
+} from "./imagine";
 
 const GROK_API_KEY = GROK_API_KEY_SECRET_KEY;
 const GROK_OAUTH = GROK_OAUTH_SECRET_KEY;
@@ -285,9 +294,68 @@ export class ProvidersService {
     }
   }
 
+  actorForImagine(): string {
+    return actorAgent("grok", IMAGINE_MODEL);
+  }
+
   actorForActive(): string {
     const provider = this.activeProvider() ?? "grok";
     return actorAgent(provider, provider === "grok" ? GROK_MODEL : GEMINI_MODEL);
+  }
+
+  /**
+   * Image-to-image for one local profile photo. Demo stays offline.
+   * Live Grok uses images/edits + b64_json. Temporary Imagine URLs are
+   * downloaded here — never returned as a list img src.
+   */
+  async imagineDiorama(image: Uint8Array, mime?: string): Promise<Uint8Array | null> {
+    if (!image.byteLength) {
+      this.error.set("Profile photo is empty.");
+      return null;
+    }
+    if (isDemoMode()) {
+      this.busy.set(true);
+      this.error.set(null);
+      this.lastPrompt.set(DIORAMA_PROMPT);
+      await delay(400);
+      this.busy.set(false);
+      return DEMO_DIORAMA_PNG;
+    }
+    if (!this.grokConnected()) {
+      this.error.set("Connect Grok in Menu → Providers first.");
+      return null;
+    }
+    this.busy.set(true);
+    this.error.set(null);
+    try {
+      const dataUrl = imageBytesToDataUrl(image, mime || sniffImageMime(image) || undefined);
+      const live = grokImagineEditRequest(dataUrl);
+      this.lastPrompt.set(DIORAMA_PROMPT);
+      const token = await this.grokToken();
+      const response = await fetch(live.url, {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${token}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify(live.body),
+      });
+      if (!response.ok) {
+        throw new Error(`Imagine API ${response.status}: ${await response.text()}`);
+      }
+      const parsed = parseImagineEditResponse(await response.json());
+      if (parsed.kind === "bytes") return parsed.bytes;
+      const downloaded = await this.io.fetchPublicBytes(parsed.url);
+      if (!downloaded?.byteLength) {
+        throw new Error("Imagine returned a temporary URL that could not be downloaded.");
+      }
+      return downloaded;
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : String(error));
+      return null;
+    } finally {
+      this.busy.set(false);
+    }
   }
 
   clearSuggestions(): void {

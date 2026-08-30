@@ -8,6 +8,7 @@ test("people-list avatars never use http(s) — that would fetch the graph", () 
   assert.equal(personListPhotoUrl("//cdn.example/ada.jpg"), null);
   assert.equal(personListPhotoUrl("javascript:alert(1)"), null);
   assert.equal(personListPhotoUrl("/people/ada-demo/photos/park.jpg"), null);
+  assert.equal(personListPhotoUrl("https://imgen.x.ai/tmp/diorama-ada.png"), null);
 });
 
 test("people-list avatars may use local data or blob URLs already on this machine", () => {
