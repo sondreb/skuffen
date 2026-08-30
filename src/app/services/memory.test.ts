@@ -15,6 +15,7 @@ import {
   clearMemoryLog,
   deleteMemoryTurn,
   followRows,
+  forgetMemoryForSlug,
   groupPendingFacts,
   inspectableMemory,
   makeStoredProposal,
@@ -133,6 +134,35 @@ test("UI lists pending memory: research facts, follow schedules, told log", () =
   assert.equal(trustForSource("follow"), "hostile-web");
   assert.equal(trustForSource("ask"), "local");
   assert.equal(trustForSource("capture"), "local");
+});
+
+test("forgetting a deleted person drops told-log rows for that slug only", () => {
+  const writes: unknown[] = [];
+  const ada = recordMemoryTurn({
+    id: "told-ada",
+    slug: "ada-lovelace",
+    source: "follow",
+    prompt: "Name: Ada Lovelace",
+    suggestions: [suggestion],
+  });
+  const bea = recordMemoryTurn({
+    id: "told-bea",
+    slug: "bea-demo",
+    query: "Bea Demo",
+    source: "research",
+    prompt: "Name: Bea Demo",
+    suggestions: [suggestion],
+  });
+  const after = forgetMemoryForSlug(appendMemoryTurn(appendMemoryTurn([], ada), bea), "ada-lovelace");
+  assert.equal(after.length, 1);
+  assert.equal(after[0]?.slug, "bea-demo");
+  assert.equal(
+    inspectableMemory({ proposals: [], follows: [], people, memoryLog: after }).filter((row) =>
+      row.personLabel.includes("Ada"),
+    ).length,
+    0,
+  );
+  assertNoAutoWrite(writes);
 });
 
 test("deleting the told log leaves OKF untouched and can drop history", () => {

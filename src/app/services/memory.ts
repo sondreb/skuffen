@@ -107,6 +107,11 @@ export function deleteMemoryTurn(log: AgentMemoryTurn[], id: string): AgentMemor
   return log.filter((item) => item.id !== id);
 }
 
+/** Drop told-log rows for a deleted person. Follow/proposals are handled separately. */
+export function forgetMemoryForSlug(log: AgentMemoryTurn[], slug: string): AgentMemoryTurn[] {
+  return log.filter((item) => item.slug !== slug);
+}
+
 export function clearMemoryLog(): AgentMemoryTurn[] {
   return [];
 }

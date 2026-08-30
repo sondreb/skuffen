@@ -102,6 +102,19 @@ button.ghost {
   background: transparent;
 }
 
+button.danger {
+  border-color: rgba(196, 92, 74, 0.55);
+  color: #f0c4bc;
+  background: rgba(196, 92, 74, 0.12);
+}
+
+button.danger:hover,
+button.danger:focus-visible {
+  border-color: #c45c4a;
+  color: #fff;
+  background: rgba(196, 92, 74, 0.22);
+}
+
 button:disabled {
   opacity: 0.45;
   cursor: not-allowed;

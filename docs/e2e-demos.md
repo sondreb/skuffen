@@ -51,6 +51,7 @@ Geocode is stubbed in `?demo=1` (and again in Playwright) so the park pin is alw
 12. `e2e/specs/12-ui-keyboard.spec.ts` — Ctrl/Cmd+, opens Menu; / focuses find; Capture is instant; no full-page scrim trap. Live AI hosts blocked.
 13. `e2e/specs/13-self-owner.spec.ts` — mark one person as the local owner. Live AI hosts blocked.
 14. `e2e/specs/14-person-card-files.spec.ts` — set a local profile image, add/remove gallery photos, attach a generic file. No land-plot kind. List avatar stays a local data URL.
+15. `e2e/specs/15-delete-person.spec.ts` — Delete + confirm removes the card from the list and the person folder from the local OKF bundle, including profile image, gallery, and files. Cancel writes nothing. selfSlug / follow / memory for that slug go away.
 
 Curated clips:
 

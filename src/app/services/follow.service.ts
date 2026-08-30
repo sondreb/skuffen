@@ -5,6 +5,7 @@ import {
   appendMemoryTurn,
   clearMemoryLog,
   deleteMemoryTurn,
+  forgetMemoryForSlug,
   makeStoredProposal,
   recordMemoryTurn,
   removeProposal,
@@ -150,6 +151,7 @@ export class FollowService {
   async forgetSlug(slug: string): Promise<void> {
     this.follows.set(dropFollow(this.follows(), slug));
     this.proposals.set(this.proposals().filter((item) => item.slug !== slug));
+    this.memoryLog.set(forgetMemoryForSlug(this.memoryLog(), slug));
     await this.persist();
   }
 
