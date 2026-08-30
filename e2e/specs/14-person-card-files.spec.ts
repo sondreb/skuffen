@@ -32,7 +32,7 @@ test("person card can set a local profile image, add gallery photos, and attach 
     buffer: PNG,
   });
   await expect(page.locator("[data-photos] article")).toHaveCount(2);
-  await expect(page.getByText("Profile image")).toBeVisible();
+  await expect(page.getByText("Profile image", { exact: true })).toBeVisible();
 
   await page.locator("[data-photos] article").filter({ hasText: "park.png" }).getByRole("button", { name: "Remove" }).click();
   await expect(page.locator("[data-photos] article")).toHaveCount(1);
@@ -44,6 +44,6 @@ test("person card can set a local profile image, add gallery photos, and attach 
     buffer: Buffer.from("local file, not uploaded"),
   });
   await expect(page.locator("[data-files] article")).toHaveCount(1);
-  await expect(page.getByRole("heading", { name: "notes" })).toBeVisible();
+  await expect(page.locator("[data-files]").getByRole("heading", { name: "notes", exact: true })).toBeVisible();
   await expect(page.getByText("No files yet.")).toHaveCount(0);
 });
