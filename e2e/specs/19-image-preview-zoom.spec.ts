@@ -102,6 +102,14 @@ test("wheel zoom in the overlay is toward the pointer, not the image center", as
   const leftZoom = await previewTransform(photo);
   expect(leftZoom.x).toBeGreaterThan(20);
 
+  await page.mouse.down();
+  await page.mouse.move(leftX + 120, midY + 60);
+  await page.mouse.up();
+  await expect(page.locator("[data-image-preview]")).toBeVisible();
+  const leftPanned = await previewTransform(photo);
+  expect(leftPanned.scale).toBe(leftZoom.scale);
+  expect(Math.abs(leftPanned.x - leftZoom.x)).toBeGreaterThan(10);
+
   await page.locator("[data-preview-close]").click();
   await page.locator("[data-profile-preview]").click();
   await expect(photo).toBeVisible();
@@ -122,8 +130,9 @@ test("wheel zoom in the overlay is toward the pointer, not the image center", as
 
   const beforePan = centerZoom;
   await page.mouse.down();
-  await page.mouse.move(centerX + 48, centerY + 16);
+  await page.mouse.move(centerX + 90, centerY + 40);
   await page.mouse.up();
+  await expect(page.locator("[data-image-preview]")).toBeVisible();
   const panned = await previewTransform(photo);
   expect(panned.scale).toBe(beforePan.scale);
   expect(Math.abs(panned.x - beforePan.x)).toBeGreaterThan(10);
