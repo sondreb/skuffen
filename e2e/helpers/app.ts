@@ -122,6 +122,15 @@ export async function fillAdaDemoForm(page: Page): Promise<void> {
   await page.getByLabel("Email").fill(DEMO.person.email);
 }
 
+/** Name research starts from Add person, never the left-pane filter. */
+export async function startNameResearch(page: Page, name: string): Promise<void> {
+  await page.getByRole("button", { name: "Add person" }).first().click();
+  await expect(page.locator("[data-create-form]")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Who?" })).toBeVisible();
+  await page.locator('input[name="person-name"]').fill(name);
+  await page.getByRole("button", { name: "AI Powered Search" }).click();
+}
+
 export async function createAdaDemo(page: Page): Promise<void> {
   await fillAdaDemoForm(page);
   await page.locator("[data-demo='save-person']").click();

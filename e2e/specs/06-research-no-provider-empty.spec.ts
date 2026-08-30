@@ -1,4 +1,4 @@
-import { expect, test } from "../helpers/app";
+import { expect, startNameResearch, test } from "../helpers/app";
 
 async function openPreview(page: import("@playwright/test").Page): Promise<void> {
   await page.goto("/");
@@ -12,8 +12,7 @@ test("header and person research show an in-place empty state without a provider
 }) => {
   await openPreview(page);
 
-  await page.getByPlaceholder("Find someone").fill("Ada Lovelace");
-  await page.getByRole("button", { name: "Research" }).click();
+  await startNameResearch(page, "Ada Lovelace");
 
   await expect(page.getByRole("dialog", { name: "Menu" })).toBeVisible();
   await expect(page.getByText(/Connect Grok in Menu/)).toBeVisible();

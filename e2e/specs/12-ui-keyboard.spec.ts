@@ -17,7 +17,7 @@ test("Cmd/Ctrl+, Menu, find, and capture feel instant — no scrim trap", async 
   await expect(page.getByRole("heading", { name: "No people yet" })).toBeVisible();
 
   await page.keyboard.press("/");
-  await expect(page.getByPlaceholder("Find someone")).toBeFocused();
+  await expect(page.getByPlaceholder("Find person")).toBeFocused();
 
   await page.keyboard.press("Control+Shift+C");
   await expect(page.getByRole("heading", { name: "Capture" })).toBeVisible();
