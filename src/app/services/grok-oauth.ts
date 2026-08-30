@@ -55,19 +55,20 @@ export function grokConnectionLabel(status: { grokOauth: boolean; grokApiKey: bo
 export function publicOauthStatus(raw: unknown): GrokOAuthStatus {
   const rec = asRecord(raw);
   return {
-    connected: Boolean(rec.connected),
-    expiresAt: typeof rec.expiresAt === "number" ? rec.expiresAt : null,
-    tokenType: typeof rec.tokenType === "string" ? rec.tokenType : null,
+    connected: Boolean(rec["connected"]),
+    expiresAt: typeof rec["expiresAt"] === "number" ? rec["expiresAt"] : null,
+    tokenType: typeof rec["tokenType"] === "string" ? rec["tokenType"] : null,
   };
 }
 
 export function publicDevicePending(raw: unknown): GrokDevicePending {
   const rec = asRecord(raw);
   return {
-    userCode: String(rec.userCode ?? ""),
-    verificationUri: String(rec.verificationUri ?? ""),
-    verificationUriComplete: typeof rec.verificationUriComplete === "string" ? rec.verificationUriComplete : null,
-    expiresIn: typeof rec.expiresIn === "number" ? rec.expiresIn : 0,
+    userCode: String(rec["userCode"] ?? ""),
+    verificationUri: String(rec["verificationUri"] ?? ""),
+    verificationUriComplete:
+      typeof rec["verificationUriComplete"] === "string" ? rec["verificationUriComplete"] : null,
+    expiresIn: typeof rec["expiresIn"] === "number" ? rec["expiresIn"] : 0,
   };
 }
 
