@@ -45,6 +45,9 @@ jobs:
       - name: Duplicate-person merge (propose-only) tests
         run: npm run test:merge
 
+      - name: Local pre-meeting brief (offline OKF) tests
+        run: npm run test:brief
+
       - name: GitHub update check (offline fixtures)
         run: npm run test:update
 

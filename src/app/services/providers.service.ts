@@ -7,6 +7,13 @@ import type { GrokDevicePending, GrokOAuthStatus } from "./grok-oauth";
 import { GROK_API_KEY_SECRET_KEY, GROK_OAUTH_SECRET_KEY, publicOauthStatus } from "./grok-oauth";
 import { IoService } from "./io.service";
 import {
+  applyPolishedTalkingPoints,
+  buildPolishPrompt,
+  demoPolishTalkingPoints,
+  parsePolishedPoints,
+  type MeetingBrief,
+} from "./brief";
+import {
   RESEARCH_SYSTEM,
   buildNameResearchPrompt,
   buildResearchPrompt,
@@ -236,6 +243,37 @@ export class ProvidersService {
 
   reject(id: string): void {
     this.suggestions.update((items) => items.filter((item) => item.id !== id));
+  }
+
+  /**
+   * Optional polish. Demo and the no-provider path stay offline.
+   * A connected provider may be called without web search and without the full graph.
+   */
+  async polishBrief(brief: MeetingBrief): Promise<MeetingBrief | null> {
+    if (isDemoMode()) {
+      return applyPolishedTalkingPoints(brief, demoPolishTalkingPoints(brief), false);
+    }
+    const provider = this.activeProvider();
+    if (!provider) {
+      this.error.set("Connect Grok or Gemini first. The local brief already works offline.");
+      return null;
+    }
+    this.busy.set(true);
+    this.error.set(null);
+    try {
+      const prompt = buildPolishPrompt(brief);
+      this.lastPrompt.set(prompt);
+      const text =
+        provider === "grok" ? await this.askGrok(prompt, false) : await this.askGemini(prompt, false);
+      const points = parsePolishedPoints(text);
+      if (!points.length) return brief;
+      return applyPolishedTalkingPoints(brief, points, true);
+    } catch (error) {
+      this.error.set(error instanceof Error ? error.message : String(error));
+      return brief;
+    } finally {
+      this.busy.set(false);
+    }
   }
 
   private promptFor(person: PersonView): string {
