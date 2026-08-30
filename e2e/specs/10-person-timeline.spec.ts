@@ -49,7 +49,7 @@ test("Accept of a note adds a timeline row; demo Ada tape has more than one kind
 
   await page.locator("[data-demo='accept']").click();
   await expect(page.locator("[data-timeline] [data-timeline-kind='note']")).toBeVisible();
-  await expect(page.locator("[data-timeline]").getByRole("heading", { name: "Public park mention (demo)" })).toBeVisible();
+  await expect(page.locator("[data-timeline] [data-timeline-kind='note']")).toContainText("Public park mention (demo)");
   await expect(page.getByText("No timeline yet.")).toHaveCount(0);
 
   await page.locator("[data-demo='pin']").click();
@@ -61,7 +61,7 @@ test("Accept of a note adds a timeline row; demo Ada tape has more than one kind
 
   await expect(page.locator("[data-timeline] [data-timeline-kind='note']")).toBeVisible();
   await expect(page.locator("[data-timeline] [data-timeline-kind='place']")).toBeVisible();
-  await expect(page.locator("[data-timeline]").getByRole("heading", { name: "Place pin" })).toBeVisible();
+  await expect(page.locator("[data-timeline] [data-timeline-kind='place']")).toContainText("Place pin");
 
   const beforeClick = await diskSnapshot(page);
   await page.locator("[data-demo='timeline']").click();

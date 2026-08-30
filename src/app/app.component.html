@@ -1452,8 +1452,8 @@
                   [attr.data-timeline-kind]="row.kind"
                   [attr.data-timeline-path]="row.path || row.id"
                 >
-                  <h3>{{ row.label }}</h3>
-                  <p>{{ row.dateLabel }}</p>
+                  <strong>{{ row.label }}</strong>
+                  <small>{{ row.dateLabel }}</small>
                 </button>
               }
               @if (!selectedTimeline().length) {

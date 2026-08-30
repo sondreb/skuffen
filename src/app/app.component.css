@@ -413,8 +413,8 @@ button:disabled {
   text-align: left;
 }
 
-.slips .timeline-row h3,
-.slips .timeline-row p {
+.slips .timeline-row strong,
+.slips .timeline-row small {
   margin: 0;
 }
 
