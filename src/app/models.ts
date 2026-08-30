@@ -39,6 +39,11 @@ export interface Settings {
    * Desktop source of truth is OS-backed settings.json — never localStorage, never tokens.
    */
   selfSlug?: string | null;
+  /**
+   * Appearance: auto (follow OS), light, or dark.
+   * Desktop source of truth is OS-backed settings.json — never OKF, never tokens.
+   */
+  theme?: "auto" | "light" | "dark" | null;
 }
 
 export interface AgentMemoryTurn {

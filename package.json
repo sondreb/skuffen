@@ -25,6 +25,7 @@
     "test:research": "tsx --test src/app/services/research.test.ts src/app/services/page-photos.test.ts src/app/services/memory.test.ts src/app/list-photo.test.ts",
     "test:imagine": "tsx --test src/app/services/imagine.test.ts src/app/list-photo.test.ts src/app/image-preview.test.ts",
     "test:self": "tsx --test src/app/services/self.test.ts",
+    "test:theme": "tsx --test src/app/services/theme.test.ts",
     "test:merge": "tsx --test src/app/services/merge.test.ts",
     "test:brief": "tsx --test src/app/services/brief.test.ts",
     "test:capture": "tsx --test src/app/services/capture.test.ts",

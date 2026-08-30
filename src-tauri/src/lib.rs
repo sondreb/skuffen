@@ -44,6 +44,9 @@ pub struct Settings {
     /// Local owner of this app copy. Person slug, not a Skuffen account. Never tokens.
     #[serde(default)]
     pub self_slug: Option<String>,
+    /// Appearance: auto | light | dark. Not OKF. Never tokens.
+    #[serde(default)]
+    pub theme: Option<String>,
 }
 
 #[tauri::command]

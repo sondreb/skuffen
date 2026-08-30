@@ -6,6 +6,26 @@
     <base href="/" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" type="image/png" href="assets/skuffen-icon.png" />
+    <script>
+      (function () {
+        try {
+          var raw = localStorage.getItem("skuffen.settings");
+          var theme = raw ? JSON.parse(raw).theme : "auto";
+          if (theme !== "light" && theme !== "dark" && theme !== "auto") theme = "auto";
+          var resolved =
+            theme === "auto"
+              ? window.matchMedia("(prefers-color-scheme: dark)").matches
+                ? "dark"
+                : "light"
+              : theme;
+          document.documentElement.dataset.theme = resolved;
+          document.documentElement.dataset.themePreference = theme;
+          document.documentElement.style.colorScheme = resolved;
+        } catch (e) {
+          document.documentElement.dataset.themePreference = "auto";
+        }
+      })();
+    </script>
   </head>
   <body>
     <app-root></app-root>

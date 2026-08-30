@@ -11,18 +11,6 @@
 }
 
 :root {
-  --ink: #e8eef0;
-  --paper: #f4f8f8;
-  --mute: #8fa3a8;
-  --charcoal: #0c1214;
-  --room: #10181a;
-  --chrome: #121c1e;
-  --sidebar: #0e1618;
-  --well: #10181a;
-  --teal: #2ec4b6;
-  --teal-glow: #7ef0df;
-  --teal-deep: #0d3d38;
-  --line: #243236;
   --font: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
   color: var(--ink);
   background: var(--charcoal);
@@ -30,7 +18,94 @@
   font-optical-sizing: auto;
   font-size: 15px;
   line-height: 1.45;
+}
+
+/* Dark is the default paint before JS; Auto then follows prefers-color-scheme. */
+:root,
+html[data-theme="dark"] {
+  --ink: #ece8e2;
+  --paper: #f4efe6;
+  --mute: #9a9288;
+  --charcoal: #141210;
+  --room: #1a1714;
+  --chrome: #1c1916;
+  --sidebar: #161310;
+  --well: #1a1815;
+  --line: #3a3530;
+  --accent: #c4b4a0;
+  --accent-soft: #d8cbb8;
+  --accent-deep: #3a3228;
+  --accent-wash: rgba(196, 180, 160, 0.1);
+  --accent-line: rgba(196, 180, 160, 0.28);
+  --hover: rgba(196, 180, 160, 0.08);
+  --selected: rgba(196, 180, 160, 0.14);
+  --surface: #221f1b;
+  --input: #141210;
+  --button: #2a2622;
+  --prose: #d8d2c8;
+  --scrim: rgba(12, 10, 8, 0.82);
+  --shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+  --thumb: rgba(20, 18, 16, 0.45);
+  --map: #1a1714;
   color-scheme: dark;
+}
+
+@media (prefers-color-scheme: light) {
+  html:not([data-theme="dark"]) {
+    --ink: #1c1916;
+    --paper: #1c1916;
+    --mute: #6f685f;
+    --charcoal: #f4efe6;
+    --room: #f4efe6;
+    --chrome: #efe9de;
+    --sidebar: #ebe4d8;
+    --well: #f7f3eb;
+    --line: #d4ccc0;
+    --accent: #5c4a38;
+    --accent-soft: #8a7358;
+    --accent-deep: #efe4d4;
+    --accent-wash: rgba(92, 74, 56, 0.08);
+    --accent-line: rgba(92, 74, 56, 0.22);
+    --hover: rgba(92, 74, 56, 0.06);
+    --selected: rgba(92, 74, 56, 0.1);
+    --surface: #fffdf8;
+    --input: #fffdf8;
+    --button: #efe9de;
+    --prose: #3a342e;
+    --scrim: rgba(28, 25, 22, 0.55);
+    --shadow: 0 16px 40px rgba(28, 25, 22, 0.12);
+    --thumb: rgba(236, 228, 216, 0.7);
+    --map: #ebe4d8;
+    color-scheme: light;
+  }
+}
+
+html[data-theme="light"] {
+  --ink: #1c1916;
+  --paper: #1c1916;
+  --mute: #6f685f;
+  --charcoal: #f4efe6;
+  --room: #f4efe6;
+  --chrome: #efe9de;
+  --sidebar: #ebe4d8;
+  --well: #f7f3eb;
+  --line: #d4ccc0;
+  --accent: #5c4a38;
+  --accent-soft: #8a7358;
+  --accent-deep: #efe4d4;
+  --accent-wash: rgba(92, 74, 56, 0.08);
+  --accent-line: rgba(92, 74, 56, 0.22);
+  --hover: rgba(92, 74, 56, 0.06);
+  --selected: rgba(92, 74, 56, 0.1);
+  --surface: #fffdf8;
+  --input: #fffdf8;
+  --button: #efe9de;
+  --prose: #3a342e;
+  --scrim: rgba(28, 25, 22, 0.55);
+  --shadow: 0 16px 40px rgba(28, 25, 22, 0.12);
+  --thumb: rgba(236, 228, 216, 0.7);
+  --map: #ebe4d8;
+  color-scheme: light;
 }
 
 * {
@@ -57,7 +132,7 @@ body {
 }
 
 :focus-visible {
-  outline: 2px solid var(--teal);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
@@ -87,7 +162,7 @@ input,
 textarea,
 select {
   width: 100%;
-  background: #0a1012;
+  background: var(--input);
   color: var(--ink);
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -99,7 +174,7 @@ textarea {
 }
 
 a {
-  color: var(--teal-glow);
+  color: var(--accent-soft);
 }
 
 h1,
@@ -126,7 +201,7 @@ h2 {
 code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.85em;
-  color: var(--teal-glow);
+  color: var(--accent-soft);
 }
 
 .sr {
@@ -138,5 +213,9 @@ code {
 }
 
 .leaflet-container img.leaflet-tile {
-  filter: saturate(0.72) brightness(0.82);
+  filter: saturate(0.65) brightness(0.78) sepia(0.12);
+}
+
+html[data-theme="light"] .leaflet-container img.leaflet-tile {
+  filter: saturate(0.7) brightness(1.02) sepia(0.08);
 }
