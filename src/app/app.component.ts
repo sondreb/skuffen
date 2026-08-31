@@ -16,6 +16,14 @@ import { ImagePreviewComponent } from "./image-preview.component";
 import { type ImagePreview, previewImageSrc } from "./image-preview";
 import { mapRelationEdges, type MapRelationEdge } from "./map/map-edges";
 import { PeopleMapComponent, type MapPin } from "./map/people-map.component";
+import {
+  graphKindLabel,
+  graphLegendKinds,
+  peopleGraphModel,
+  type GraphPersonNode,
+  type GraphRelationEdge,
+} from "./graph/graph-edges";
+import { PeopleGraphComponent } from "./graph/people-graph.component";
 import type {
   FactSuggestion,
   FollowInterval,
@@ -176,6 +184,7 @@ type Panel =
   | "edit"
   | "providers"
   | "map"
+  | "graph"
   | "propose"
   | "merge"
   | "delete"
@@ -200,7 +209,7 @@ type FactSurface = "none" | "drop" | "pin" | "note" | "suggest" | "timeline" | "
 
 @Component({
   selector: "app-root",
-  imports: [FormsModule, PeopleMapComponent, ImagePreviewComponent],
+  imports: [FormsModule, PeopleMapComponent, PeopleGraphComponent, ImagePreviewComponent],
   templateUrl: "./app.component.html",
   styleUrl: "./app.component.css",
 })
@@ -326,6 +335,10 @@ export class AppComponent implements OnInit, OnDestroy {
     const present = new Set(this.mapEdges().map((edge) => edge.kind));
     return RELATION_KINDS.filter((kind) => present.has(kind));
   });
+  readonly graphModel = computed(() => peopleGraphModel(this.people.people()));
+  readonly graphNodes = computed<GraphPersonNode[]>(() => this.graphModel().nodes);
+  readonly graphEdges = computed<GraphRelationEdge[]>(() => this.graphModel().edges);
+  readonly graphLegendKinds = computed(() => graphLegendKinds(this.graphEdges()));
   readonly visibleSuggestions = computed(() => {
     const rejectedIds = this.rejectedSuggestionIds();
     const rejectedKeys = this.rejectedRelationKeys();
@@ -489,6 +502,7 @@ export class AppComponent implements OnInit, OnDestroy {
       this.panel === "create" ||
       this.panel === "edit" ||
       this.panel === "map" ||
+      this.panel === "graph" ||
       this.panel === "memory"
     ) {
       this.panel = "none";
@@ -578,6 +592,16 @@ export class AppComponent implements OnInit, OnDestroy {
     this.fact = "none";
     this.mapAssignSlug = this.people.selected()?.slug ?? "";
     this.resetLocationDraft(this.people.selected());
+  }
+
+  openGraph(): void {
+    this.menuOpen = false;
+    this.panel = "graph";
+    this.fact = "none";
+  }
+
+  kindLabelForGraph(kind: string): string {
+    return graphKindLabel(kind);
   }
 
   async closeFile(): Promise<void> {

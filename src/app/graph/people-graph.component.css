@@ -1,0 +1,129 @@
+:host {
+  display: block;
+  min-height: 0;
+  height: 100%;
+}
+
+.graph-root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: inherit;
+  overflow: hidden;
+  background: var(--map);
+  touch-action: none;
+}
+
+.graph-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+
+.graph-canvas:active {
+  cursor: grabbing;
+}
+
+.graph-edge {
+  fill: none;
+  stroke: var(--mute);
+  stroke-width: 2;
+  pointer-events: none;
+}
+
+.graph-edge-family {
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+
+.graph-edge-business {
+  stroke: var(--accent-soft);
+  stroke-dasharray: 8 6;
+}
+
+.graph-edge-other {
+  stroke: var(--mute);
+  stroke-dasharray: 2 7;
+}
+
+.graph-edge-knows {
+  stroke: var(--accent-soft);
+  stroke-dasharray: 12 5;
+}
+
+.graph-edge-introduced {
+  stroke: var(--mute);
+  stroke-dasharray: 1 4 8 4;
+}
+
+.graph-node {
+  cursor: pointer;
+  outline: none;
+}
+
+.graph-node-hit {
+  fill: transparent;
+}
+
+.graph-node-disk {
+  fill: var(--surface);
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.graph-node-active .graph-node-disk {
+  fill: var(--accent-deep);
+  stroke: var(--accent-soft);
+  stroke-width: 3;
+}
+
+.graph-node-initial {
+  fill: var(--paper);
+  font-size: 16px;
+  font-weight: 600;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  pointer-events: none;
+}
+
+.graph-node-label {
+  fill: var(--paper);
+  font-size: 12px;
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+.graph-node:focus-visible .graph-node-disk {
+  stroke: var(--accent-soft);
+  stroke-width: 3;
+}
+
+.graph-zoom {
+  position: absolute;
+  right: 0.7rem;
+  bottom: 0.7rem;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.graph-zoom-btn {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--chrome) 90%, transparent);
+  color: var(--paper);
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+@media (max-width: 960px) {
+  .graph-zoom {
+    right: 0.45rem;
+    bottom: 0.45rem;
+  }
+}

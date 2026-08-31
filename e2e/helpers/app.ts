@@ -180,6 +180,13 @@ export async function openMapFromMenu(page: Page): Promise<void> {
   await expect(page.locator("[data-people-map]")).toBeVisible();
 }
 
+export async function openGraphFromMenu(page: Page): Promise<void> {
+  await page.getByRole("button", { name: "Menu", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Menu" })).toBeVisible();
+  await page.locator("[data-open-graph='menu']").click();
+  await expect(page.locator("[data-people-graph]")).toBeVisible();
+}
+
 export async function createBeaDemo(page: Page): Promise<void> {
   await page.locator("[data-demo='put-someone-in']").first().click();
   await expect(page.getByRole("heading", { name: "Who?" })).toBeVisible();
