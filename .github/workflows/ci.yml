@@ -87,6 +87,9 @@ jobs:
       - name: People gallery (local thumbs, filter, modes) tests
         run: npm run test:gallery
 
+      - name: In-app view history (session only, never people-graph) tests
+        run: npm run test:view-history
+
       - name: First-class Places (local OKF, Accept-only) tests
         run: npm run test:places
 

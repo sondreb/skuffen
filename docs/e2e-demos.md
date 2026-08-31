@@ -66,6 +66,7 @@ Geocode is stubbed in `?demo=1` (and again in Playwright) so the park pin is alw
 27. `e2e/specs/27-people-sort.spec.ts` — people list defaults to Name A–Z; Recently added / updated / opened change local list order; the choice survives reload in app settings, not OKF or tokens. Sort control stays reachable when the pane is collapsed. Never a friend-heat or importance score. Live AI hosts blocked.
 28. `e2e/specs/28-people-tags.spec.ts` — add a tag as a chip; `#tag` / `# tag` filter shows that person; name filter still works; uncheck/reject a proposed tag writes nothing; Accept writes `tags:` / family onto `people/ada-demo/person.md`. Live AI hosts blocked.
 29. `e2e/specs/29-people-gallery.spec.ts` — Menu → People shows large local thumbs; name and `#tag` (from `person.tags`) hide others with the view still open; click a thumb opens that person; empty graph is a local empty state; Dense layout exists. Live AI hosts blocked.
+30. `e2e/specs/30-people-nav.spec.ts` — People is in the top bar; opening a person from People then People/back chrome returns to People, not Home; history back/forward; logo/name opens Menu; filter header does not overlap thumbs. Live AI hosts blocked. History does not write the people-graph.
 
 Curated clips:
 
