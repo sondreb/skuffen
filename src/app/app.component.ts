@@ -198,6 +198,7 @@ import {
 import { existingTags, normalizeTag, suggestTags } from "./services/tags";
 import { UPDATE_WHISPER } from "./services/update";
 import { UpdateService } from "./services/update.service";
+import { ViewHistory, snapshotView, type AppView } from "./services/view-history";
 
 type Panel =
   | "none"
@@ -340,6 +341,11 @@ export class AppComponent implements OnInit, OnDestroy {
   readonly rejectedRelationKeys = signal(new Set<string>());
   readonly desktop = isTauri();
   readonly demoMode = isDemoMode();
+  /** Session-only. Never written to OKF, settings, or the people-graph. */
+  private readonly viewHistory = new ViewHistory();
+  private applyingHistory = false;
+  readonly canNavBack = signal(false);
+  readonly canNavForward = signal(false);
 
   readonly filtered = computed(() =>
     sortPeople(
@@ -549,7 +555,7 @@ export class AppComponent implements OnInit, OnDestroy {
       this.panel === "places" ||
       this.panel === "place-create"
     ) {
-      this.panel = "none";
+      void this.leaveSheet();
     }
   }
 
@@ -606,6 +612,9 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   async open(person: PersonView): Promise<void> {
+    this.recordView(
+      snapshotView({ panel: "none", selectedSlug: person.slug, selectedPlaceSlug: null }),
+    );
     this.panel = "none";
     this.menuOpen = false;
     this.personMenu = null;
@@ -638,6 +647,13 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   openMap(): void {
+    this.recordView(
+      snapshotView({
+        panel: "map",
+        selectedSlug: this.people.selected()?.slug ?? null,
+        selectedPlaceSlug: this.people.selectedPlace()?.slug ?? null,
+      }),
+    );
     this.menuOpen = false;
     this.panel = "map";
     this.fact = "none";
@@ -646,16 +662,110 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   openGraph(): void {
+    this.recordView(
+      snapshotView({
+        panel: "graph",
+        selectedSlug: this.people.selected()?.slug ?? null,
+        selectedPlaceSlug: this.people.selectedPlace()?.slug ?? null,
+      }),
+    );
     this.menuOpen = false;
     this.panel = "graph";
     this.fact = "none";
   }
 
   openPeople(): void {
+    this.recordView(snapshotView({ panel: "people" }));
     this.menuOpen = false;
     this.panel = "people";
     this.fact = "none";
     this.galleryQuery.set("");
+    this.people.selected.set(null);
+    this.people.selectedPlace.set(null);
+  }
+
+  /** Sheet Back / Escape: prior view, not Home by default. */
+  leaveSheet(): Promise<void> {
+    if (this.viewHistory.canBack()) return this.historyBack();
+    this.panel = "none";
+    return Promise.resolve();
+  }
+
+  async historyBack(): Promise<void> {
+    const view = this.viewHistory.back();
+    if (!view) return;
+    await this.applyHistoricView(view);
+  }
+
+  async historyForward(): Promise<void> {
+    const view = this.viewHistory.forward();
+    if (!view) return;
+    await this.applyHistoricView(view);
+  }
+
+  private currentView(): AppView {
+    return snapshotView({
+      panel: this.panel,
+      selectedSlug: this.people.selected()?.slug ?? null,
+      selectedPlaceSlug: this.people.selectedPlace()?.slug ?? null,
+    });
+  }
+
+  private recordView(next: AppView): void {
+    if (this.applyingHistory) return;
+    this.viewHistory.push(this.currentView(), next);
+    this.syncNavChrome();
+  }
+
+  private replaceHistoryTip(): void {
+    if (this.applyingHistory) return;
+    this.viewHistory.replaceTip(this.currentView());
+    this.syncNavChrome();
+  }
+
+  private syncNavChrome(): void {
+    this.canNavBack.set(this.viewHistory.canBack());
+    this.canNavForward.set(this.viewHistory.canForward());
+  }
+
+  private async applyHistoricView(view: AppView): Promise<void> {
+    this.applyingHistory = true;
+    try {
+      this.menuOpen = false;
+      this.personMenu = null;
+      this.closeImagePreview();
+      this.fact = "none";
+      this.notice = null;
+      this.actionError = null;
+      this.panel = view.panel as Panel;
+      if (view.selectedSlug) {
+        const person = this.people.people().find((item) => item.slug === view.selectedSlug);
+        if (person) {
+          this.pendingDelete = null;
+          this.cardSection = "about";
+          this.openedFilePath = null;
+          this.pinDropped = false;
+          this.addingSocial = false;
+          this.addingRelation = false;
+          this.addingPlaceLink = false;
+          this.tagDraft = "";
+          this.resetLocationDraft(person);
+          await this.people.select(person.slug);
+        } else {
+          await this.people.select(null);
+        }
+      } else {
+        await this.people.select(null);
+      }
+      if (view.selectedPlaceSlug) {
+        await this.people.selectPlace(view.selectedPlaceSlug);
+      } else {
+        await this.people.selectPlace(null);
+      }
+    } finally {
+      this.applyingHistory = false;
+      this.syncNavChrome();
+    }
   }
 
   kindLabelForGraph(kind: string): string {
@@ -663,6 +773,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   openPlaces(): void {
+    this.recordView(snapshotView({ panel: "places" }));
     this.menuOpen = false;
     this.panel = "places";
     this.fact = "none";
@@ -671,6 +782,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   startCreatePlace(): void {
+    this.recordView(snapshotView({ panel: "place-create" }));
     this.placeDraft = blankPlaceDraft();
     this.notice = null;
     this.actionError = null;
@@ -699,12 +811,16 @@ export class AppComponent implements OnInit, OnDestroy {
       });
       this.panel = "none";
       await this.people.selectPlace(created.slug);
+      this.replaceHistoryTip();
     } catch (err) {
       this.actionError = err instanceof Error ? err.message : "Could not save this place.";
     }
   }
 
   async openPlaceCard(place: PlaceView): Promise<void> {
+    this.recordView(
+      snapshotView({ panel: "none", selectedSlug: null, selectedPlaceSlug: place.slug }),
+    );
     this.panel = "none";
     this.menuOpen = false;
     this.fact = "none";
@@ -719,10 +835,9 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   async closePlaceCard(): Promise<void> {
-    this.panel = "none";
     this.notice = null;
     this.actionError = null;
-    await this.people.selectPlace(null);
+    this.openPlaces();
   }
 
   async addPlaceLink(): Promise<void> {
@@ -756,7 +871,6 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   async closeFile(): Promise<void> {
-    this.panel = "none";
     this.fact = "none";
     this.cardSection = "about";
     this.openedFilePath = null;
@@ -771,11 +885,11 @@ export class AppComponent implements OnInit, OnDestroy {
     this.providers.clearSuggestions();
     this.nameProposal = null;
     this.resetLocationDraft(null);
-    await this.people.select(null);
-    await this.people.selectPlace(null);
+    this.openPeople();
   }
 
   startCreate(): void {
+    this.recordView(snapshotView({ panel: "create" }));
     this.draft = blankDraft();
     this.showMore = false;
     this.notice = null;
@@ -799,6 +913,9 @@ export class AppComponent implements OnInit, OnDestroy {
   startEdit(): void {
     const person = this.people.selected();
     if (!person) return;
+    this.recordView(
+      snapshotView({ panel: "edit", selectedSlug: person.slug, selectedPlaceSlug: null }),
+    );
     this.draft = {
       title: person.title,
       description: person.description ?? "",
@@ -823,6 +940,7 @@ export class AppComponent implements OnInit, OnDestroy {
       }
       this.panel = "none";
       this.fact = "none";
+      this.replaceHistoryTip();
       this.offerMergeIfNeeded(true);
     } catch (err) {
       this.actionError = err instanceof Error ? err.message : "Could not save this person.";
@@ -1417,6 +1535,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.notice = null;
     this.actionError = null;
     this.menuOpen = false;
+    this.recordView(snapshotView({ panel: "propose" }));
     this.panel = "propose";
     this.people.selected.set(null);
     this.nameProposal = null;
@@ -1553,6 +1672,12 @@ export class AppComponent implements OnInit, OnDestroy {
         : this.visibleMerge();
     if (!hit) return;
     this.mergeProposal = proposeMerge(hit.keeper, hit.incoming, hit.overlaps);
+    this.recordView(
+      snapshotView({
+        panel: "merge",
+        selectedSlug: this.people.selected()?.slug ?? hit.keeper.slug,
+      }),
+    );
     this.panel = "merge";
     this.menuOpen = false;
     this.fact = "none";
@@ -1575,9 +1700,8 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   closeMergeSheet(): void {
-    this.panel = "none";
     this.notice = null;
-    void this.people.select(null);
+    void this.leaveSheet();
   }
 
   async dismissMerge(): Promise<void> {
@@ -1590,10 +1714,9 @@ export class AppComponent implements OnInit, OnDestroy {
     );
     await this.persistDismissedMerges();
     this.mergeProposal = null;
-    this.panel = "none";
     this.notice = null;
     void dismissMergeProposal();
-    await this.people.select(null);
+    await this.leaveSheet();
   }
 
   async keepBothPeople(): Promise<void> {
@@ -1688,6 +1811,9 @@ export class AppComponent implements OnInit, OnDestroy {
     this.closePersonMenu();
     this.closeImagePreview();
     this.pendingDelete = person;
+    this.recordView(
+      snapshotView({ panel: "delete", selectedSlug: person.slug }),
+    );
     this.panel = "delete";
     this.menuOpen = false;
     this.notice = null;
@@ -1705,7 +1831,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
   cancelDelete(): void {
     this.pendingDelete = null;
-    this.panel = "none";
+    void this.leaveSheet();
   }
 
   async confirmDelete(): Promise<void> {
@@ -1888,6 +2014,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   openProviders(): void {
+    this.recordView(snapshotView({ panel: "providers" }));
     this.menuOpen = false;
     this.panel = "providers";
     this.people.selected.set(null);
@@ -1895,6 +2022,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   openMemory(): void {
+    this.recordView(snapshotView({ panel: "memory" }));
     this.menuOpen = false;
     this.panel = "memory";
     this.fact = "none";
@@ -1902,6 +2030,12 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   async openBrief(slug?: string): Promise<void> {
+    this.recordView(
+      snapshotView({
+        panel: "brief",
+        selectedSlug: slug || this.people.selected()?.slug || null,
+      }),
+    );
     this.menuOpen = false;
     this.panel = "brief";
     this.fact = "none";
@@ -1972,6 +2106,12 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   openShuffle(slug?: string): void {
+    this.recordView(
+      snapshotView({
+        panel: "shuffle",
+        selectedSlug: slug || this.people.selected()?.slug || null,
+      }),
+    );
     this.menuOpen = false;
     this.panel = "shuffle";
     this.fact = "none";
@@ -2091,6 +2231,12 @@ export class AppComponent implements OnInit, OnDestroy {
 
   openCommitments(slug?: string): void {
     commitmentsOpenWrites();
+    this.recordView(
+      snapshotView({
+        panel: "commitments",
+        selectedSlug: slug || this.people.selected()?.slug || null,
+      }),
+    );
     this.menuOpen = false;
     this.panel = "commitments";
     this.fact = "none";
@@ -2234,6 +2380,12 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   openCapture(slug?: string): void {
+    this.recordView(
+      snapshotView({
+        panel: "capture",
+        selectedSlug: slug || this.people.selected()?.slug || null,
+      }),
+    );
     this.menuOpen = false;
     this.panel = "capture";
     this.fact = "none";

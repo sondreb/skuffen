@@ -215,7 +215,7 @@ npm run test:graph
 
 ## People gallery
 
-Menu → **People** is a full-content-area view of everyone as large profile thumbs (local OKF `data:` / `blob:` bytes, initials if there is no photo). Little metadata on the tiles — a quiet name caption, no relations or fields. Two layouts: large thumbs and a denser mosaic. Switching modes and filtering animate the set (fade / scale / layout), including when `#tag` tokens match tags from the people-tag model.
+**People** in the top bar (and Menu → People) is a full-content-area view of everyone as large profile thumbs (local OKF `data:` / `blob:` bytes, initials if there is no photo). Little metadata on the tiles — a quiet name caption, no relations or fields. Two layouts: large thumbs and a denser mosaic. Switching modes and filtering animate the set (fade / scale / layout), including when `#tag` tokens match tags from the people-tag model. Opening a card from People, then People on that card, returns to this view — not Home. Back/forward next to the logo walk in-app history only (never the people-graph). The logo / name opens Menu.
 
 Filter is name text, plus `#tag` once tags exist on the person. Example: `#family` leaves everyone else. Click a thumb to open that card. Works with the collapsed photo-strip sidebar.
 

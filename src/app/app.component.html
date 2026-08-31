@@ -6,12 +6,66 @@
   (drop)="onDrop($event)"
 >
   <header class="chrome">
-    <div class="brand">
+    <button
+      #menuBtn
+      class="brand"
+      type="button"
+      [class.on]="menuOpen"
+      (click)="toggleMenu()"
+      [attr.aria-expanded]="menuOpen"
+      aria-controls="skuffen-menu"
+      aria-label="Menu"
+      data-open-menu
+    >
       <img src="assets/skuffen-icon.png" alt="" />
       <div>
         <strong>Skuffen</strong>
         <span>{{ personCount() ? personCount() + (personCount() === 1 ? " person" : " people") : "People" }}</span>
       </div>
+      @if (follow.pendingCount()) {
+        <span class="memory-count">{{ follow.pendingCount() }}</span>
+      }
+    </button>
+
+    <div class="history-nav" data-nav-history>
+      <button
+        type="button"
+        class="tool"
+        data-nav-back
+        aria-label="Previous view"
+        [disabled]="!canNavBack()"
+        (click)="historyBack()"
+      >
+        <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+          <path
+            d="M10.2 2.7 5 8l5.2 5.3"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </button>
+      <button
+        type="button"
+        class="tool"
+        data-nav-forward
+        aria-label="Next view"
+        [disabled]="!canNavForward()"
+        (click)="historyForward()"
+      >
+        <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+          <path
+            d="M5.8 2.7 11 8l-5.2 5.3"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </button>
     </div>
 
     <div class="tools">
@@ -43,6 +97,15 @@
         >
           Places
         </button>
+        <button
+          type="button"
+          class="tool"
+          [class.on]="panel === 'people'"
+          (click)="openPeople()"
+          data-open-people="chrome"
+        >
+          People
+        </button>
         @if (!empty()) {
           <button type="button" class="tool" [class.on]="panel === 'map'" (click)="openMap()" data-open-map>
             Map
@@ -70,21 +133,6 @@
           </button>
         }
       </div>
-
-    <button
-      #menuBtn
-      class="menu-btn"
-      type="button"
-      [class.on]="menuOpen"
-      (click)="toggleMenu()"
-      [attr.aria-expanded]="menuOpen"
-      aria-controls="skuffen-menu"
-    >
-      Menu
-      @if (follow.pendingCount()) {
-        <span class="memory-count">{{ follow.pendingCount() }}</span>
-      }
-    </button>
 
     @if (menuOpen) {
       <aside
@@ -461,7 +509,7 @@
         <section class="sheet">
           <header class="sheet-head">
             <h1>Providers</h1>
-            <button class="ghost" type="button" (click)="panel = 'none'">Back</button>
+            <button class="ghost" type="button" (click)="leaveSheet()">Back</button>
           </header>
           <p class="lede">
             @if (desktop) {
@@ -541,7 +589,7 @@
               <p class="kicker">Local people-graph</p>
               <h1>People map</h1>
             </div>
-            <button class="ghost" type="button" (click)="panel = 'none'">Back</button>
+            <button class="ghost" type="button" (click)="leaveSheet()">Back</button>
           </header>
           @if (mapPins().length === 0) {
             <div class="map-empty" data-map-empty>
@@ -613,7 +661,7 @@
                   </button>
                 </div>
               }
-              <button class="ghost" type="button" (click)="panel = 'none'">Back</button>
+              <button class="ghost" type="button" (click)="leaveSheet()">Back</button>
             </div>
           </header>
           @if (people.people().length === 0) {
@@ -652,7 +700,7 @@
               <p class="kicker">Local people-graph</p>
               <h1>Who knows who</h1>
             </div>
-            <button class="ghost" type="button" (click)="panel = 'none'">Back</button>
+            <button class="ghost" type="button" (click)="leaveSheet()">Back</button>
           </header>
           @if (graphNodes().length === 0) {
             <div class="map-empty" data-graph-empty>
@@ -693,7 +741,7 @@
             </div>
             <div class="row">
               <button class="brass" type="button" data-add-place (click)="startCreatePlace()">Add place</button>
-              <button class="ghost" type="button" (click)="panel = 'none'">Back</button>
+              <button class="ghost" type="button" (click)="leaveSheet()">Back</button>
             </div>
           </header>
           <p class="whisper">
@@ -801,7 +849,7 @@
               <p class="kicker">Inspectable — not a hidden store</p>
               <h1>Memory</h1>
             </div>
-            <button class="ghost" type="button" (click)="panel = 'none'">Back</button>
+            <button class="ghost" type="button" (click)="leaveSheet()">Back</button>
           </header>
           <p class="whisper">
             What the model was told and what it wanted to write. Pending facts live in local app
@@ -1536,7 +1584,7 @@
             >
               {{ panel === "create" ? "Add person" : "Save" }}
             </button>
-            <button class="ghost" type="button" (click)="panel = 'none'">Cancel</button>
+            <button class="ghost" type="button" (click)="leaveSheet()">Cancel</button>
           </div>
         </section>
       } @else if (panel === "propose") {
@@ -1837,7 +1885,7 @@
       } @else if (people.selected(); as person) {
         <section class="file">
           <nav class="file-nav">
-            <button class="ghost back" type="button" (click)="closeFile()">People</button>
+            <button class="ghost back" type="button" data-leave-person (click)="closeFile()">People</button>
           </nav>
 
           <article class="card">
