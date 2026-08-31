@@ -323,8 +323,6 @@ export class PeopleService {
     await this.rebuildIndexes();
     const created = this.places().find((item) => item.slug === slug);
     if (!created) throw new Error("Place missing after write");
-    this.selectedPlace.set(created);
-    this.selected.set(null);
     return created;
   }
 

@@ -78,42 +78,52 @@ test("people without a Place still show from people/{slug}/place.md", async ({ d
   await expect(page.locator('[data-map-pin-kind="place"]')).toHaveCount(0);
 });
 
-test("Accept is required for a model-proposed Place; uncheck writes nothing", async ({
-  demoPage: page,
-}) => {
-  await openDemo(page);
-  await createAdaDemo(page);
+async function proposePlaceViaAskThenResearch(page: import("@playwright/test").Page) {
+  await page.locator("[data-person-row='ada-demo']").click();
   await page.getByRole("button", { name: "Suggest", exact: true }).click();
   await page.locator("[data-demo='suggest-facts']").click();
   await page.locator("[data-demo='research']").click();
   const placeOffer = page.locator("[data-suggestion-kind='place']");
   await expect(placeOffer).toHaveCount(1);
   await expect(placeOffer.getByText("Golden Gate Park (demo)")).toBeVisible();
+  return placeOffer;
+}
+
+test("uncheck a proposed Place writes nothing", async ({ demoPage: page }) => {
+  await openDemo(page);
+  await createAdaDemo(page);
+  const placeOffer = await proposePlaceViaAskThenResearch(page);
   await expect(page.getByText("Nothing is written until you accept.")).toBeVisible();
 
   await placeOffer.getByRole("checkbox").uncheck();
   await page.locator("[data-demo='accept']").click();
   const afterUncheck = await bundleFiles(page);
-  expect(Object.keys(afterUncheck).some((path) => path.startsWith("places/"))).toBe(false);
+  expect(afterUncheck["places/golden-gate-park/place.md"]).toBeUndefined();
   expect(afterUncheck["people/ada-demo/place-links.md"]).toBeUndefined();
+});
 
-  await page.locator("[data-demo='suggest-facts']").click();
-  await page.locator("[data-demo='research']").click();
-  const again = page.locator("[data-suggestion-kind='place']");
-  await expect(again).toBeVisible();
-  await again.getByRole("button", { name: "Delete" }).click();
+test("reject a proposed Place writes nothing", async ({ demoPage: page }) => {
+  await openDemo(page);
+  await createAdaDemo(page);
+  const placeOffer = await proposePlaceViaAskThenResearch(page);
+
+  await placeOffer.getByRole("button", { name: "Delete" }).click();
   await expect(page.locator("[data-suggestion-kind='place']")).toHaveCount(0);
   await page.locator("[data-demo='accept']").click();
   const afterReject = await bundleFiles(page);
-  expect(Object.keys(afterReject).some((path) => path.startsWith("places/"))).toBe(false);
+  expect(afterReject["places/golden-gate-park/place.md"]).toBeUndefined();
+  expect(afterReject["people/ada-demo/place-links.md"]).toBeUndefined();
+});
 
-  await page.locator("[data-demo='suggest-facts']").click();
-  await page.locator("[data-demo='research']").click();
-  await expect(page.locator("[data-suggestion-kind='place']")).toBeVisible();
+test("Accept writes a model-proposed Place", async ({ demoPage: page }) => {
+  await openDemo(page);
+  await createAdaDemo(page);
+  await proposePlaceViaAskThenResearch(page);
   await page.locator("[data-demo='accept']").click();
+  await expect(page.locator("[data-demo='accept']")).toHaveCount(0);
+  await openPersonTab(page, "Places");
+  await expect(page.locator("[data-place-link='golden-gate-park']")).toBeVisible();
   const afterAccept = await bundleFiles(page);
   expect(afterAccept["places/golden-gate-park/place.md"]).toMatch(/type: Place/);
   expect(afterAccept["people/ada-demo/place-links.md"]).toMatch(/met-at/);
-  await openPersonTab(page, "Places");
-  await expect(page.locator("[data-place-link='golden-gate-park']")).toBeVisible();
 });

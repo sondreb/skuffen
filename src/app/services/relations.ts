@@ -175,10 +175,16 @@ export function collapseEquivalentSuggestions(items: FactSuggestion[]): FactSugg
 
 export function equivalentSuggestionIds(items: FactSuggestion[], target: FactSuggestion): string[] {
   const key = relationOfferKey(target);
+  const placeKey = placeOfferKey(target);
   return [
     ...new Set(
       items
-        .filter((item) => item.id === target.id || (key !== null && relationOfferKey(item) === key))
+        .filter(
+          (item) =>
+            item.id === target.id ||
+            (key !== null && relationOfferKey(item) === key) ||
+            (placeKey !== null && placeOfferKey(item) === placeKey),
+        )
         .map((item) => item.id),
     ),
   ];
