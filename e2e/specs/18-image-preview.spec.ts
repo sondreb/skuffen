@@ -1,4 +1,4 @@
-import { createAdaDemo, expect, openDemo, test } from "../helpers/app";
+import { createAdaDemo, expect, openDemo, openPersonTab, test } from "../helpers/app";
 
 const BUNDLE_KEY = "skuffen.bundle.files";
 const BLOBS_KEY = "skuffen.bundle.blobs";
@@ -24,6 +24,7 @@ test("no profile photo hides diorama; people-list context menu has no diorama", 
   await openDemo(page);
   await createAdaDemo(page);
 
+  await openPersonTab(page, "Photos");
   await expect(page.getByText("No photos yet.")).toBeVisible();
   await expect(page.locator("[data-diorama-action]")).toHaveCount(0);
   await expect(page.locator("[data-image-preview]")).toHaveCount(0);

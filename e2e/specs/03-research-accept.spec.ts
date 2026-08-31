@@ -1,4 +1,4 @@
-import { captureReadmeStill, createAdaDemo, expect, openDemo, test } from "../helpers/app";
+import { captureReadmeStill, createAdaDemo, expect, openDemo, openPersonTab, test } from "../helpers/app";
 import { hold, showDemoLabel } from "../helpers/labels";
 
 test("Grok research proposes, user Accepts", async ({ demoPage: page }) => {
@@ -34,6 +34,7 @@ test("Grok research proposes, user Accepts", async ({ demoPage: page }) => {
   await expect(page.getByRole("heading", { name: "Public park mention (demo)" })).toBeVisible();
   await expect(page.getByText(/Synthetic Grok proposal for Ada Demo/)).toBeVisible();
   await expect(page.getByText("+1 555 0100")).toBeVisible();
+  await openPersonTab(page, "Photos");
   await expect(page.getByRole("heading", { name: "Public portrait (demo)" })).toBeVisible();
   await expect(page.getByText("No photos yet.")).toHaveCount(0);
   await expect(page.locator("[data-photos] [data-photo-profile]")).toBeVisible();

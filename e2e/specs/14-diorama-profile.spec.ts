@@ -1,4 +1,4 @@
-import { createAdaDemo, expect, openDemo, test } from "../helpers/app";
+import { createAdaDemo, expect, openDemo, openPersonTab, test } from "../helpers/app";
 
 const PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
@@ -18,6 +18,7 @@ test("without Grok, 3D clay diorama opens Menu → Providers and writes nothing"
   await page.locator('input[name="person-name"]').fill("Ada Demo");
   await page.locator("[data-create-form] button.brass").click();
   await expect(page.getByRole("heading", { name: "Ada Demo" })).toBeVisible();
+  await openPersonTab(page, "Photos");
   await expect(page.getByText("No photos yet.")).toBeVisible();
   await expect(page.locator("[data-diorama-action]")).toHaveCount(0);
 
@@ -41,6 +42,7 @@ test("demo diorama becomes the local profile and keeps the previous photo", asyn
   await createAdaDemo(page);
 
   await expect(page.locator("[data-diorama-action]")).toHaveCount(0);
+  await openPersonTab(page, "Photos");
   await expect(page.getByText("No photos yet.")).toBeVisible();
 
   await page.locator("#skuffen-profile-file").setInputFiles({

@@ -664,32 +664,155 @@ button:disabled {
   min-width: 0;
 }
 
+.card-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 1.05rem 0 0.65rem;
+}
+
+.card-tabs [role="tab"] {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.card-panel {
+  margin-top: 0.15rem;
+  outline: none;
+}
+
+.card-panel[hidden] {
+  display: none;
+}
+
+.card-panel:focus-visible {
+  box-shadow: 0 0 0 2px var(--accent-line);
+  border-radius: 12px;
+}
+
+.photo-gallery .row,
+.file-gallery .row {
+  margin-bottom: 0.35rem;
+}
+
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11.5rem, 1fr));
+  gap: 0.75rem;
+}
+
+.photo-tile {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.65rem;
+  overflow: hidden;
+}
+
 .photo-preview-open {
   display: block;
-  width: min(100%, 12rem);
+  width: 100%;
+  aspect-ratio: 1;
   padding: 0;
-  margin-bottom: 0.55rem;
+  margin: 0;
   border: 0;
   background: transparent;
   box-shadow: none;
   cursor: zoom-in;
+  border-radius: 10px;
+  overflow: hidden;
 }
 
 .photo-preview-open:hover,
 .photo-preview-open:focus-visible {
   border-color: transparent;
   background: transparent;
-  box-shadow: none;
+  box-shadow: 0 0 0 2px var(--accent-line);
 }
 
 .photo-thumb {
   display: block;
   width: 100%;
-  max-height: 10rem;
-  height: auto;
+  height: 100%;
   object-fit: cover;
-  border-radius: 8px;
   background: var(--thumb);
+}
+
+.photo-missing {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  border-radius: 10px;
+  background: var(--thumb);
+  color: var(--mute);
+}
+
+.photo-tile.is-profile {
+  border-color: var(--accent);
+}
+
+.photo-badge {
+  justify-self: start;
+  margin: 0;
+  padding: 0.12rem 0.45rem;
+  border-radius: 999px;
+  background: var(--accent-wash);
+  color: var(--accent-soft);
+  font-size: 0.72rem;
+}
+
+.photo-meta h3 {
+  margin: 0;
+  font-size: 0.92rem;
+}
+
+.file-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.file-tile {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.file-icon {
+  display: grid;
+  place-items: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 10px;
+  background: var(--accent-wash);
+  color: var(--accent-soft);
+}
+
+.file-copy h3,
+.file-copy small,
+.file-copy p {
+  margin: 0;
+}
+
+.file-copy small {
+  display: block;
+  word-break: break-all;
+}
+
+@media (max-width: 1100px) {
+  .card-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+  }
+
+  .card-tabs [role="tab"] {
+    min-width: 9.25rem;
+  }
 }
 
 .person-menu {

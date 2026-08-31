@@ -1,4 +1,4 @@
-import { createAdaDemo, expect, openDemo, test } from "../helpers/app";
+import { createAdaDemo, expect, openDemo, openPersonTab, test } from "../helpers/app";
 
 const PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
@@ -11,6 +11,7 @@ test("after diorama is set, control is gone; removing that photo brings it back"
   await openDemo(page);
   await createAdaDemo(page);
 
+  await openPersonTab(page, "Photos");
   await expect(page.getByText("No photos yet.")).toBeVisible();
   await expect(page.locator("[data-diorama-action]")).toHaveCount(0);
 

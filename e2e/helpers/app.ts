@@ -145,6 +145,13 @@ export async function createAdaDemo(page: Page): Promise<void> {
   await expect(page.getByRole("heading", { name: "Ada Demo" })).toBeVisible();
 }
 
+/** Person-card content tab. One section is visible at a time. */
+export async function openPersonTab(page: Page, name: string): Promise<void> {
+  const tab = page.locator("[data-card-tabs]").getByRole("tab", { name, exact: true });
+  await tab.click();
+  await expect(tab).toHaveAttribute("aria-selected", "true");
+}
+
 export async function pinNote(page: Page, body: string, title?: string): Promise<void> {
   await page.getByRole("button", { name: "Note" }).click();
   await page.getByPlaceholder("A line about them").fill(body);
