@@ -195,7 +195,9 @@ async function callTool(name: string, args: Record<string, unknown>): Promise<un
     case "get_person": {
       const person = bundle.getPerson(String(args.slug ?? ""));
       if (!person) throw new Error("Person not found");
-      return args.include_sensitive ? person : publicPersonView(person as unknown as Record<string, unknown>);
+      return args.include_sensitive
+        ? person
+        : publicPersonView(person as unknown as Record<string, unknown>, { includeRelations: true });
     }
     case "create_person":
       return publicPersonView(
@@ -259,6 +261,7 @@ async function callTool(name: string, args: Record<string, unknown>): Promise<un
           kind: args.kind === "family" || args.kind === "business" || args.kind === "other" ? args.kind : "other",
           role: String(args.role ?? ""),
         }) as unknown as Record<string, unknown>,
+        { includeRelations: true },
       );
     case "remove_relation":
       return publicPersonView(
@@ -267,6 +270,7 @@ async function callTool(name: string, args: Record<string, unknown>): Promise<un
           kind: args.kind === "family" || args.kind === "business" || args.kind === "other" ? args.kind : "other",
           role: String(args.role ?? ""),
         }) as unknown as Record<string, unknown>,
+        { includeRelations: true },
       );
     case "clear_person_location":
       return publicPersonView(bundle.clearLocation(String(args.slug ?? "")) as unknown as Record<string, unknown>);
