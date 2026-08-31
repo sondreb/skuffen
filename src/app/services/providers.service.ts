@@ -196,17 +196,17 @@ export class ProvidersService {
     throw new Error("Grok sign-in expired. Try again.");
   }
 
-  async suggest(person: PersonView): Promise<void> {
+  async suggest(person: PersonView, others: Array<{ slug: string; title: string }> = []): Promise<void> {
     if (isDemoMode()) {
-      await this.applyDemoResearch("ask", person.title);
+      await this.applyDemoResearch("ask", person.title, demoResearchSuggestions("ask", others));
       return;
     }
     await this.runPrompt(person, "ask", false);
   }
 
-  async research(person: PersonView): Promise<void> {
+  async research(person: PersonView, others: Array<{ slug: string; title: string }> = []): Promise<void> {
     if (isDemoMode()) {
-      await this.applyDemoResearch("research", person.title);
+      await this.applyDemoResearch("research", person.title, demoResearchSuggestions("research", others));
       return;
     }
     await this.runPrompt(person, "research", true);
@@ -229,9 +229,13 @@ export class ProvidersService {
     return items;
   }
 
-  async researchPerson(person: PersonView, source: SuggestionSource = "follow"): Promise<FactSuggestion[]> {
+  async researchPerson(
+    person: PersonView,
+    source: SuggestionSource = "follow",
+    others: Array<{ slug: string; title: string }> = [],
+  ): Promise<FactSuggestion[]> {
     if (isDemoMode()) {
-      return demoResearchSuggestions(source);
+      return demoResearchSuggestions(source, others);
     }
     const provider = this.activeProvider();
     if (!provider) {

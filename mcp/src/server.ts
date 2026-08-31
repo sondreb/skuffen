@@ -137,6 +137,35 @@ const tools = [
     },
   },
   {
+    name: "add_relation",
+    description:
+      "Add a typed relation between two local people (family, business, other). Writes both cards. Does not upload the graph.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        slug: { type: "string" },
+        relatedSlug: { type: "string" },
+        kind: { type: "string", description: "family | business | other" },
+        role: { type: "string", description: "partner, parent, child, sibling, colleague, manager, client, friend, neighbor, or free text" },
+      },
+      required: ["slug", "relatedSlug", "kind", "role"],
+    },
+  },
+  {
+    name: "remove_relation",
+    description: "Remove a typed relation between two local people. Writes both cards. Does not upload.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        slug: { type: "string" },
+        relatedSlug: { type: "string" },
+        kind: { type: "string" },
+        role: { type: "string" },
+      },
+      required: ["slug", "relatedSlug", "kind", "role"],
+    },
+  },
+  {
     name: "clear_person_location",
     description: "Remove a person's local Place pin from the OKF bundle.",
     inputSchema: {
@@ -166,7 +195,9 @@ async function callTool(name: string, args: Record<string, unknown>): Promise<un
     case "get_person": {
       const person = bundle.getPerson(String(args.slug ?? ""));
       if (!person) throw new Error("Person not found");
-      return args.include_sensitive ? person : publicPersonView(person as unknown as Record<string, unknown>);
+      return args.include_sensitive
+        ? person
+        : publicPersonView(person as unknown as Record<string, unknown>, { includeRelations: true });
     }
     case "create_person":
       return publicPersonView(
@@ -222,6 +253,24 @@ async function callTool(name: string, args: Record<string, unknown>): Promise<un
           longitude: Number(args.longitude),
           source: args.source === "pin" || args.source === "search" ? args.source : undefined,
         }) as unknown as Record<string, unknown>,
+      );
+    case "add_relation":
+      return publicPersonView(
+        bundle.addRelation(String(args.slug ?? ""), {
+          relatedSlug: String(args.relatedSlug ?? ""),
+          kind: args.kind === "family" || args.kind === "business" || args.kind === "other" ? args.kind : "other",
+          role: String(args.role ?? ""),
+        }) as unknown as Record<string, unknown>,
+        { includeRelations: true },
+      );
+    case "remove_relation":
+      return publicPersonView(
+        bundle.removeRelation(String(args.slug ?? ""), {
+          relatedSlug: String(args.relatedSlug ?? ""),
+          kind: args.kind === "family" || args.kind === "business" || args.kind === "other" ? args.kind : "other",
+          role: String(args.role ?? ""),
+        }) as unknown as Record<string, unknown>,
+        { includeRelations: true },
       );
     case "clear_person_location":
       return publicPersonView(bundle.clearLocation(String(args.slug ?? "")) as unknown as Record<string, unknown>);

@@ -306,6 +306,26 @@
             </label>
           </div>
         </div>
+        <div class="kind-filters" data-relation-filters>
+          <button
+            type="button"
+            [class.on]="relationKindFilter() === ''"
+            (click)="setRelationKindFilter('')"
+            data-relation-filter="all"
+          >
+            All
+          </button>
+          @for (kind of relationKinds; track kind) {
+            <button
+              type="button"
+              [class.on]="relationKindFilter() === kind"
+              (click)="setRelationKindFilter(kind)"
+              [attr.data-relation-filter]="kind"
+            >
+              {{ kindLabelForRelation(kind) }}
+            </button>
+          }
+        </div>
         <nav class="people-list" aria-label="Everyone">
           @if (query().trim() && filtered().length === 0) {
             <p class="invite-line">
@@ -1774,7 +1794,12 @@
             } @else if (fact === "suggest") {
               <div class="surface suggest">
                 <div class="row">
-                  <button type="button" (click)="ask()" [disabled]="providers.busy()">
+                  <button
+                    type="button"
+                    (click)="ask()"
+                    [disabled]="providers.busy()"
+                    [attr.data-demo]="demoMode ? 'suggest-facts' : null"
+                  >
                     {{ providers.busy() ? "Listening…" : "Suggest facts" }}
                   </button>
                   <button
@@ -1844,7 +1869,11 @@
                   </label>
                   <div class="offers">
                     @for (item of visibleSuggestions(); track item.id) {
-                      <article class="fact-offer">
+                      <article
+                        class="fact-offer"
+                        [attr.data-suggestion-kind]="item.kind"
+                        [attr.data-suggestion-id]="item.id"
+                      >
                         <label class="follow-line">
                           <input
                             type="checkbox"
@@ -1959,6 +1988,106 @@
               }
               @if (!selectedTimeline().length) {
                 <p class="whisper">{{ timelineEmpty }}</p>
+              }
+            </section>
+
+            <section class="slips" data-relations>
+              <h2>Relations</h2>
+              <p class="whisper">
+                Typed links to other people in this local graph. Written to
+                <code>people/{{ person.slug }}/relations.md</code>.
+                Both cards show the edge. Never uploaded.
+              </p>
+              @for (edge of person.relations; track edge.slug + edge.kind + edge.role) {
+                <article
+                  [attr.data-relation-row]="edge.slug"
+                  [attr.data-relation-kind]="edge.kind"
+                  [attr.data-relation-role]="edge.role"
+                >
+                  <button type="button" class="ghost relation-open" (click)="openBySlug(edge.slug)">
+                    <strong>{{ edge.title }}</strong>
+                    <small>{{ kindLabelForRelation(edge.kind) }} · {{ roleLabelForRelation(edge.role) }}</small>
+                  </button>
+                  <button
+                    class="ghost"
+                    type="button"
+                    data-remove-relation
+                    (click)="removeRelation(edge)"
+                  >
+                    Remove
+                  </button>
+                </article>
+              }
+              @if (!person.relations.length && !addingRelation) {
+                <p class="whisper" data-relations-empty>No relations yet.</p>
+              }
+              @if (addingRelation) {
+                <div class="grid" data-add-relation>
+                  <label>
+                    Person
+                    <select [(ngModel)]="relationTarget" name="relation-target" data-relation-target>
+                      <option value="">Choose a person</option>
+                      @for (other of relationOthers(person.slug); track other.slug) {
+                        <option [value]="other.slug">{{ other.title }}</option>
+                      }
+                    </select>
+                  </label>
+                  <label>
+                    Kind
+                    <select
+                      [ngModel]="relationKind"
+                      (ngModelChange)="onRelationKindChange($event)"
+                      name="relation-kind"
+                      data-relation-kind
+                    >
+                      @for (kind of relationKinds; track kind) {
+                        <option [value]="kind">{{ kindLabelForRelation(kind) }}</option>
+                      }
+                    </select>
+                  </label>
+                  <label>
+                    Role
+                    <select [(ngModel)]="relationRole" name="relation-role" data-relation-role>
+                      @for (role of relationRoleChoices(); track role) {
+                        <option [value]="role">{{ roleLabelForRelation(role) }}</option>
+                      }
+                      <option value="custom">Other (free text)</option>
+                    </select>
+                  </label>
+                  @if (relationRole === "custom") {
+                    <label>
+                      Family / business / other role
+                      <input
+                        [(ngModel)]="relationCustomRole"
+                        name="relation-custom"
+                        data-relation-custom
+                        placeholder="cousin, landlord, …"
+                      />
+                    </label>
+                  }
+                </div>
+                <div class="row">
+                  <button
+                    class="brass"
+                    type="button"
+                    data-relation-save
+                    (click)="addRelation()"
+                    [disabled]="!relationTarget || (relationRole === 'custom' && !relationCustomRole.trim())"
+                  >
+                    Save relation
+                  </button>
+                  <button class="ghost" type="button" (click)="addingRelation = false">Cancel</button>
+                </div>
+              } @else {
+                <button
+                  class="ghost"
+                  type="button"
+                  data-add-relation-open
+                  (click)="addingRelation = true"
+                  [disabled]="relationOthers(person.slug).length === 0"
+                >
+                  Add a relation
+                </button>
               }
             </section>
 

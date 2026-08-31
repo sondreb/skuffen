@@ -1,7 +1,11 @@
 import { redactSensitiveRecord } from "../../packages/okf/src/index.ts";
 
-export function publicPersonView(person: Record<string, unknown>): Record<string, unknown> {
-  return redactSensitiveRecord({
+/** List/search omit relations so MCP cannot dump the who-knows-who graph. */
+export function publicPersonView(
+  person: Record<string, unknown>,
+  options?: { includeRelations?: boolean },
+): Record<string, unknown> {
+  const view: Record<string, unknown> = {
     id: person.id,
     slug: person.slug,
     title: person.title,
@@ -13,5 +17,7 @@ export function publicPersonView(person: Record<string, unknown>): Record<string
     photos: person.photos,
     location: person.location,
     documents: person.documents,
-  });
+  };
+  if (options?.includeRelations) view.relations = person.relations;
+  return redactSensitiveRecord(view);
 }

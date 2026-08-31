@@ -8,6 +8,7 @@ export const SOCIAL_TYPE = "SocialProfile";
 export const PLACE_TYPE = "Place";
 export const DOCUMENT_TYPE = "Document";
 export const DOCUMENT_KIND = "document";
+export const RELATIONS_TYPE = "Relations";
 
 export type OkfType =
   | typeof PERSON_TYPE
@@ -16,7 +17,28 @@ export type OkfType =
   | typeof SOCIAL_TYPE
   | typeof PLACE_TYPE
   | typeof DOCUMENT_TYPE
+  | typeof RELATIONS_TYPE
   | string;
+
+export type RelationKind = "family" | "business" | "other";
+
+export const FAMILY_ROLES = ["partner", "parent", "child", "sibling"] as const;
+export const BUSINESS_ROLES = ["colleague", "manager", "client"] as const;
+export const OTHER_ROLES = ["friend", "neighbor"] as const;
+
+export type PresetRelationRole =
+  | (typeof FAMILY_ROLES)[number]
+  | (typeof BUSINESS_ROLES)[number]
+  | (typeof OTHER_ROLES)[number];
+
+export interface OkfRelation {
+  /** family | business | other */
+  kind: RelationKind;
+  /** Preset role or a free-text family/business/other role. */
+  role: string;
+  /** Bundle path of the other person. File path is identity. */
+  person: string;
+}
 
 export type PlaceSource = "search" | "pin";
 
@@ -56,6 +78,8 @@ export interface OkfFrontmatter {
   subjects?: string[];
   /** Bundle-relative profile image. Never http(s). */
   image?: string;
+  /** Typed links to other local people. Only on relations.md. */
+  relations?: OkfRelation[];
 }
 
 export interface OkfDocument {
@@ -266,6 +290,10 @@ export function photoFilePath(slug: string, fileName: string): string {
 
 export function placePath(slug: string): string {
   return `${personDir(slug)}/place.md`;
+}
+
+export function relationsPath(slug: string): string {
+  return `${personDir(slug)}/relations.md`;
 }
 
 export function isValidLatitude(value: number): boolean {
@@ -576,6 +604,127 @@ export function createDocumentDocument(input: {
     },
     body: `${parts.join("\n\n")}\n`,
   };
+}
+
+export function createRelationsDocument(input: {
+  slug: string;
+  relations?: OkfRelation[];
+  generatedBy?: string;
+  verifiedBy?: string;
+}): OkfDocument {
+  const at = nowUtc();
+  const relations = normalizeRelationList(input.relations);
+  return {
+    id: conceptId(relationsPath(input.slug)),
+    path: relationsPath(input.slug),
+    frontmatter: {
+      type: RELATIONS_TYPE,
+      title: "Relations",
+      relations,
+      generated: { by: input.generatedBy ?? actorHuman(), at },
+      verified: { by: input.verifiedBy ?? actorHuman(), at },
+    },
+    body: `Typed links from [${input.slug}](/${personPath(input.slug)}) to other local people. File path is identity. Never uploaded.\n`,
+  };
+}
+
+export function slugFromPersonPath(path: string): string | undefined {
+  const normalized = path.replace(/\\/g, "/").replace(/^\//, "");
+  const match = normalized.match(/^people\/([^/]+)\/person\.md$/);
+  return match?.[1];
+}
+
+export function isRelationKind(value: unknown): value is RelationKind {
+  return value === "family" || value === "business" || value === "other";
+}
+
+export function presetRolesForKind(kind: RelationKind): readonly string[] {
+  if (kind === "family") return FAMILY_ROLES;
+  if (kind === "business") return BUSINESS_ROLES;
+  return OTHER_ROLES;
+}
+
+export function normalizeRelationRole(kind: RelationKind, role: string): string {
+  const trimmed = role.trim();
+  if (!trimmed) return "";
+  const lower = trimmed.toLowerCase();
+  const presets = presetRolesForKind(kind);
+  const preset = presets.find((item) => item === lower);
+  return preset ?? trimmed;
+}
+
+export function inverseRelationRole(role: string): string {
+  const lower = role.trim().toLowerCase();
+  if (lower === "parent") return "child";
+  if (lower === "child") return "parent";
+  return role.trim();
+}
+
+export function normalizeRelation(value: unknown): OkfRelation | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const raw = value as Record<string, unknown>;
+  if (!isRelationKind(raw["kind"])) return null;
+  const role = typeof raw["role"] === "string" ? normalizeRelationRole(raw["kind"], raw["role"]) : "";
+  if (!role) return null;
+  const person = typeof raw["person"] === "string" ? raw["person"].replace(/\\/g, "/").replace(/^\//, "").trim() : "";
+  if (!slugFromPersonPath(person)) return null;
+  return { kind: raw["kind"], role, person };
+}
+
+export function normalizeRelationList(value: unknown): OkfRelation[] {
+  if (!Array.isArray(value)) return [];
+  const out: OkfRelation[] = [];
+  const seen = new Set<string>();
+  for (const item of value) {
+    const edge = normalizeRelation(item);
+    if (!edge) continue;
+    const key = relationKey(edge);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(edge);
+  }
+  return out;
+}
+
+export function relationKey(edge: Pick<OkfRelation, "kind" | "role" | "person">): string {
+  return `${edge.kind}|${edge.role.toLowerCase()}|${edge.person}`;
+}
+
+export function relationsFromDocument(doc: OkfDocument): OkfRelation[] {
+  if (doc.frontmatter.type !== RELATIONS_TYPE) return [];
+  return normalizeRelationList(doc.frontmatter.relations);
+}
+
+export function upsertRelation(relations: OkfRelation[], edge: OkfRelation): OkfRelation[] {
+  const next = normalizeRelation(edge);
+  if (!next) return normalizeRelationList(relations);
+  const without = normalizeRelationList(relations).filter((item) => relationKey(item) !== relationKey(next));
+  return [...without, next];
+}
+
+export function removeRelation(
+  relations: OkfRelation[],
+  match: { person: string; kind?: RelationKind; role?: string },
+): OkfRelation[] {
+  const person = match.person.replace(/\\/g, "/").replace(/^\//, "");
+  return normalizeRelationList(relations).filter((item) => {
+    if (item.person !== person) return true;
+    if (match.kind && item.kind !== match.kind) return true;
+    if (match.role && item.role.toLowerCase() !== match.role.trim().toLowerCase()) return true;
+    return false;
+  });
+}
+
+export function wipeRelationsForSlug(relations: OkfRelation[], slug: string): OkfRelation[] {
+  const path = personPath(slug);
+  return normalizeRelationList(relations).filter((item) => item.person !== path);
+}
+
+export function retargetRelationsForSlug(relations: OkfRelation[], fromSlug: string, toSlug: string): OkfRelation[] {
+  if (fromSlug === toSlug) return normalizeRelationList(relations);
+  const from = personPath(fromSlug);
+  const to = personPath(toSlug);
+  return normalizeRelationList(relations).map((item) => (item.person === from ? { ...item, person: to } : item));
 }
 
 export function addDocumentSubject(doc: OkfDocument, slug: string): OkfDocument {

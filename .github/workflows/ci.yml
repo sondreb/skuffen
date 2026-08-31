@@ -72,6 +72,9 @@ jobs:
       - name: Commitments (local, never auto-send) tests
         run: npm run test:commitments
 
+      - name: People-graph relations (local OKF, Accept-only) tests
+        run: npm run test:relations
+
       - name: GitHub update check (offline fixtures)
         run: npm run test:update
 

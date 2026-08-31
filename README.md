@@ -95,6 +95,7 @@ npm run test:capture
 npm run test:shuffle
 npm run test:timeline
 npm run test:commitments
+npm run test:relations
 npm run test:update
 npm run test:version
 npm run test:e2e
@@ -136,6 +137,7 @@ people/
   <slug>/photos/<file>   # photo bytes (profile + gallery)
   <slug>/photos/<file>.md # type: Photo, resource points at the file
   <slug>/place.md        # type: Place (lat/lng/address pin)
+  <slug>/relations.md    # type: Relations; typed links to other person.md paths
 documents/
   <slug>/<file>          # file bytes (PDF, images, other docs)
   <slug>/document.md     # type: Document; kind: document; required title + resource
@@ -143,7 +145,17 @@ documents/
 
 Photos and documents are files, not markdown blobs. A Person may set `image` to a local bundle path under that person's folder — the people list uses those bytes only and never fetches `http(s)`. Extra photos live beside the person as Photo concepts. A Document has required `type`, `title`, and `resource` pointing at the file (`kind: document`). File path is identity. `subjects` link one or more people. Drop a file onto a person or use Add file — nothing is uploaded.
 
-A person's map pin is a linked `Place` concept (`people/<slug>/place.md`). Suggested facts from Grok or Gemini are written only after you accept them. On desktop, those files are plaintext markdown+YAML (photos and documents stay as their own files).
+A person's map pin is a linked `Place` concept (`people/<slug>/place.md`). Typed relations live in `people/<slug>/relations.md` next to the person — file path is identity. Adding “Ada is Bea’s sibling” writes both cards. Deleting a person wipes that slug’s edges. Suggested facts from Grok or Gemini are written only after you accept them. On desktop, those files are plaintext markdown+YAML (photos and documents stay as their own files).
+
+## People-graph relations
+
+On a person card you can add or remove a typed link to another local person: **family** (partner, parent, child, sibling, or a free-text family role), **business** (colleague, manager, client, or free-text), **other** (friend, neighbor, or free-text). The people list can filter by kind.
+
+Edges stay in the local OKF bundle. The model may only *propose* a relation — Accept writes, uncheck or Reject writes nothing. There is no people-graph upload. Tokens stay in the OS credential store `me.grok.skuffen`.
+
+```bash
+npm run test:relations
+```
 
 ## People map
 

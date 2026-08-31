@@ -35,7 +35,8 @@ export type OkfWriteIntent =
   | { type: "note"; slug: string; title: string; body: string }
   | { type: "social"; slug: string; network: string; url: string; handle?: string }
   | { type: "field"; slug: string; field: PersonField; value: string }
-  | { type: "photo"; slug: string; url: string; title?: string };
+  | { type: "photo"; slug: string; url: string; title?: string }
+  | { type: "relation"; slug: string; relatedSlug: string; relationKind: NonNullable<FactSuggestion["relationKind"]>; relationRole: string };
 
 export type PersonDraft = {
   title: string;
@@ -157,7 +158,10 @@ export function parseSuggestions(text: string, source: FactSuggestion["source"] 
   return (parsed.suggestions ?? []).map((item, index) => ({
     id: `${source}-${Date.now()}-${index}`,
     source,
-    kind: item.kind === "social" || item.kind === "field" || item.kind === "photo" ? item.kind : "note",
+    kind:
+      item.kind === "social" || item.kind === "field" || item.kind === "photo" || item.kind === "relation"
+        ? item.kind
+        : "note",
     title: String(item.title ?? "Suggestion"),
     body: item.body,
     network: item.network,
@@ -165,6 +169,9 @@ export function parseSuggestions(text: string, source: FactSuggestion["source"] 
     handle: item.handle,
     field: PERSON_FIELDS.has(item.field as PersonField) ? (item.field as PersonField) : undefined,
     value: item.value,
+    relationKind: item.relationKind,
+    relationRole: item.relationRole,
+    relatedSlug: item.relatedSlug,
   }));
 }
 
@@ -227,6 +234,15 @@ export function writesForAcceptedSuggestion(slug: string, suggestion: FactSugges
   }
   if (suggestion.kind === "field" && suggestion.field && suggestion.value) {
     return { type: "field", slug, field: suggestion.field, value: suggestion.value };
+  }
+  if (suggestion.kind === "relation" && suggestion.relatedSlug && suggestion.relationKind && suggestion.relationRole) {
+    return {
+      type: "relation",
+      slug,
+      relatedSlug: suggestion.relatedSlug,
+      relationKind: suggestion.relationKind,
+      relationRole: suggestion.relationRole,
+    };
   }
   return {
     type: "note",
