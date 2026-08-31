@@ -185,6 +185,7 @@ export class PeopleService {
   }
 
   async select(slug: string | null): Promise<void> {
+    const previous = this.selected()?.slug ?? null;
     if (!slug) {
       this.selected.set(null);
       return;
@@ -200,7 +201,7 @@ export class PeopleService {
       const titled = resolveRelationTitles(pool);
       this.selected.set(titled.find((person) => person.slug === slug) ?? fresh);
     }
-    await this.peopleSort.rememberOpened(slug);
+    if (slug !== previous) await this.peopleSort.rememberOpened(slug);
   }
 
   async createPerson(input: {
