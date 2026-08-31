@@ -79,3 +79,20 @@ test("reject a proposed tag writes nothing", async ({ demoPage: page }) => {
   expect(afterReject["people/ada-demo/person.md"]).not.toMatch(/tags:/);
   expect(afterReject["people/ada-demo/person.md"]).not.toMatch(/\bfamily\b/);
 });
+
+test("Accept writes a model-proposed tag onto person.md", async ({ demoPage: page }) => {
+  await openDemo(page);
+  await createAdaDemo(page);
+  const tagOffer = await proposeTagViaAskThenResearch(page);
+  await expect(tagOffer.getByRole("checkbox")).toBeChecked();
+  await expect(page.getByText("Nothing is written until you accept.")).toBeVisible();
+
+  await page.locator("[data-demo='accept']").click();
+  await expect(page.locator("[data-demo='accept']")).toHaveCount(0);
+  await expect(page.locator("[data-person-tag='family']")).toBeVisible();
+
+  const afterAccept = await bundleFiles(page);
+  expect(afterAccept["people/ada-demo/person.md"]).toMatch(/tags:/);
+  expect(afterAccept["people/ada-demo/person.md"]).toMatch(/family/);
+  expect(afterAccept["people/ada-demo/person.md"]).not.toMatch(/token|secret|skuffen\.cloud/i);
+});
