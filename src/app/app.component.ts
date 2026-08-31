@@ -1581,10 +1581,10 @@ export class AppComponent implements OnInit, OnDestroy {
   dismissProposal(): void {
     const pending = this.nameProposal;
     this.nameProposal = null;
+    this.panel = "none";
     this.notice = null;
     this.actionError = null;
     this.researchRequestedWithoutProvider = false;
-    void this.leaveSheet();
     void dismissNameProposal();
     if (pending) {
       for (const fact of pending.facts) {
@@ -2101,8 +2101,8 @@ export class AppComponent implements OnInit, OnDestroy {
     this.meetingBrief = null;
     this.briefEventPaste = "";
     this.briefEvent = {};
+    this.panel = "none";
     this.notice = null;
-    void this.leaveSheet();
   }
 
   openShuffle(slug?: string): void {
@@ -2161,8 +2161,8 @@ export class AppComponent implements OnInit, OnDestroy {
     this.reconnectDraft = null;
     this.skippedShuffleSlugs = new Set();
     this.shuffleSuggestions = [];
+    this.panel = "none";
     this.notice = null;
-    void this.leaveSheet();
   }
 
   async polishShuffleDraft(): Promise<void> {
@@ -2254,10 +2254,9 @@ export class AppComponent implements OnInit, OnDestroy {
     dismissCommitmentWrites();
     this.commitmentProposal = null;
     this.commitmentSourceNote = "";
+    this.panel = "none";
     this.notice = null;
-    void this.leaveSheet().then(() => {
-      if (this.people.selected()) this.selectCardSection("commitments");
-    });
+    if (this.people.selected()) this.selectCardSection("commitments");
   }
 
   commitmentPerson(): PersonView | null {
@@ -2509,8 +2508,8 @@ export class AppComponent implements OnInit, OnDestroy {
     this.stopCaptureRecording();
     this.captureProposal = null;
     this.captureRequestedWithoutProvider = false;
+    this.panel = "none";
     this.notice = null;
-    void this.leaveSheet();
     void dismissCaptureProposal();
     if (pending) {
       for (const entry of pending.items) {

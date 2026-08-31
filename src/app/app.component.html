@@ -32,7 +32,7 @@
         type="button"
         class="tool"
         data-nav-back
-        aria-label="Back"
+        aria-label="Previous view"
         [disabled]="!canNavBack()"
         (click)="historyBack()"
       >
@@ -51,7 +51,7 @@
         type="button"
         class="tool"
         data-nav-forward
-        aria-label="Forward"
+        aria-label="Next view"
         [disabled]="!canNavForward()"
         (click)="historyForward()"
       >

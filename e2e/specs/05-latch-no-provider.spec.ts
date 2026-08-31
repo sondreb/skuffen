@@ -47,7 +47,8 @@ test("no-provider research opens Menu, dismiss recovers the page", async ({ demo
 
   await startNameResearch(page, "Ada Lovelace");
   await expectMenuOpen(page);
-  await page.locator(".well").click({ position: { x: 16, y: 16 } });
+  // Menu opens from the logo (left). Click the well on the right — outside the sheet.
+  await page.locator(".well").click({ position: { x: 520, y: 80 } });
   await expectMenuClosed(page);
   await page.getByRole("button", { name: "Dismiss" }).click();
 
