@@ -54,6 +54,15 @@ import {
   setAllMergeFieldsKept,
   setMergeFieldKept,
 } from "./services/merge";
+import {
+  CARD_SECTION_LABELS,
+  CARD_SECTIONS,
+  cardPanelId,
+  cardTabId,
+  nextCardSection,
+  type CardSection,
+} from "./card-tabs";
+import { localDocumentBundlePath, localFileName, localFileObjectUrl } from "./file-open";
 import { personListPhotoUrl } from "./list-photo";
 import {
   DIORAMA_MENU_LABEL,
@@ -224,6 +233,10 @@ export class AppComponent implements OnInit, OnDestroy {
     this.panelState.set(value);
   }
   fact: FactSurface = "none";
+  cardSection: CardSection = "about";
+  readonly cardSections = CARD_SECTIONS;
+  readonly cardSectionLabels = CARD_SECTION_LABELS;
+  openedFilePath: string | null = null;
   menuOpen = false;
   personMenu: { slug: string; x: number; y: number } | null = null;
   imagePreview: ImagePreview | null = null;
@@ -536,6 +549,8 @@ export class AppComponent implements OnInit, OnDestroy {
     this.closeImagePreview();
     this.pendingDelete = null;
     this.fact = "none";
+    this.cardSection = "about";
+    this.openedFilePath = null;
     this.notice = null;
     this.actionError = null;
     this.pinDropped = false;
@@ -568,6 +583,8 @@ export class AppComponent implements OnInit, OnDestroy {
   async closeFile(): Promise<void> {
     this.panel = "none";
     this.fact = "none";
+    this.cardSection = "about";
+    this.openedFilePath = null;
     this.notice = null;
     this.actionError = null;
     this.pinDropped = false;
@@ -646,19 +663,81 @@ export class AppComponent implements OnInit, OnDestroy {
   openTimeline(): void {
     timelineOpenWrites();
     this.fact = this.fact === "timeline" ? "none" : "timeline";
+    this.selectCardSection("timeline");
     this.notice = null;
   }
 
   openCardCommitments(): void {
     commitmentsOpenWrites();
     this.fact = this.fact === "commitments" ? "none" : "commitments";
+    this.selectCardSection("commitments");
     this.notice = null;
+  }
+
+  selectCardSection(section: CardSection): void {
+    this.cardSection = section;
+    if (section !== "files") this.openedFilePath = null;
+  }
+
+  onCardTabKey(event: KeyboardEvent, section: CardSection): void {
+    const next = nextCardSection(section, event.key);
+    if (!next) return;
+    event.preventDefault();
+    this.selectCardSection(next);
+    queueMicrotask(() => document.getElementById(cardTabId(next))?.focus());
+  }
+
+  cardTabId(section: CardSection): string {
+    return cardTabId(section);
+  }
+
+  cardPanelId(section: CardSection): string {
+    return cardPanelId(section);
+  }
+
+  fileLabel(doc: PersonView["documents"][number]): string {
+    return localFileName(doc.resource, doc.title);
+  }
+
+  async openDocument(doc: PersonView["documents"][number]): Promise<void> {
+    const path = localDocumentBundlePath(doc.resource);
+    if (!path) {
+      this.actionError = "That file is not a local OKF document.";
+      return;
+    }
+    const bytes = await this.io.readBytes(this.people.bundleRoot(), path);
+    if (!bytes?.byteLength) {
+      this.actionError = "Could not read that file from this machine.";
+      return;
+    }
+    this.actionError = null;
+    if (this.desktop) {
+      const { openPath } = await import("@tauri-apps/plugin-opener");
+      await openPath(`${this.people.bundleRoot()}/${path}`);
+      this.openedFilePath = doc.path;
+      return;
+    }
+    const url = localFileObjectUrl(bytes, path);
+    if (!url) {
+      this.actionError = "Could not open that local file.";
+      return;
+    }
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = this.fileLabel(doc);
+    link.rel = "noreferrer";
+    link.click();
+    URL.revokeObjectURL(url);
+    this.openedFilePath = doc.path;
   }
 
   openTimelineEvent(row: TimelineEvent): void {
     if (row.kind === "place") this.setFact("pin");
     else if (row.kind === "follow") this.setFact("suggest");
     else this.fact = "none";
+    if (row.kind === "note") this.selectCardSection("about");
+    else if (row.kind === "photo") this.selectCardSection("photos");
+    else if (row.kind === "document") this.selectCardSection("files");
     const path = row.path;
     if (!path || typeof document === "undefined") return;
     queueMicrotask(() => {
@@ -675,6 +754,7 @@ export class AppComponent implements OnInit, OnDestroy {
     await this.people.addNote(person.slug, title, body);
     this.noteTitle = "";
     this.noteBody = "";
+    this.selectCardSection("about");
   }
 
   relationOthers(slug: string): Array<{ slug: string; title: string }> {
@@ -722,6 +802,7 @@ export class AppComponent implements OnInit, OnDestroy {
       this.relationTarget = "";
       this.relationCustomRole = "";
       this.addingRelation = false;
+      this.selectCardSection("relations");
     } catch (error) {
       this.actionError = error instanceof Error ? error.message : String(error);
     }
@@ -745,6 +826,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.socialHandle = "";
     this.socialUrl = "";
     this.addingSocial = false;
+    this.selectCardSection("about");
   }
 
   async addPhoto(): Promise<void> {
@@ -755,6 +837,7 @@ export class AppComponent implements OnInit, OnDestroy {
       if (!source) return;
       await this.people.addPhoto(person.slug, source);
       this.notice = null;
+      this.selectCardSection("photos");
       return;
     }
     document.getElementById("skuffen-photo-file")?.click();
@@ -768,6 +851,7 @@ export class AppComponent implements OnInit, OnDestroy {
       if (!source) return;
       await this.people.setProfileImage(person.slug, { sourcePath: source });
       this.notice = null;
+      this.selectCardSection("photos");
       return;
     }
     document.getElementById("skuffen-profile-file")?.click();
@@ -781,6 +865,7 @@ export class AppComponent implements OnInit, OnDestroy {
       const bytes = new Uint8Array(await file.arrayBuffer());
       await this.people.setProfileImage(person.slug, { fileName: file.name, bytes });
       this.notice = null;
+      this.selectCardSection("photos");
     }
     input.value = "";
   }
@@ -795,6 +880,7 @@ export class AppComponent implements OnInit, OnDestroy {
         await this.people.addPhotoBytes(person.slug, file.name, bytes);
       }
       this.notice = null;
+      this.selectCardSection("photos");
     }
     input.value = "";
   }
@@ -873,6 +959,8 @@ export class AppComponent implements OnInit, OnDestroy {
     }
 
     this.notice = null;
+    if (images.length) this.selectCardSection("photos");
+    else if (docs.length) this.selectCardSection("files");
   }
 
   async searchAddress(): Promise<void> {
@@ -973,6 +1061,7 @@ export class AppComponent implements OnInit, OnDestroy {
         note: this.docNote.trim() || undefined,
       });
       this.clearDocDraft();
+      this.selectCardSection("files");
       return;
     }
     document.getElementById("skuffen-document-file")?.click();
@@ -1000,6 +1089,7 @@ export class AppComponent implements OnInit, OnDestroy {
       });
     }
     this.clearDocDraft();
+    this.selectCardSection("files");
   }
 
   async linkSelectedDocument(docSlug: string): Promise<void> {
@@ -1782,6 +1872,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.commitmentSourceNote = "";
     this.panel = "none";
     this.notice = null;
+    if (this.people.selected()) this.selectCardSection("commitments");
   }
 
   commitmentPerson(): PersonView | null {
@@ -2291,6 +2382,7 @@ export class AppComponent implements OnInit, OnDestroy {
         generatedBy: this.providers.actorForImagine(),
       });
       this.notice = null;
+      this.selectCardSection("photos");
     } catch (error) {
       this.actionError = error instanceof Error ? error.message : "Could not save the diorama.";
       this.notice = null;

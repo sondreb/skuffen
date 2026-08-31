@@ -1,4 +1,4 @@
-import { createAdaDemo, createBeaDemo, expect, openDemo, test } from "../helpers/app";
+import { createAdaDemo, createBeaDemo, expect, openDemo, openPersonTab, test } from "../helpers/app";
 import { DEMO } from "../helpers/demo-data";
 
 const BUNDLE_KEY = "skuffen.bundle.files";
@@ -18,6 +18,7 @@ test("add sibling shows on both cards; filter by family; delete wipes edges", as
 
   await page.locator("[data-person-row='ada-demo']").click();
   await expect(page.getByRole("heading", { name: "Ada Demo" })).toBeVisible();
+  await openPersonTab(page, "Relations");
   await expect(page.locator("[data-relations-empty]")).toBeVisible();
 
   await page.locator("[data-add-relation-open]").click();
@@ -39,6 +40,7 @@ test("add sibling shows on both cards; filter by family; delete wipes edges", as
 
   await page.locator("[data-relation-row='bea-demo'] .relation-open").click();
   await expect(page.getByRole("heading", { name: DEMO.bea.title })).toBeVisible();
+  await openPersonTab(page, "Relations");
   const beaRow = page.locator("[data-relation-row='ada-demo']");
   await expect(beaRow).toBeVisible();
   await expect(beaRow.getByText("Family · Sibling")).toBeVisible();
@@ -59,6 +61,7 @@ test("add sibling shows on both cards; filter by family; delete wipes edges", as
   await expect(page.locator(".person-card b").filter({ hasText: /^Ada Demo$/ })).toHaveCount(0);
 
   await page.locator("[data-person-row='bea-demo']").click();
+  await openPersonTab(page, "Relations");
   await expect(page.locator("[data-relations-empty]")).toBeVisible();
   await expect(page.locator("[data-relation-row]")).toHaveCount(0);
   const afterDelete = await bundleFiles(page);
@@ -87,6 +90,7 @@ test("uncheck a proposed relation writes nothing", async ({ demoPage: page }) =>
 
   await siblingOffer.getByRole("checkbox").uncheck();
   await page.locator("[data-demo='accept']").click();
+  await openPersonTab(page, "Relations");
   await expect(page.locator("[data-relations-empty]")).toBeVisible();
   await expect(page.locator("[data-relation-row]")).toHaveCount(0);
   const afterUncheck = await bundleFiles(page);
@@ -104,6 +108,7 @@ test("reject a proposed relation writes nothing", async ({ demoPage: page }) => 
   await siblingOffer.getByRole("button", { name: "Delete" }).click();
   await expect(page.locator("[data-suggestion-kind='relation']")).toHaveCount(0);
   await page.locator("[data-demo='accept']").click();
+  await openPersonTab(page, "Relations");
   await expect(page.locator("[data-relation-row]")).toHaveCount(0);
   const afterReject = await bundleFiles(page);
   expect(afterReject["people/ada-demo/relations.md"]).toBeUndefined();

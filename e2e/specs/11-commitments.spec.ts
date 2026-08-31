@@ -1,5 +1,5 @@
 import { DEMO } from "../helpers/demo-data";
-import { createAdaDemo, expect, openDemo, pinNote, test } from "../helpers/app";
+import { createAdaDemo, expect, openDemo, openPersonTab, pinNote, test } from "../helpers/app";
 
 const BUNDLE_KEY = "skuffen.bundle.files";
 const SETTINGS_KEY = "skuffen.settings";
@@ -20,6 +20,7 @@ test("empty list copy; opening Commitments writes nothing", async ({ demoPage: p
   await openDemo(page);
   await createAdaDemo(page);
 
+  await openPersonTab(page, "Commitments");
   await expect(page.locator("[data-commitments]")).toBeVisible();
   await expect(page.getByText("No commitments yet.")).toBeVisible();
 

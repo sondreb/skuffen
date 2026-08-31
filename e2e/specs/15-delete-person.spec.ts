@@ -1,5 +1,5 @@
 import { DEMO } from "../helpers/demo-data";
-import { createAdaDemo, createBeaDemo, expect, openDemo, test } from "../helpers/app";
+import { createAdaDemo, createBeaDemo, expect, openDemo, openPersonTab, test } from "../helpers/app";
 
 const BUNDLE_KEY = "skuffen.bundle.files";
 const BLOBS_KEY = "skuffen.bundle.blobs";
@@ -136,7 +136,9 @@ test("confirm wipe removes profile image, gallery photos, and files under the pe
     buffer: Buffer.from("local file, not uploaded"),
   });
   await expect(page.locator("[data-profile-image] img")).toBeVisible();
+  await openPersonTab(page, "Photos");
   await expect(page.locator("[data-photos] article")).toHaveCount(2);
+  await openPersonTab(page, "Files");
   await expect(page.locator("[data-files] article")).toHaveCount(1);
 
   const before = await diskSnapshot(page);

@@ -1,4 +1,4 @@
-import { expect, openDemo, startNameResearch, test } from "../helpers/app";
+import { expect, openDemo, openPersonTab, startNameResearch, test } from "../helpers/app";
 import { hold } from "../helpers/labels";
 
 test("name search Accept selected creates the card and shows a photo preview", async ({
@@ -31,6 +31,7 @@ test("name search Accept selected creates the card and shows a photo preview", a
   await expect(page.getByText("ada.lovelace@example.invalid")).toBeVisible();
   await expect(page.getByText("+1 555 0143")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Public park mention (demo)" })).toBeVisible();
+  await openPersonTab(page, "Photos");
   await expect(page.getByRole("heading", { name: "Public portrait (demo)" })).toBeVisible();
   await expect(page.getByText("No photos yet.")).toHaveCount(0);
   await hold(page);

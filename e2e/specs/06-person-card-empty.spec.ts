@@ -1,4 +1,4 @@
-import { createAdaDemo, expect, openDemo, test } from "../helpers/app";
+import { createAdaDemo, expect, openDemo, openPersonTab, test } from "../helpers/app";
 
 test("new Ada Demo card shows empty Notes, Photos, Files, and Suggest copy", async ({
   demoPage: page,
@@ -7,17 +7,24 @@ test("new Ada Demo card shows empty Notes, Photos, Files, and Suggest copy", asy
   await createAdaDemo(page);
 
   await expect(page.getByRole("heading", { name: "Ada Demo" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Timeline" })).toBeVisible();
-  await expect(page.getByText("No timeline yet.")).toBeVisible();
+  await expect(page.locator("[data-card-tabs]").getByRole("tab")).toHaveCount(6);
   await expect(page.getByRole("heading", { name: "Notes" })).toBeVisible();
   await expect(page.getByText("No notes yet.")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Threads" })).toBeVisible();
   await expect(page.getByText("No threads yet.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Add a thread" })).toBeVisible();
+
+  await openPersonTab(page, "Timeline");
+  await expect(page.getByRole("heading", { name: "Timeline" })).toBeVisible();
+  await expect(page.getByText("No timeline yet.")).toBeVisible();
+
+  await openPersonTab(page, "Photos");
   await expect(page.getByRole("heading", { name: "Photos" })).toBeVisible();
   await expect(page.getByText("No photos yet.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Set profile image" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Add photo" })).toBeVisible();
+
+  await openPersonTab(page, "Files");
   await expect(page.getByRole("heading", { name: "Files" })).toBeVisible();
   await expect(page.getByText("No files yet.")).toBeVisible();
   await expect(page.getByRole("button", { name: "Add file" }).first()).toBeVisible();
@@ -33,5 +40,6 @@ test("new Ada Demo card shows empty Notes, Photos, Files, and Suggest copy", asy
   await expect(page.getByRole("heading", { name: "A slip about Ada Demo." })).toBeVisible();
   await expect(page.getByText("No notes yet.")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Notes" })).toBeVisible();
+  await openPersonTab(page, "Photos");
   await expect(page.getByText("No photos yet.")).toBeVisible();
 });

@@ -1,5 +1,5 @@
 import { DEMO } from "../helpers/demo-data";
-import { createAdaDemo, expect, openDemo, test } from "../helpers/app";
+import { createAdaDemo, expect, openDemo, openPersonTab, test } from "../helpers/app";
 
 const BUNDLE_KEY = "skuffen.bundle.files";
 const SETTINGS_KEY = "skuffen.settings";
@@ -21,6 +21,7 @@ test("empty card shows empty timeline copy; opening Timeline writes nothing", as
   await createAdaDemo(page);
 
   await expect(page.getByRole("heading", { name: "Ada Demo" })).toBeVisible();
+  await openPersonTab(page, "Timeline");
   await expect(page.locator("[data-timeline]")).toBeVisible();
   await expect(page.getByText("No timeline yet.")).toBeVisible();
   await expect(page.locator("[data-timeline-kind]")).toHaveCount(0);
@@ -39,6 +40,7 @@ test("Accept of a note adds a timeline row; demo Ada tape has more than one kind
 }) => {
   await openDemo(page);
   await createAdaDemo(page);
+  await openPersonTab(page, "Timeline");
   await expect(page.getByText("No timeline yet.")).toBeVisible();
 
   await page.locator("[data-demo='suggest']").click();

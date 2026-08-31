@@ -1595,10 +1595,6 @@
               </div>
             </header>
 
-            @if (hasAbout(person)) {
-              <p class="prose">{{ person.body }}</p>
-            }
-
             <div class="facts" role="tablist">
               <button type="button" [class.on]="fact === 'drop'" (click)="setFact('drop')">Drop</button>
               <button type="button" [class.on]="fact === 'pin'" (click)="setFact('pin')" [attr.data-demo]="demoMode ? 'pin' : null">
@@ -1913,277 +1909,380 @@
               </div>
             }
 
-            <section class="slips" id="person-commitments" data-commitments>
-              <h2>Commitments</h2>
-              @for (row of selectedCommitments(); track row.id) {
-                <article
-                  class="commitment-row"
-                  [attr.data-commitment-path]="row.sourcePath"
-                  [attr.data-okf-path]="row.sourcePath"
-                >
-                  <strong>{{ row.what }}</strong>
-                  <small>{{ row.dueDate || "no due date" }}</small>
-                  <div class="row">
-                    <button class="brass" type="button" (click)="markCommitmentDone(row)">Mark done</button>
-                    <button class="ghost" type="button" (click)="dropCommitment(row)">Drop</button>
-                  </div>
-                </article>
-              }
-              @if (!selectedCommitments().length) {
-                <p class="whisper">{{ commitmentsEmpty }}</p>
-              }
-            </section>
-
-            <section class="slips" id="person-timeline" data-timeline>
-              <h2>Timeline</h2>
-              @for (row of selectedTimeline(); track row.id) {
+            <div
+              class="card-tabs"
+              data-card-tabs
+              role="tablist"
+              aria-label="Person card sections"
+            >
+              @for (section of cardSections; track section) {
                 <button
                   type="button"
-                  class="timeline-row"
-                  (click)="openTimelineEvent(row)"
-                  [attr.data-timeline-kind]="row.kind"
-                  [attr.data-timeline-path]="row.path || row.id"
+                  role="tab"
+                  [id]="cardTabId(section)"
+                  [attr.data-card-tab]="section"
+                  [attr.aria-selected]="cardSection === section"
+                  [attr.aria-controls]="cardPanelId(section)"
+                  [attr.tabindex]="cardSection === section ? 0 : -1"
+                  [class.on]="cardSection === section"
+                  (click)="selectCardSection(section)"
+                  (keydown)="onCardTabKey($event, section)"
                 >
-                  <strong>{{ row.label }}</strong>
-                  <small>{{ row.dateLabel }}</small>
+                  {{ cardSectionLabels[section] }}
                 </button>
               }
-              @if (!selectedTimeline().length) {
-                <p class="whisper">{{ timelineEmpty }}</p>
-              }
-            </section>
+            </div>
 
-            <section class="slips" data-relations>
-              <h2>Relations</h2>
-              <p class="whisper">
-                Typed links to other people in this local graph. Written to
-                <code>people/{{ person.slug }}/relations.md</code>.
-                Both cards show the edge. Never uploaded.
-              </p>
-              @for (edge of person.relations; track edge.slug + edge.kind + edge.role) {
-                <article
-                  [attr.data-relation-row]="edge.slug"
-                  [attr.data-relation-kind]="edge.kind"
-                  [attr.data-relation-role]="edge.role"
-                >
-                  <button type="button" class="ghost relation-open" (click)="openBySlug(edge.slug)">
-                    <strong>{{ edge.title }}</strong>
-                    <small>{{ kindLabelForRelation(edge.kind) }} · {{ roleLabelForRelation(edge.role) }}</small>
+            <div
+              class="card-panel slips"
+              role="tabpanel"
+              data-card-panel="about"
+              [id]="cardPanelId('about')"
+              [attr.aria-labelledby]="cardTabId('about')"
+              [hidden]="cardSection !== 'about'"
+              tabindex="0"
+            >
+              @if (hasAbout(person)) {
+                <p class="prose">{{ person.body }}</p>
+              }
+              <section class="slips">
+                <h2>Notes</h2>
+                @for (note of person.notes; track note.id) {
+                  <article [attr.data-okf-path]="note.path">
+                    <h3>{{ note.title }}</h3>
+                    <p>{{ note.body }}</p>
+                  </article>
+                }
+                @if (!person.notes.length) {
+                  <p class="whisper">No notes yet.</p>
+                }
+              </section>
+              <section class="threads">
+                <h2>Threads</h2>
+                @for (item of person.social; track item.id) {
+                  <article [attr.data-okf-path]="item.path">
+                    <h3>{{ item.title }}</h3>
+                    <p>{{ item.network }} {{ item.handle }}</p>
+                    @if (item.url) {
+                      <a [href]="item.url" target="_blank" rel="noreferrer">{{ item.url }}</a>
+                    }
+                    <button class="ghost" type="button" (click)="removeSocial(item.path)">Delete</button>
+                  </article>
+                }
+                @if (!person.social.length && !addingSocial) {
+                  <p class="whisper">No threads yet.</p>
+                }
+                @if (addingSocial) {
+                  <div class="grid">
+                    <label>Network <input [(ngModel)]="socialNetwork" placeholder="linkedin" /></label>
+                    <label>Handle <input [(ngModel)]="socialHandle" /></label>
+                    <label>URL <input [(ngModel)]="socialUrl" /></label>
+                  </div>
+                  <div class="row">
+                    <button type="button" (click)="addSocial()">Save thread</button>
+                    <button class="ghost" type="button" (click)="addingSocial = false">Cancel</button>
+                  </div>
+                } @else {
+                  <button class="ghost" type="button" (click)="addingSocial = true">Add a thread</button>
+                }
+              </section>
+            </div>
+
+            <div
+              class="card-panel"
+              role="tabpanel"
+              data-card-panel="photos"
+              [id]="cardPanelId('photos')"
+              [attr.aria-labelledby]="cardTabId('photos')"
+              [hidden]="cardSection !== 'photos'"
+              tabindex="0"
+            >
+              <section class="prints photo-gallery" data-photos>
+                <h2>Photos</h2>
+                <div class="row">
+                  <button
+                    type="button"
+                    (click)="addPhoto()"
+                    [attr.data-demo]="demoMode ? 'add-photo' : null"
+                  >
+                    Add photo
                   </button>
+                </div>
+                @if (person.photos.length) {
+                  <div class="photo-grid">
+                    @for (photo of person.photos; track photo.id) {
+                      <article
+                        [attr.data-okf-path]="photo.path"
+                        class="photo-tile"
+                        [class.is-profile]="isProfilePhoto(person, photo)"
+                        [attr.data-photo-profile]="isProfilePhoto(person, photo) ? photo.path : null"
+                      >
+                        @if (photo.listSrc; as src) {
+                          <button
+                            type="button"
+                            class="photo-preview-open"
+                            data-photo-open
+                            (click)="openPhotoPreview(person, photo)"
+                            [attr.aria-label]="'Preview ' + photo.title"
+                          >
+                            <img class="photo-thumb" [src]="src" alt="" />
+                          </button>
+                        } @else {
+                          <div class="photo-missing">
+                            <h3>{{ photo.title }}</h3>
+                          </div>
+                        }
+                        @if (isProfilePhoto(person, photo)) {
+                          <small class="photo-badge">Profile image</small>
+                        }
+                        <div class="photo-meta">
+                          <h3>{{ photo.title }}</h3>
+                          <div class="row">
+                            @if (!isProfilePhoto(person, photo)) {
+                              <button type="button" (click)="usePhotoAsProfile(photo)">Use as profile</button>
+                            }
+                            <button class="ghost" type="button" (click)="removePhoto(photo)">Remove</button>
+                          </div>
+                        </div>
+                      </article>
+                    }
+                  </div>
+                } @else {
+                  <p class="whisper">No photos yet.</p>
+                }
+              </section>
+            </div>
+
+            <div
+              class="card-panel"
+              role="tabpanel"
+              data-card-panel="files"
+              [id]="cardPanelId('files')"
+              [attr.aria-labelledby]="cardTabId('files')"
+              [hidden]="cardSection !== 'files'"
+              tabindex="0"
+            >
+              <section class="prints file-gallery" data-files>
+                <h2>Files</h2>
+                <div class="row">
+                  <button
+                    type="button"
+                    (click)="pickAndAddDocument()"
+                    [attr.data-demo]="demoMode ? 'add-file' : null"
+                  >
+                    Add file
+                  </button>
+                </div>
+                @if (person.documents.length) {
+                  <ul class="file-list">
+                    @for (doc of person.documents; track doc.id) {
+                      <li>
+                        <article
+                          class="file-tile"
+                          [attr.data-okf-path]="doc.path"
+                          [attr.data-file-opened]="openedFilePath === doc.path ? doc.path : null"
+                        >
+                          <span class="file-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="28" height="28">
+                              <path
+                                fill="currentColor"
+                                d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm7 1.5V9h4.5L14 4.5z"
+                              />
+                            </svg>
+                          </span>
+                          <div class="file-copy">
+                            <h3>{{ doc.title }}</h3>
+                            <small>{{ fileLabel(doc) }}</small>
+                            @if (doc.note) {
+                              <p>{{ doc.note }}</p>
+                            }
+                          </div>
+                          <button
+                            type="button"
+                            data-file-open
+                            (click)="openDocument(doc)"
+                          >
+                            Open
+                          </button>
+                        </article>
+                      </li>
+                    }
+                  </ul>
+                } @else {
+                  <p class="whisper">No files yet.</p>
+                }
+              </section>
+            </div>
+
+            <div
+              class="card-panel"
+              role="tabpanel"
+              data-card-panel="timeline"
+              [id]="cardPanelId('timeline')"
+              [attr.aria-labelledby]="cardTabId('timeline')"
+              [hidden]="cardSection !== 'timeline'"
+              tabindex="0"
+            >
+              <section class="slips" id="person-timeline" data-timeline>
+                <h2>Timeline</h2>
+                @for (row of selectedTimeline(); track row.id) {
+                  <button
+                    type="button"
+                    class="timeline-row"
+                    (click)="openTimelineEvent(row)"
+                    [attr.data-timeline-kind]="row.kind"
+                    [attr.data-timeline-path]="row.path || row.id"
+                  >
+                    <strong>{{ row.label }}</strong>
+                    <small>{{ row.dateLabel }}</small>
+                  </button>
+                }
+                @if (!selectedTimeline().length) {
+                  <p class="whisper">{{ timelineEmpty }}</p>
+                }
+              </section>
+            </div>
+
+            <div
+              class="card-panel"
+              role="tabpanel"
+              data-card-panel="commitments"
+              [id]="cardPanelId('commitments')"
+              [attr.aria-labelledby]="cardTabId('commitments')"
+              [hidden]="cardSection !== 'commitments'"
+              tabindex="0"
+            >
+              <section class="slips" id="person-commitments" data-commitments>
+                <h2>Commitments</h2>
+                @for (row of selectedCommitments(); track row.id) {
+                  <article
+                    class="commitment-row"
+                    [attr.data-commitment-path]="row.sourcePath"
+                    [attr.data-okf-path]="row.sourcePath"
+                  >
+                    <strong>{{ row.what }}</strong>
+                    <small>{{ row.dueDate || "no due date" }}</small>
+                    <div class="row">
+                      <button class="brass" type="button" (click)="markCommitmentDone(row)">Mark done</button>
+                      <button class="ghost" type="button" (click)="dropCommitment(row)">Drop</button>
+                    </div>
+                  </article>
+                }
+                @if (!selectedCommitments().length) {
+                  <p class="whisper">{{ commitmentsEmpty }}</p>
+                }
+              </section>
+            </div>
+
+            <div
+              class="card-panel"
+              role="tabpanel"
+              data-card-panel="relations"
+              [id]="cardPanelId('relations')"
+              [attr.aria-labelledby]="cardTabId('relations')"
+              [hidden]="cardSection !== 'relations'"
+              tabindex="0"
+            >
+              <section class="slips" data-relations>
+                <h2>Relations</h2>
+                <p class="whisper">
+                  Typed links to other people in this local graph. Written to
+                  <code>people/{{ person.slug }}/relations.md</code>.
+                  Both cards show the edge. Never uploaded.
+                </p>
+                @for (edge of person.relations; track edge.slug + edge.kind + edge.role) {
+                  <article
+                    [attr.data-relation-row]="edge.slug"
+                    [attr.data-relation-kind]="edge.kind"
+                    [attr.data-relation-role]="edge.role"
+                  >
+                    <button type="button" class="ghost relation-open" (click)="openBySlug(edge.slug)">
+                      <strong>{{ edge.title }}</strong>
+                      <small>{{ kindLabelForRelation(edge.kind) }} · {{ roleLabelForRelation(edge.role) }}</small>
+                    </button>
+                    <button
+                      class="ghost"
+                      type="button"
+                      data-remove-relation
+                      (click)="removeRelation(edge)"
+                    >
+                      Remove
+                    </button>
+                  </article>
+                }
+                @if (!person.relations.length && !addingRelation) {
+                  <p class="whisper" data-relations-empty>No relations yet.</p>
+                }
+                @if (addingRelation) {
+                  <div class="grid" data-add-relation>
+                    <label>
+                      Person
+                      <select [(ngModel)]="relationTarget" name="relation-target" data-relation-target>
+                        <option value="">Choose a person</option>
+                        @for (other of relationOthers(person.slug); track other.slug) {
+                          <option [value]="other.slug">{{ other.title }}</option>
+                        }
+                      </select>
+                    </label>
+                    <label>
+                      Kind
+                      <select
+                        [ngModel]="relationKind"
+                        (ngModelChange)="onRelationKindChange($event)"
+                        name="relation-kind"
+                        data-relation-kind
+                      >
+                        @for (kind of relationKinds; track kind) {
+                          <option [value]="kind">{{ kindLabelForRelation(kind) }}</option>
+                        }
+                      </select>
+                    </label>
+                    <label>
+                      Role
+                      <select [(ngModel)]="relationRole" name="relation-role" data-relation-role>
+                        @for (role of relationRoleChoices(); track role) {
+                          <option [value]="role">{{ roleLabelForRelation(role) }}</option>
+                        }
+                        <option value="custom">Other (free text)</option>
+                      </select>
+                    </label>
+                    @if (relationRole === "custom") {
+                      <label>
+                        Family / business / other role
+                        <input
+                          [(ngModel)]="relationCustomRole"
+                          name="relation-custom"
+                          data-relation-custom
+                          placeholder="cousin, landlord, …"
+                        />
+                      </label>
+                    }
+                  </div>
+                  <div class="row">
+                    <button
+                      class="brass"
+                      type="button"
+                      data-relation-save
+                      (click)="addRelation()"
+                      [disabled]="!relationTarget || (relationRole === 'custom' && !relationCustomRole.trim())"
+                    >
+                      Save relation
+                    </button>
+                    <button class="ghost" type="button" (click)="addingRelation = false">Cancel</button>
+                  </div>
+                } @else {
                   <button
                     class="ghost"
                     type="button"
-                    data-remove-relation
-                    (click)="removeRelation(edge)"
+                    data-add-relation-open
+                    (click)="addingRelation = true"
+                    [disabled]="relationOthers(person.slug).length === 0"
                   >
-                    Remove
+                    Add a relation
                   </button>
-                </article>
-              }
-              @if (!person.relations.length && !addingRelation) {
-                <p class="whisper" data-relations-empty>No relations yet.</p>
-              }
-              @if (addingRelation) {
-                <div class="grid" data-add-relation>
-                  <label>
-                    Person
-                    <select [(ngModel)]="relationTarget" name="relation-target" data-relation-target>
-                      <option value="">Choose a person</option>
-                      @for (other of relationOthers(person.slug); track other.slug) {
-                        <option [value]="other.slug">{{ other.title }}</option>
-                      }
-                    </select>
-                  </label>
-                  <label>
-                    Kind
-                    <select
-                      [ngModel]="relationKind"
-                      (ngModelChange)="onRelationKindChange($event)"
-                      name="relation-kind"
-                      data-relation-kind
-                    >
-                      @for (kind of relationKinds; track kind) {
-                        <option [value]="kind">{{ kindLabelForRelation(kind) }}</option>
-                      }
-                    </select>
-                  </label>
-                  <label>
-                    Role
-                    <select [(ngModel)]="relationRole" name="relation-role" data-relation-role>
-                      @for (role of relationRoleChoices(); track role) {
-                        <option [value]="role">{{ roleLabelForRelation(role) }}</option>
-                      }
-                      <option value="custom">Other (free text)</option>
-                    </select>
-                  </label>
-                  @if (relationRole === "custom") {
-                    <label>
-                      Family / business / other role
-                      <input
-                        [(ngModel)]="relationCustomRole"
-                        name="relation-custom"
-                        data-relation-custom
-                        placeholder="cousin, landlord, …"
-                      />
-                    </label>
-                  }
-                </div>
-                <div class="row">
-                  <button
-                    class="brass"
-                    type="button"
-                    data-relation-save
-                    (click)="addRelation()"
-                    [disabled]="!relationTarget || (relationRole === 'custom' && !relationCustomRole.trim())"
-                  >
-                    Save relation
-                  </button>
-                  <button class="ghost" type="button" (click)="addingRelation = false">Cancel</button>
-                </div>
-              } @else {
-                <button
-                  class="ghost"
-                  type="button"
-                  data-add-relation-open
-                  (click)="addingRelation = true"
-                  [disabled]="relationOthers(person.slug).length === 0"
-                >
-                  Add a relation
-                </button>
-              }
-            </section>
-
-            <section class="slips">
-              <h2>Notes</h2>
-              @for (note of person.notes; track note.id) {
-                <article [attr.data-okf-path]="note.path">
-                  <h3>{{ note.title }}</h3>
-                  <p>{{ note.body }}</p>
-                </article>
-              }
-              @if (!person.notes.length) {
-                <p class="whisper">No notes yet.</p>
-              }
-            </section>
-
-            <section class="threads">
-              <h2>Threads</h2>
-              @for (item of person.social; track item.id) {
-                <article [attr.data-okf-path]="item.path">
-                  <h3>{{ item.title }}</h3>
-                  <p>{{ item.network }} {{ item.handle }}</p>
-                  @if (item.url) {
-                    <a [href]="item.url" target="_blank" rel="noreferrer">{{ item.url }}</a>
-                  }
-                  <button class="ghost" type="button" (click)="removeSocial(item.path)">Delete</button>
-                </article>
-              }
-              @if (!person.social.length && !addingSocial) {
-                <p class="whisper">No threads yet.</p>
-              }
-              @if (addingSocial) {
-                <div class="grid">
-                  <label>Network <input [(ngModel)]="socialNetwork" placeholder="linkedin" /></label>
-                  <label>Handle <input [(ngModel)]="socialHandle" /></label>
-                  <label>URL <input [(ngModel)]="socialUrl" /></label>
-                </div>
-                <div class="row">
-                  <button type="button" (click)="addSocial()">Save thread</button>
-                  <button class="ghost" type="button" (click)="addingSocial = false">Cancel</button>
-                </div>
-              } @else {
-                <button class="ghost" type="button" (click)="addingSocial = true">Add a thread</button>
-              }
-            </section>
-
-            <section class="prints" data-photos>
-              <h2>Photos</h2>
-              <div class="row">
-                <button
-                  type="button"
-                  (click)="addPhoto()"
-                  [attr.data-demo]="demoMode ? 'add-photo' : null"
-                >
-                  Add photo
-                </button>
-              </div>
-              @for (photo of person.photos; track photo.id) {
-                <article
-                  [attr.data-okf-path]="photo.path"
-                  class="photo-slip"
-                  [attr.data-photo-profile]="isProfilePhoto(person, photo) ? photo.path : null"
-                >
-                  @if (photo.listSrc; as src) {
-                    <button
-                      type="button"
-                      class="photo-preview-open"
-                      data-photo-open
-                      (click)="openPhotoPreview(person, photo)"
-                      [attr.aria-label]="'Preview ' + photo.title"
-                    >
-                      <img class="photo-thumb" [src]="src" alt="" />
-                    </button>
-                  }
-                  <h3>{{ photo.title }}</h3>
-                  @if (isProfilePhoto(person, photo)) {
-                    <small>Profile image</small>
-                  }
-                  <code>{{ photo.resource }}</code>
-                  <div class="row">
-                    @if (!isProfilePhoto(person, photo)) {
-                      <button type="button" (click)="usePhotoAsProfile(photo)">Use as profile</button>
-                    }
-                    <button class="ghost" type="button" (click)="removePhoto(photo)">Remove</button>
-                  </div>
-                </article>
-              }
-              @if (!person.photos.length) {
-                <p class="whisper">No photos yet.</p>
-              }
-            </section>
-
-            <section class="prints" data-files>
-              <h2>Files</h2>
-              <div class="row">
-                <button
-                  type="button"
-                  (click)="pickAndAddDocument()"
-                  [attr.data-demo]="demoMode ? 'add-file' : null"
-                >
-                  Add file
-                </button>
-              </div>
-              @for (doc of person.documents; track doc.id) {
-                <article [attr.data-okf-path]="doc.path">
-                  <h3>{{ doc.title }}</h3>
-                  <small>{{ kindLabel(doc.kind) }}</small>
-                  @if (doc.note) {
-                    <p>{{ doc.note }}</p>
-                  }
-                  <code>{{ doc.resource }}</code>
-                  <p class="whisper">Linked: {{ doc.subjects.join(", ") }}</p>
-                  @if (unlinkedPeople(doc).length) {
-                    <div class="row">
-                      <label>
-                        Also link to
-                        <select [(ngModel)]="linkSlug" name="link-{{ doc.slug }}">
-                          <option value="">Choose another person</option>
-                          @for (other of unlinkedPeople(doc); track other.slug) {
-                            <option [value]="other.slug">{{ other.title }}</option>
-                          }
-                        </select>
-                      </label>
-                      <button type="button" (click)="linkSelectedDocument(doc.slug)" [disabled]="!linkSlug">
-                        Link
-                      </button>
-                    </div>
-                  }
-                </article>
-              }
-              @if (!person.documents.length) {
-                <p class="whisper">No files yet.</p>
-              }
-            </section>
+                }
+              </section>
+            </div>
             <input
               id="skuffen-profile-file"
               type="file"
