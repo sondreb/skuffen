@@ -14,6 +14,8 @@ import {
   createNoteDocument,
   createPersonDocument,
   createPhotoDocument,
+  normalizeTag,
+  normalizeTagList,
   createSocialDocument,
   documentConceptPath,
   documentFilePath,
@@ -49,6 +51,20 @@ test("round-trips a Person with required type", () => {
   assert.equal(parsed.frontmatter.type, "Person");
   assert.equal(parsed.frontmatter.title, "Ada Lovelace");
   assert.equal(parsed.frontmatter.given_name, "Ada");
+});
+
+test("person tags live on person.md and stay local labels", () => {
+  assert.equal(normalizeTag("# family"), "family");
+  assert.deepEqual(normalizeTagList(["Family", "family", "#work", "  "]), ["Family", "work"]);
+  const doc = createPersonDocument({
+    slug: "ada-lovelace",
+    title: "Ada Lovelace",
+    tags: ["#family", "work", "Family"],
+  });
+  const raw = serializeDocument(doc);
+  const parsed = parseDocument(doc.path, raw);
+  assert.deepEqual(parsed.frontmatter.tags, ["family", "work"]);
+  assert.doesNotMatch(raw, /skuffen\.cloud|encrypt|score|rank/i);
 });
 
 test("bundle-root index declares okf_version 0.2", () => {

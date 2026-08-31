@@ -18,11 +18,12 @@ test("MCP default view drops raw email and phone", () => {
   assert.match(notes[0].body, /\[redacted-phone\]/);
 });
 
-test("list/search view omits relations; get_person can keep this card's edges", () => {
+test("list/search view omits relations and tags; get_person can keep this card's edges and tags", () => {
   const person = {
     id: "people/ada-demo/person",
     slug: "ada-demo",
     title: "Ada Demo",
+    tags: ["family"],
     relations: [
       {
         kind: "family",
@@ -35,6 +36,14 @@ test("list/search view omits relations; get_person can keep this card's edges", 
   };
   const listed = publicPersonView(person);
   assert.equal(listed.relations, undefined);
-  const one = publicPersonView(person, { includeRelations: true });
+  assert.equal(listed.tags, undefined);
+  const edgesOnly = publicPersonView(person, { includeRelations: true });
+  assert.deepEqual(edgesOnly.relations, person.relations);
+  assert.equal(edgesOnly.tags, undefined);
+  const tagsOnly = publicPersonView(person, { includeTags: true });
+  assert.equal(tagsOnly.relations, undefined);
+  assert.deepEqual(tagsOnly.tags, ["family"]);
+  const one = publicPersonView(person, { includeRelations: true, includeTags: true });
   assert.deepEqual(one.relations, person.relations);
+  assert.deepEqual(one.tags, ["family"]);
 });

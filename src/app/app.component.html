@@ -316,7 +316,7 @@
                 data-people-filter
                 [ngModel]="query()"
                 (ngModelChange)="query.set($event)"
-                placeholder="Find person"
+                placeholder="Find person or #tag"
                 autocomplete="off"
                 (focus)="peoplePane.openFilter()"
               />
@@ -417,6 +417,13 @@
               <span class="person-meta">
                 <b>{{ person.title }}</b>
                 <small>{{ personCue(person) }}</small>
+                @if (person.tags.length) {
+                  <span class="person-tags" data-person-list-tags>
+                    @for (tag of person.tags; track tag) {
+                      <span class="person-tag" [attr.data-person-list-tag]="tag">{{ tag }}</span>
+                    }
+                  </span>
+                }
               </span>
             </button>
           }
@@ -1838,6 +1845,49 @@
                     </span>
                   }
                 </p>
+                <div class="tag-editor" data-person-tags>
+                  @for (tag of person.tags; track tag) {
+                    <span class="person-tag" [attr.data-person-tag]="tag">
+                      {{ tag }}
+                      <button
+                        class="chip-x"
+                        type="button"
+                        (click)="removePersonTag(tag)"
+                        [attr.data-person-tag-remove]="tag"
+                        [attr.aria-label]="'Remove tag ' + tag"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  }
+                  <label class="tag-add">
+                    <span class="sr">Add tag</span>
+                    <input
+                      data-person-tag-input
+                      name="person-tag"
+                      [ngModel]="tagDraft"
+                      (ngModelChange)="onTagDraftChange($event)"
+                      (keydown)="onTagKey($event)"
+                      placeholder="Add tag"
+                      autocomplete="off"
+                    />
+                  </label>
+                  @if (tagSuggestionsFor(person).length) {
+                    <ul class="tag-suggest" data-person-tag-suggest-list>
+                      @for (item of tagSuggestionsFor(person); track item) {
+                        <li>
+                          <button
+                            type="button"
+                            [attr.data-person-tag-suggest]="item"
+                            (click)="addPersonTag(item)"
+                          >
+                            {{ item }}
+                          </button>
+                        </li>
+                      }
+                    </ul>
+                  }
+                </div>
               </div>
               <div class="nameplate-actions">
                 <button type="button" (click)="startEdit()">Edit</button>

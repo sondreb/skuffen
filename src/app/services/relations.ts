@@ -7,6 +7,7 @@ import {
 } from "../../../packages/okf/src/index";
 import type { FactSuggestion, PersonView } from "../models";
 import { placeOfferKey } from "./places";
+import { parsePeopleFilter, personHasAllTags, tagOfferKey } from "./tags";
 
 export type RelationWrite = {
   slug: string;
@@ -53,10 +54,12 @@ export function filterPeopleByRelation(
   query: string,
   kind: RelationKind | "",
 ): PersonView[] {
-  const q = query.trim().toLowerCase();
+  const parsed = parsePeopleFilter(query);
+  const q = parsed.text.toLowerCase();
   const byKind = peopleMatchingRelationKind(people, kind);
-  if (!q) return byKind;
   return byKind.filter((person) => {
+    if (!personHasAllTags(person, parsed.tags)) return false;
+    if (!q) return true;
     const roles = person.relations.map((edge) => `${edge.kind} ${edge.role} ${edge.title}`).join(" ");
     return `${person.title} ${person.description ?? ""} ${roles}`.toLowerCase().includes(q);
   });
@@ -158,16 +161,20 @@ export function collapseEquivalentSuggestions(items: FactSuggestion[]): FactSugg
   const seenIds = new Set<string>();
   const seenRelations = new Set<string>();
   const seenPlaces = new Set<string>();
+  const seenTags = new Set<string>();
   const out: FactSuggestion[] = [];
   for (const item of items) {
     if (seenIds.has(item.id)) continue;
     const key = relationOfferKey(item);
     const placeKey = placeOfferKey(item);
+    const tagKey = tagOfferKey(item);
     if (key && seenRelations.has(key)) continue;
     if (placeKey && seenPlaces.has(placeKey)) continue;
+    if (tagKey && seenTags.has(tagKey)) continue;
     seenIds.add(item.id);
     if (key) seenRelations.add(key);
     if (placeKey) seenPlaces.add(placeKey);
+    if (tagKey) seenTags.add(tagKey);
     out.push(item);
   }
   return out;
@@ -176,6 +183,7 @@ export function collapseEquivalentSuggestions(items: FactSuggestion[]): FactSugg
 export function equivalentSuggestionIds(items: FactSuggestion[], target: FactSuggestion): string[] {
   const key = relationOfferKey(target);
   const placeKey = placeOfferKey(target);
+  const tagKey = tagOfferKey(target);
   return [
     ...new Set(
       items
@@ -183,7 +191,8 @@ export function equivalentSuggestionIds(items: FactSuggestion[], target: FactSug
           (item) =>
             item.id === target.id ||
             (key !== null && relationOfferKey(item) === key) ||
-            (placeKey !== null && placeOfferKey(item) === placeKey),
+            (placeKey !== null && placeOfferKey(item) === placeKey) ||
+            (tagKey !== null && tagOfferKey(item) === tagKey),
         )
         .map((item) => item.id),
     ),

@@ -230,7 +230,10 @@ async function callTool(name: string, args: Record<string, unknown>): Promise<un
       if (!person) throw new Error("Person not found");
       return args.include_sensitive
         ? person
-        : publicPersonView(person as unknown as Record<string, unknown>, { includeRelations: true });
+        : publicPersonView(person as unknown as Record<string, unknown>, {
+            includeRelations: true,
+            includeTags: true,
+          });
     }
     case "create_person":
       return publicPersonView(

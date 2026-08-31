@@ -28,6 +28,8 @@ import {
   locationFromDocument,
   normalizePlaceLinkRole,
   normalizeRelationRole,
+  normalizeTag,
+  normalizeTagList,
   parseDocument,
   personDir,
   personImageResource,
@@ -225,6 +227,35 @@ export class PeopleService {
     this.selected.set(created);
     await this.peopleSort.rememberOpened(slug);
     return created;
+  }
+
+  async setPersonTags(slug: string, tags: string[]): Promise<void> {
+    const path = personPath(slug);
+    const raw = await this.io.readText(this.bundleRoot(), path);
+    if (!raw) throw new Error("Person not found");
+    const doc = parseDocument(path, raw);
+    const next = normalizeTagList(tags);
+    if (next.length) doc.frontmatter.tags = next;
+    else delete doc.frontmatter.tags;
+    await this.writeDoc(doc);
+    await this.log("Update", `Updated tags on [${doc.frontmatter.title}](/${doc.path}).`);
+    await this.reload();
+    await this.rebuildIndexes();
+    await this.select(slug);
+  }
+
+  async addPersonTag(slug: string, tag: string): Promise<void> {
+    const person = this.people().find((item) => item.slug === slug);
+    await this.setPersonTags(slug, [...(person?.tags ?? []), tag]);
+  }
+
+  async removePersonTag(slug: string, tag: string): Promise<void> {
+    const person = this.people().find((item) => item.slug === slug);
+    const key = normalizeTag(tag).toLowerCase();
+    await this.setPersonTags(
+      slug,
+      (person?.tags ?? []).filter((item) => normalizeTag(item).toLowerCase() !== key),
+    );
   }
 
   async updatePerson(
@@ -789,6 +820,17 @@ export class PeopleService {
       await this.writeDoc(doc);
     }
 
+    const mergedTags = normalizeTagList([...(keeper.tags ?? []), ...(incoming.tags ?? [])]);
+    if (mergedTags.length) {
+      const path = personPath(plan.keeperSlug);
+      const raw = await this.io.readText(this.bundleRoot(), path);
+      if (raw) {
+        const doc = parseDocument(path, raw);
+        doc.frontmatter.tags = mergedTags;
+        await this.writeDoc(doc);
+      }
+    }
+
     for (const note of plan.notes) {
       const doc = createNoteDocument({
         slug: plan.keeperSlug,
@@ -1011,6 +1053,7 @@ export class PeopleService {
       documents,
       relations: await this.loadRelationsForPerson(slug),
       places: await this.loadPlaceLinksForPerson(slug),
+      tags: normalizeTagList(doc.frontmatter.tags),
       addedAt,
       updatedAt,
     };

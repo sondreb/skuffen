@@ -33,6 +33,7 @@ function person(overrides: Partial<PersonView> = {}): PersonView {
     documents: [],
     relations: [],
     places: [],
+    tags: [],
     ...overrides,
   };
 }
@@ -110,6 +111,27 @@ test("filter people by relation kind", () => {
   assert.deepEqual(peopleMatchingRelationKind([ada, bea, cal], "business"), []);
   assert.equal(filterPeopleByRelation([ada, bea, cal], "sibling", "family").length, 2);
   assert.equal(filterPeopleByRelation([ada, bea, cal], "Cal", "").length, 1);
+});
+
+test("filter #family shows tagged people; name text still matches", () => {
+  const ada = person({ slug: "ada-demo", title: "Ada Demo", tags: ["family"] });
+  const bea = person({ slug: "bea-demo", title: "Bea Demo", tags: ["work"] });
+  assert.deepEqual(
+    filterPeopleByRelation([ada, bea], "#family", "").map((item) => item.slug),
+    ["ada-demo"],
+  );
+  assert.deepEqual(
+    filterPeopleByRelation([ada, bea], "# family", "").map((item) => item.slug),
+    ["ada-demo"],
+  );
+  assert.deepEqual(
+    filterPeopleByRelation([ada, bea], "#family Bea", "").map((item) => item.slug),
+    [],
+  );
+  assert.deepEqual(
+    filterPeopleByRelation([ada, bea], "Bea", "").map((item) => item.slug),
+    ["bea-demo"],
+  );
 });
 
 test("relation rows resolve the other person's title, not their slug", () => {

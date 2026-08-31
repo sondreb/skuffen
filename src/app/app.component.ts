@@ -190,6 +190,7 @@ import {
   emptyPlacesCopy,
   placeRoleLabel,
 } from "./services/places";
+import { existingTags, normalizeTag, suggestTags } from "./services/tags";
 import { UPDATE_WHISPER } from "./services/update";
 import { UpdateService } from "./services/update.service";
 
@@ -290,6 +291,7 @@ export class AppComponent implements OnInit, OnDestroy {
   socialHandle = "";
   socialUrl = "";
   addingRelation = false;
+  tagDraft = "";
   addingPlaceLink = false;
   placeLinkTarget = "";
   placeLinkRole: PlaceLinkRole = "lives";
@@ -606,6 +608,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.addingSocial = false;
     this.addingRelation = false;
     this.addingPlaceLink = false;
+    this.tagDraft = "";
     this.providers.clearSuggestions();
     this.nameProposal = null;
     this.researchRequestedWithoutProvider = false;
@@ -744,6 +747,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.addingSocial = false;
     this.addingRelation = false;
     this.addingPlaceLink = false;
+    this.tagDraft = "";
     this.closeImagePreview();
     this.providers.clearSuggestions();
     this.nameProposal = null;
@@ -940,6 +944,46 @@ export class AppComponent implements OnInit, OnDestroy {
   async setPeopleSort(method: PeopleSortMethod): Promise<void> {
     await this.peopleSort.set(method);
     this.peoplePane.closeSort();
+  }
+
+  knownPersonTags(): string[] {
+    return existingTags(this.people.people());
+  }
+
+  tagSuggestionsFor(person: PersonView): string[] {
+    return suggestTags(this.knownPersonTags(), this.tagDraft, person.tags);
+  }
+
+  onTagDraftChange(value: string): void {
+    if (value.includes(",")) {
+      const parts = value.split(",");
+      const last = parts.pop() ?? "";
+      for (const part of parts) void this.addPersonTag(part);
+      this.tagDraft = last;
+      return;
+    }
+    this.tagDraft = value;
+  }
+
+  onTagKey(event: KeyboardEvent): void {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      void this.addPersonTag(this.tagDraft);
+    }
+  }
+
+  async addPersonTag(raw: string): Promise<void> {
+    const person = this.people.selected();
+    const tag = normalizeTag(raw);
+    if (!person || !tag) return;
+    this.tagDraft = "";
+    await this.people.addPersonTag(person.slug, tag);
+  }
+
+  async removePersonTag(tag: string): Promise<void> {
+    const person = this.people.selected();
+    if (!person) return;
+    await this.people.removePersonTag(person.slug, tag);
   }
 
   kindLabelForRelation(kind: RelationKind): string {
@@ -1613,6 +1657,7 @@ export class AppComponent implements OnInit, OnDestroy {
     if (item.kind === "relation") {
       return `${item.relationRole || "relation"} · ${item.relatedSlug || item.title}`;
     }
+    if (item.kind === "tag") return item.tag || item.title;
     return item.body || item.value || item.url || item.title;
   }
 
@@ -1814,6 +1859,8 @@ export class AppComponent implements OnInit, OnDestroy {
         });
       } else if (write.type === "place") {
         await this.people.acceptProposedPlace(write);
+      } else if (write.type === "tag") {
+        await this.people.addPersonTag(write.slug, write.tag);
       } else {
         await this.people.addNote(write.slug, write.title, write.body, generatedBy);
       }

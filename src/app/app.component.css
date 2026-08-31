@@ -450,6 +450,28 @@ button:disabled {
   color: var(--paper);
 }
 
+.person-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.15rem;
+}
+
+.person-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  max-width: 100%;
+  padding: 0.05rem 0.45rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--button);
+  color: var(--mute);
+  font-size: 0.72rem;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
 .node {
   width: 2.1rem;
   height: 2.1rem;
@@ -921,6 +943,50 @@ button:disabled {
   gap: 0.7rem;
   flex-wrap: wrap;
   margin: 0.35rem 0 0;
+}
+
+.tag-editor {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.55rem 0 0;
+}
+
+.tag-add {
+  display: flex;
+  min-width: 7rem;
+  flex: 1 1 7rem;
+}
+
+.tag-add input {
+  width: 100%;
+  min-width: 0;
+  padding: 0.25rem 0.45rem;
+  font-size: 0.85rem;
+}
+
+.tag-suggest {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 0.2rem);
+  z-index: 2;
+  margin: 0;
+  padding: 0.25rem;
+  list-style: none;
+  min-width: 8rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--chrome);
+}
+
+.tag-suggest button {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  padding: 0.3rem 0.5rem;
 }
 
 .lede,
