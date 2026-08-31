@@ -50,6 +50,7 @@ export class ImagePreviewComponent implements OnChanges, OnDestroy {
     | { distance: number; start: PreviewTransform; mid: { x: number; y: number } }
     | null = null;
   private lastPan: { x: number; y: number } | null = null;
+  private didPan = false;
   private stageEl: HTMLElement | null = null;
 
   get src(): string | null {
@@ -66,6 +67,7 @@ export class ImagePreviewComponent implements OnChanges, OnDestroy {
       this.pointers.clear();
       this.pinch = null;
       this.lastPan = null;
+      this.didPan = false;
     }
   }
 
@@ -78,6 +80,10 @@ export class ImagePreviewComponent implements OnChanges, OnDestroy {
   }
 
   onBackdrop(event: MouseEvent): void {
+    if (this.didPan) {
+      this.didPan = false;
+      return;
+    }
     const target = event.target;
     if (!(target instanceof Element)) return;
     if (target.closest("[data-image-preview-chrome]")) return;
@@ -132,11 +138,10 @@ export class ImagePreviewComponent implements OnChanges, OnDestroy {
       return;
     }
     if (this.lastPan && this.transform.scale > 1) {
-      this.transform = panPreview(
-        this.transform,
-        event.clientX - this.lastPan.x,
-        event.clientY - this.lastPan.y,
-      );
+      const dx = event.clientX - this.lastPan.x;
+      const dy = event.clientY - this.lastPan.y;
+      if (dx || dy) this.didPan = true;
+      this.transform = panPreview(this.transform, dx, dy);
       this.lastPan = { x: event.clientX, y: event.clientY };
     }
   }
