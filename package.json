@@ -34,6 +34,7 @@
     "test:timeline": "tsx --test src/app/services/timeline.test.ts",
     "test:commitments": "tsx --test src/app/services/commitments.test.ts",
     "test:relations": "tsx --test src/app/services/relations.test.ts",
+    "test:map": "tsx --test src/app/map/map-edges.test.ts",
     "test:update": "tsx --test src/app/services/update.test.ts",
     "test:version": "tsx --test scripts/bump-version.test.ts",
     "test:e2e": "playwright test --config e2e/playwright.config.ts",

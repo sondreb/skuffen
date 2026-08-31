@@ -14,6 +14,7 @@ import { FormsModule } from "@angular/forms";
 import { DEMO_COMMITMENTS, DEMO_MERGE, DEMO_SHUFFLE, isDemoMode } from "./demo-mode";
 import { ImagePreviewComponent } from "./image-preview.component";
 import { type ImagePreview, previewImageSrc } from "./image-preview";
+import { mapRelationEdges, type MapRelationEdge } from "./map/map-edges";
 import { PeopleMapComponent, type MapPin } from "./map/people-map.component";
 import type {
   FactSuggestion,
@@ -307,7 +308,11 @@ export class AppComponent implements OnInit, OnDestroy {
       .filter((person): person is PersonView & { location: NonNullable<PersonView["location"]> } => !!person.location)
       .map((person) => ({ slug: person.slug, title: person.title, location: person.location })),
   );
-  readonly mapAssignPeople = computed(() => this.people.people());
+  readonly mapEdges = computed<MapRelationEdge[]>(() => mapRelationEdges(this.people.people()));
+  readonly mapLegendKinds = computed(() => {
+    const present = new Set(this.mapEdges().map((edge) => edge.kind));
+    return RELATION_KINDS.filter((kind) => present.has(kind));
+  });
   readonly visibleSuggestions = computed(() => {
     const rejectedIds = this.rejectedSuggestionIds();
     const rejectedKeys = this.rejectedRelationKeys();

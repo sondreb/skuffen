@@ -38,4 +38,10 @@ export const DEMO = {
     latitude: 37.7694,
     longitude: -122.4862,
   },
+  field: {
+    query: "Crissy Field, San Francisco",
+    label: "Crissy Field, San Francisco, California, United States (demo)",
+    latitude: 37.8039,
+    longitude: -122.4662,
+  },
 } as const;

@@ -75,6 +75,9 @@ jobs:
       - name: People-graph relations (local OKF, Accept-only) tests
         run: npm run test:relations
 
+      - name: People map overlay (local places + typed edges) tests
+        run: npm run test:map
+
       - name: GitHub update check (offline fixtures)
         run: npm run test:update
 

@@ -59,6 +59,7 @@ Geocode is stubbed in `?demo=1` (and again in Playwright) so the park pin is alw
 20. `e2e/specs/20-people-pane.spec.ts` — People heading is gone; collapse shows a photo strip; expand restores names; the choice survives reload in app settings, not OKF or tokens.
 21. `e2e/specs/21-hide-diorama-once-made.spec.ts` — after a diorama is set, the control is gone on the profile image and in its preview; changing the profile photo still works; removing that diorama photo brings the control back.
 22. `e2e/specs/22-people-relations.spec.ts` — add sibling, both cards show it; filter by family; Suggest facts then Research shows one sibling offer; uncheck/reject writes nothing; delete person wipes that slug’s edges. Live AI hosts blocked.
+23. `e2e/specs/23-people-map.spec.ts` — Menu → Map on an empty graph is a local empty state (no network people); people with places appear as pins; a family edge draws a line when both have places; click a pin opens that person. Live AI hosts blocked. OSM tiles stubbed.
 
 Curated clips:
 

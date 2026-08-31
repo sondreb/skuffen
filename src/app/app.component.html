@@ -35,7 +35,9 @@
           Capture
         </button>
         @if (!empty()) {
-          <button type="button" class="tool" [class.on]="panel === 'map'" (click)="openMap()">Map</button>
+          <button type="button" class="tool" [class.on]="panel === 'map'" (click)="openMap()" data-open-map>
+            Map
+          </button>
           <button
             type="button"
             class="tool"
@@ -118,6 +120,7 @@
           >
             Capture
           </button>
+          <button type="button" (click)="openMap()" data-open-map="menu">Map</button>
           <button
             type="button"
             (click)="openShuffle()"
@@ -374,7 +377,7 @@
         </nav>
       </aside>
 
-    <main class="main well">
+    <main class="main well" [class.map-open]="panel === 'map'">
       @if (!desktop) {
         <p class="ribbon">
           Preview people-graph stays in this tab. Tokens stay in this tab — never localStorage.
@@ -463,82 +466,41 @@
           }
         </section>
       } @else if (panel === "map") {
-        <section class="sheet map-sheet">
-          <header class="sheet-head">
+        <section class="sheet map-sheet map-fill" data-people-map>
+          <header class="sheet-head map-chrome">
             <div>
               <p class="kicker">Local people-graph</p>
               <h1>People map</h1>
             </div>
             <button class="ghost" type="button" (click)="panel = 'none'">Back</button>
           </header>
-          <p class="whisper">
-            Pins stay on this machine as OKF Place files. Address search and map tiles may use the
-            public internet. There is no Skuffen map backend.
-          </p>
-          <div class="map-controls">
-            <label class="grow">
-              Address search
-              <input
-                [(ngModel)]="addressQuery"
-                name="map-address"
-                placeholder="Search an address"
-                (keyup.enter)="searchAddress()"
+          @if (mapPins().length === 0) {
+            <div class="map-empty" data-map-empty>
+              <p class="kicker">On this machine</p>
+              <p class="lede">No places in this local graph</p>
+              <p class="whisper">
+                This map only shows people who already have a location in the people-graph on this
+                machine. Skuffen does not fetch people from the network. Pins stay in
+                <code>place.md</code> on disk. There is no Skuffen map backend.
+              </p>
+            </div>
+          } @else {
+            <div class="map-stage">
+              <app-people-map
+                [pins]="mapPins()"
+                [edges]="mapEdges()"
+                [selectedSlug]="people.selected()?.slug || null"
+                [clickToDrop]="false"
+                (openPerson)="openBySlug($event)"
               />
-            </label>
-            <button type="button" (click)="searchAddress()" [disabled]="geocodeBusy || !addressQuery.trim()">
-              {{ geocodeBusy ? "Searching…" : "Search" }}
-            </button>
-            <label>
-              Save pin to
-              <select [(ngModel)]="mapAssignSlug" name="map-assign">
-                <option value="">Choose a card</option>
-                @for (item of mapAssignPeople(); track item.slug) {
-                  <option [value]="item.slug">{{ item.title }}</option>
-                }
-              </select>
-            </label>
-            <button
-              class="brass"
-              type="button"
-              (click)="savePendingLocation()"
-              [disabled]="!pendingPin || !mapAssignSlug"
-            >
-              Save pin
-            </button>
-          </div>
-          @if (geocodeError) {
-            <p class="error">{{ geocodeError }}</p>
-          }
-          @if (geocodeHits.length) {
-            <ul class="geocode-hits">
-              @for (hit of geocodeHits; track hit.label) {
-                <li>
-                  <button type="button" (click)="pickGeocodeHit(hit)">{{ hit.label }}</button>
-                </li>
+              @if (mapLegendKinds().length) {
+                <ul class="map-legend" data-map-legend>
+                  @for (kind of mapLegendKinds(); track kind) {
+                    <li [attr.data-map-legend-kind]="kind">{{ kindLabelForRelation(kind) }}</li>
+                  }
+                </ul>
               }
-            </ul>
-          }
-          @if (pendingPin) {
-            <p class="whisper">
-              Pending {{ pendingPin.source === "pin" ? "dropped pin" : "search result" }}
-              @if (pendingPin.address) {
-                — {{ pendingPin.address }}
-              }
-              ({{ pendingPin.latitude.toFixed(5) }}, {{ pendingPin.longitude.toFixed(5) }})
-            </p>
-          }
-          <div class="map-frame tall">
-            <app-people-map
-              [pins]="mapPins()"
-              [pending]="pendingPin"
-              [selectedSlug]="mapAssignSlug || people.selected()?.slug || null"
-              [focus]="mapFocus"
-              (dropPin)="onMapDrop($event)"
-              (openPerson)="openBySlug($event)"
-            />
-          </div>
-          @if (mapPins().length === 0 && !pendingPin) {
-            <p class="whisper">No pins yet. Search an address or click the map, then save to a card.</p>
+            </div>
           }
         </section>
       } @else if (panel === "memory") {

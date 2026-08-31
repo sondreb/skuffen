@@ -159,7 +159,15 @@ npm run test:relations
 
 ## People map
 
-The people-graph can be plotted on a map. Search an address or drop a pin from person detail or the map view. **Pins and people stay on disk** in the OKF bundle. They are never sent to a Skuffen cloud backend (there is none). Map tiles and Nominatim geocoding may use the public internet (OpenStreetMap). No analytics.
+Menu → **Map** shows everyone who already has a place in the local people-graph. Typed relation lines (family / business / other) overlay people who both appear. Click a pin to open that card. The map fills the content area, including a collapsed photo-strip sidebar.
+
+Search an address or drop a pin from the person card (`people/<slug>/place.md`). **Pins, people, and edges stay on disk** in the OKF bundle. They are never sent to a Skuffen cloud backend (there is none). Map tiles and Nominatim geocoding may use the public internet (OpenStreetMap). The graph is never uploaded to a map provider. No analytics. No friend-heat or ranking.
+
+If nobody has a location, the map is a local empty state. Skuffen does not fetch people from the network.
+
+```bash
+npm run test:map
+```
 
 ## On-disk format
 
