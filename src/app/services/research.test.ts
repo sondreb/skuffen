@@ -67,6 +67,7 @@ function person(overrides: Partial<PersonView> = {}): PersonView {
     documents: [],
     relations: [],
     places: [],
+    tags: [],
     ...overrides,
   };
 }
@@ -194,6 +195,25 @@ test("relation suggestions write only on Accept — uncheck yields nothing", () 
     relatedSlug: "bea-demo",
     relationKind: "family",
     relationRole: "sibling",
+  });
+});
+
+test("tag suggestions write only on Accept — uncheck yields nothing", () => {
+  const parsed = parseSuggestions(
+    JSON.stringify({
+      suggestions: [{ kind: "tag", title: "family (demo)", tag: "family" }],
+    }),
+    "research",
+  );
+  assert.equal(parsed[0]?.kind, "tag");
+  assert.deepEqual(proposeOnly(parsed), []);
+  const proposal = proposeNameResearch("Ada", parsed);
+  const allOff = setAllFactsChecked(proposal, false);
+  assert.equal(planAcceptedNameProposal(allOff), null);
+  assert.deepEqual(writesForAcceptedSuggestion("ada-demo", parsed[0]!), {
+    type: "tag",
+    slug: "ada-demo",
+    tag: "family",
   });
 });
 

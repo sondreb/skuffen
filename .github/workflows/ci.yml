@@ -87,6 +87,9 @@ jobs:
       - name: First-class Places (local OKF, Accept-only) tests
         run: npm run test:places
 
+      - name: People tags (local OKF, #tag filter, Accept-only) tests
+        run: npm run test:tags
+
       - name: Person-card tabs and local file open tests
         run: npm run test:card-tabs
 

@@ -129,6 +129,8 @@ export interface PersonView {
   }>;
   /** Typed links to other local people. File path is identity. */
   relations: PersonRelation[];
+  /** Local labels on this person.md. File path stays identity. */
+  tags: string[];
   /** ISO from person.md generated.at — when the card was added. Not a score. */
   addedAt?: string;
   /** Latest local document stamp on this card. Recency only — not a score. */
@@ -201,7 +203,7 @@ export type PersonField = "title" | "description" | "body" | "email" | "phone" |
 export interface FactSuggestion {
   id: string;
   source?: SuggestionSource;
-  kind: "note" | "social" | "field" | "photo" | "relation" | "place";
+  kind: "note" | "social" | "field" | "photo" | "relation" | "place" | "tag";
   title: string;
   body?: string;
   network?: string;
@@ -218,6 +220,8 @@ export interface FactSuggestion {
   latitude?: number;
   longitude?: number;
   placeRole?: PlaceLinkRole;
+  /** Proposed local person tag. Written only on Accept. */
+  tag?: string;
 }
 
 export interface ProposedFact {

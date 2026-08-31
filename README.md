@@ -161,6 +161,16 @@ A person may still keep a leftover pin at `people/<slug>/place.md`. The map pref
 
 Typed relations live in `people/<slug>/relations.md` next to the person — file path is identity. Adding “Ada is Bea’s sibling” writes both cards. Deleting a person wipes that slug’s edges. Suggested facts from Grok or Gemini are written only after you accept them. On desktop, those files are plaintext markdown+YAML (photos and documents stay as their own files).
 
+## People tags
+
+Each person can have local tags on `people/<slug>/person.md` — file path is identity. Type a tag on the card, Enter or comma to add a chip, click × to remove. Existing tags are suggested as you type. The left-pane filter treats `#family` (or `# family`) as a tag token; leftover text still matches names. `#tag` tokens can mix with name text. Tags stay readable on the expanded people list. The collapsed photo-strip does not show them.
+
+Tags are user writes. The model may only *propose* a tag — Accept writes, uncheck or Reject writes nothing. There is no scoring or friend-heat.
+
+```bash
+npm run test:tags
+```
+
 ## People-graph relations
 
 On a person card you can add or remove a typed link to another local person: **family** (partner, parent, child, sibling, or a free-text family role), **business** (colleague, manager, client, or free-text), **other** (friend, neighbor, or free-text). The people list can filter by kind.

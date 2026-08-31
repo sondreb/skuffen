@@ -1,3 +1,4 @@
+import { normalizeTag } from "../../../packages/okf/src/index";
 import type {
   FactSuggestion,
   FollowInterval,
@@ -47,7 +48,8 @@ export type OkfWriteIntent =
       longitude?: number;
       placeRole?: NonNullable<FactSuggestion["placeRole"]>;
       placeSlug?: string;
-    };
+    }
+  | { type: "tag"; slug: string; tag: string };
 
 export type PersonDraft = {
   title: string;
@@ -75,7 +77,7 @@ const PERSON_FIELDS = new Set<PersonField>([
 ]);
 
 const SUGGESTION_SCHEMA =
-  '{"suggestions":[{"kind":"note"|"social"|"field"|"photo","title":"","body":"","network":"","url":"","handle":"","field":"title"|"description"|"body"|"email"|"phone"|"givenName"|"familyName","value":""}]}';
+  '{"suggestions":[{"kind":"note"|"social"|"field"|"photo"|"tag","title":"","body":"","network":"","url":"","handle":"","field":"title"|"description"|"body"|"email"|"phone"|"givenName"|"familyName","value":"","tag":""}]}';
 
 export function normalizeInterval(value: unknown): FollowInterval {
   return value === "daily" || value === "monthly" ? value : "weekly";
@@ -120,7 +122,7 @@ export function buildResearchPrompt(person: PersonPromptInput): string {
     "Search the public web for current, sourced facts about this one person.",
     WEBSITE_CONTACT_INSTRUCTION,
     WEBSITE_PHOTO_INSTRUCTION,
-    "Suggest at most 8 structured facts: email, phone, social URLs, about/bio, and public profile photo URLs when a real page image is known.",
+    "Suggest at most 8 structured facts: email, phone, social URLs, about/bio, public profile photo URLs when a real page image is known, and at most one short local tag (kind tag, field tag) when a public page clearly indicates a label such as family or work.",
     "Results are suggestions only.",
     "Do not invent people. Do not create a new person. Do not ask for or assume the rest of the people-graph.",
     "Do not draft outreach. Do not send messages. Do not upload or request the full graph.",
@@ -174,7 +176,8 @@ export function parseSuggestions(text: string, source: FactSuggestion["source"] 
       item.kind === "field" ||
       item.kind === "photo" ||
       item.kind === "relation" ||
-      item.kind === "place"
+      item.kind === "place" ||
+      item.kind === "tag"
         ? item.kind
         : "note",
     title: String(item.title ?? "Suggestion"),
@@ -193,6 +196,7 @@ export function parseSuggestions(text: string, source: FactSuggestion["source"] 
     latitude: item.latitude,
     longitude: item.longitude,
     placeRole: item.placeRole,
+    tag: item.tag,
   }));
 }
 
@@ -277,6 +281,10 @@ export function writesForAcceptedSuggestion(slug: string, suggestion: FactSugges
       placeRole: suggestion.placeRole,
       placeSlug: suggestion.placeSlug,
     };
+  }
+  if (suggestion.kind === "tag") {
+    const tag = normalizeTag(suggestion.tag || suggestion.title);
+    if (tag) return { type: "tag", slug, tag };
   }
   return {
     type: "note",

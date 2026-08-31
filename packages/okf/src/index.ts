@@ -445,6 +445,28 @@ export function subjectPaths(value: unknown): string[] {
   return [...new Set(value.filter((item): item is string => typeof item === "string" && item.trim().length > 0))];
 }
 
+/** Local person tag. Leading # is stripped. Empty after trim is dropped. */
+export function normalizeTag(value: unknown): string {
+  if (typeof value !== "string") return "";
+  return value.replace(/^#+\s*/, "").trim().replace(/\s+/g, " ");
+}
+
+/** Deduped tags, first casing wins. File path stays identity — tags are labels only. */
+export function normalizeTagList(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const item of value) {
+    const tag = normalizeTag(item);
+    if (!tag) continue;
+    const key = tag.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(tag);
+  }
+  return out;
+}
+
 export function documentLinkedToPerson(frontmatter: OkfFrontmatter, slug: string): boolean {
   return subjectPaths(frontmatter.subjects).includes(personPath(slug));
 }
@@ -488,11 +510,13 @@ export function createPersonDocument(input: {
   email?: string;
   phone?: string;
   image?: string;
+  tags?: string[];
   body?: string;
   generatedBy?: string;
   verifiedBy?: string;
 }): OkfDocument {
   const at = nowUtc();
+  const tags = normalizeTagList(input.tags);
   const frontmatter: OkfFrontmatter & PersonFields = {
     type: PERSON_TYPE,
     title: input.title,
@@ -502,6 +526,7 @@ export function createPersonDocument(input: {
     email: input.email || undefined,
     phone: input.phone || undefined,
     image: personImageResource(input.image),
+    tags: tags.length ? tags : undefined,
     generated: { by: input.generatedBy ?? actorHuman(), at },
     verified: { by: input.verifiedBy ?? actorHuman(), at },
   };

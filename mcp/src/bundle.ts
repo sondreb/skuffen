@@ -23,6 +23,7 @@ import {
   locationFromDocument,
   normalizePlaceLinkRole,
   normalizeRelationRole,
+  normalizeTagList,
   parseDocument,
   personImageResource,
   personPath,
@@ -91,6 +92,7 @@ export interface PersonView {
     path: string;
     title: string;
   }>;
+  tags: string[];
 }
 
 export interface PlaceView {
@@ -157,6 +159,7 @@ export class OkfBundle {
         person.body,
         ...person.notes.map((n) => n.title),
         ...person.relations.map((edge) => `${edge.kind} ${edge.role} ${edge.title}`),
+        ...person.tags,
       ]
         .filter(Boolean)
         .join("\n")
@@ -211,6 +214,7 @@ export class OkfBundle {
       documents: this.documentsFor(slug),
       relations: this.relationsFor(slug),
       places: this.placeLinksFor(slug),
+      tags: normalizeTagList(doc.frontmatter.tags),
     };
   }
 
