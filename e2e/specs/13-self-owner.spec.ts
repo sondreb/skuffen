@@ -1,4 +1,4 @@
-import { createAdaDemo, createBeaDemo, expect, openDemo, test } from "../helpers/app";
+import { createAdaDemo, createBeaDemo, expect, leavePersonCard, openDemo, test } from "../helpers/app";
 
 const BUNDLE_KEY = "skuffen.bundle.files";
 const BLOBS_KEY = "skuffen.bundle.blobs";
@@ -39,8 +39,9 @@ test("mark This is me; only one self; persists in settings not tokens", async ({
   await page.getByRole("button", { name: "Menu" }).click();
   await expect(page.locator("[data-self-owner]")).toHaveText("You · Ada Demo");
   await page.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Menu" })).toHaveCount(0);
 
-  await page.getByRole("button", { name: "People" }).click();
+  await leavePersonCard(page);
   await expect(page.locator("[data-self-card='ada-demo']")).toBeVisible();
   await expect(page.locator("[data-self-card='ada-demo']")).toContainText("This is me");
 
@@ -71,13 +72,13 @@ test("mark This is me; only one self; persists in settings not tokens", async ({
   await expect(page.locator("[data-self-badge]")).toHaveText("This is me · this local copy");
   await expect(page.locator("[data-self-toggle]")).toHaveCount(0);
 
-  await page.getByRole("button", { name: "People" }).click();
+  await leavePersonCard(page);
   await createBeaDemo(page);
   await expect(page.locator("[data-self-toggle]")).toHaveCount(0);
   await expect(page.locator("[data-self-badge]")).toHaveCount(0);
   expect(await settingsSelfSlug(page)).toBe("ada-demo");
 
-  await page.getByRole("button", { name: "People" }).click();
+  await leavePersonCard(page);
   const adaCard = page.locator(".person-card").filter({ has: page.locator("b", { hasText: /^Ada Demo$/ }) });
   const beaCard = page.locator(".person-card").filter({ has: page.locator("b", { hasText: /^Bea Demo$/ }) });
   await expect(page.locator("[data-self-card='ada-demo']")).toBeVisible();

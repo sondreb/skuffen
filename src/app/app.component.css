@@ -526,7 +526,8 @@ button:disabled {
 }
 
 .main.map-open,
-.main.graph-open {
+.main.graph-open,
+.main.people-open {
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -534,7 +535,8 @@ button:disabled {
 }
 
 .main.map-open .ribbon,
-.main.graph-open .ribbon {
+.main.graph-open .ribbon,
+.main.people-open .ribbon {
   flex-shrink: 0;
   margin: 0;
   border-radius: 0;
@@ -1302,10 +1304,52 @@ label {
 }
 
 .map-stage app-people-map,
-.map-stage app-people-graph {
+.map-stage app-people-graph,
+.map-stage app-people-gallery {
   display: block;
   width: 100%;
   height: 100%;
+}
+
+.map-fill[data-people-gallery] .map-chrome {
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.gallery-chrome-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.45rem;
+}
+
+.gallery-filter {
+  margin: 0;
+  width: min(14.5rem, 42vw);
+}
+
+.gallery-filter input {
+  margin: 0;
+}
+
+.gallery-modes {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.gallery-modes button {
+  width: auto;
+  padding: 0.35rem 0.7rem;
+}
+
+.gallery-none {
+  position: absolute;
+  inset: auto 1.2rem 1.4rem;
+  margin: 0;
+  color: var(--mute);
+  text-align: center;
+  pointer-events: none;
 }
 
 .map-legend {

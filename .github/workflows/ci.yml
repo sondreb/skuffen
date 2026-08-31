@@ -84,6 +84,9 @@ jobs:
       - name: Who-knows-who graph (typed edges, never scored) tests
         run: npm run test:graph
 
+      - name: People gallery (local thumbs, filter, modes) tests
+        run: npm run test:gallery
+
       - name: First-class Places (local OKF, Accept-only) tests
         run: npm run test:places
 

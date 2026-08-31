@@ -1,5 +1,5 @@
 import { DEMO } from "../helpers/demo-data";
-import { expect, openDemo, seedDemoMergePair, test } from "../helpers/app";
+import { expect, leavePersonCard, openDemo, seedDemoMergePair, test } from "../helpers/app";
 import { hold, showDemoLabel } from "../helpers/labels";
 
 test("duplicate cards propose a merge and do not merge silently", async ({ demoPage: page }) => {
@@ -43,7 +43,7 @@ test("Accept merges into one OKF person", async ({ demoPage: page }) => {
   await expect(page.getByRole("heading", { name: DEMO.person.title, exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: DEMO.twin.noteTitle })).toBeVisible();
   await expect(page.getByText(DEMO.twin.noteBody)).toBeVisible();
-  await page.getByRole("button", { name: "People" }).click();
+  await leavePersonCard(page);
   await expect(page.locator(".person-card b").filter({ hasText: /^Ada Demo$/ })).toBeVisible();
   await expect(page.locator(".person-card b", { hasText: DEMO.twin.title })).toHaveCount(0);
   await expect(page.getByText("may be the same person")).toHaveCount(0);

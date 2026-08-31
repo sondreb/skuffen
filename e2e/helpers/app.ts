@@ -210,6 +210,18 @@ export async function openGraphFromMenu(page: Page): Promise<void> {
   await expect(page.locator("[data-people-graph]")).toBeVisible();
 }
 
+export async function openPeopleFromMenu(page: Page): Promise<void> {
+  await page.getByRole("button", { name: "Menu", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Menu" })).toBeVisible();
+  await page.locator("[data-open-people='menu']").click();
+  await expect(page.locator("[data-people-gallery]")).toBeVisible();
+}
+
+/** Person-card back control. Not Menu → People (same visible name). */
+export async function leavePersonCard(page: Page): Promise<void> {
+  await page.getByRole("main").getByRole("button", { name: "People", exact: true }).click();
+}
+
 export async function createBeaDemo(page: Page): Promise<void> {
   await page.locator("[data-demo='put-someone-in']").first().click();
   await expect(page.getByRole("heading", { name: "Who?" })).toBeVisible();

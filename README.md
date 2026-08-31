@@ -213,6 +213,18 @@ If nobody is in the local graph, this view is a local empty state. Skuffen does 
 npm run test:graph
 ```
 
+## People gallery
+
+Menu → **People** is a full-content-area view of everyone as large profile thumbs (local OKF `data:` / `blob:` bytes, initials if there is no photo). Little metadata on the tiles — a quiet name caption, no relations or fields. Two layouts: large thumbs and a denser mosaic. Switching modes and filtering animate the set (fade / scale / layout), including when `#tag` tokens match tags from the people-tag model.
+
+Filter is name text, plus `#tag` once tags exist on the person. Example: `#family` leaves everyone else. Click a thumb to open that card. Works with the collapsed photo-strip sidebar.
+
+**People stay on this machine.** There is no Skuffen people backend and no people-graph upload. Photos are never loaded over `http(s)` for this view. No scoring, ranking, or friend-heat. An empty graph is a local empty state — Skuffen does not fetch people from the network.
+
+```bash
+npm run test:gallery
+```
+
 ## On-disk format
 
 Desktop Skuffen (`npm run tauri dev` or an installer) stores the people-graph as **plaintext markdown+YAML**. File path is identity. Photos and documents are ordinary files beside their concept markdown.

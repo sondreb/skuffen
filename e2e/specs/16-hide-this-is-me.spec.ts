@@ -1,4 +1,4 @@
-import { createAdaDemo, createBeaDemo, expect, openDemo, test } from "../helpers/app";
+import { createAdaDemo, createBeaDemo, expect, leavePersonCard, openDemo, test } from "../helpers/app";
 
 const SETTINGS_KEY = "skuffen.settings";
 
@@ -21,12 +21,12 @@ test("This is me hides after mark and returns after self is cleared", async ({ d
   await expect(page.locator("[data-self-toggle]")).toHaveCount(0);
   expect(await settingsSelfSlug(page)).toBe("ada-demo");
 
-  await page.getByRole("button", { name: "People" }).click();
+  await leavePersonCard(page);
   await createBeaDemo(page);
   await expect(page.locator("[data-self-toggle]")).toHaveCount(0);
   await expect(page.locator("[data-self-badge]")).toHaveCount(0);
 
-  await page.getByRole("button", { name: "People" }).click();
+  await leavePersonCard(page);
   await page.locator("[data-self-card='ada-demo']").click();
   await expect(page.locator("[data-self-badge]")).toBeVisible();
   await expect(page.locator("[data-self-toggle]")).toHaveCount(0);

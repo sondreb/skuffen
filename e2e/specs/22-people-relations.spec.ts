@@ -1,4 +1,4 @@
-import { createAdaDemo, createBeaDemo, expect, openDemo, openPersonTab, test } from "../helpers/app";
+import { createAdaDemo, createBeaDemo, expect, leavePersonCard, openDemo, openPersonTab, test } from "../helpers/app";
 import { DEMO } from "../helpers/demo-data";
 
 const BUNDLE_KEY = "skuffen.bundle.files";
@@ -46,7 +46,7 @@ test("add sibling shows on both cards; filter by family; delete wipes edges", as
   await expect(beaRow.getByText("Family · Sibling")).toBeVisible();
   await expect(beaRow.getByText(DEMO.person.title)).toBeVisible();
 
-  await page.getByRole("button", { name: "People" }).click();
+  await leavePersonCard(page);
   await page.locator("[data-relation-filter='family']").click();
   await expect(page.locator("[data-person-row='ada-demo']")).toBeVisible();
   await expect(page.locator("[data-person-row='bea-demo']")).toBeVisible();
