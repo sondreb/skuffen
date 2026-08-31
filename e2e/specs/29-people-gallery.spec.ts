@@ -2,6 +2,7 @@ import {
   createAdaDemo,
   createBeaDemo,
   expect,
+  leavePersonCard,
   openDemo,
   openPeopleFromMenu,
   test,
@@ -75,4 +76,31 @@ test("Menu People shows large thumbs; filter hides others; click opens the card;
   await page.locator('[data-people-gallery-thumb="ada-demo"]').click();
   await expect(page.getByRole("heading", { name: DEMO.person.title })).toBeVisible();
   await expect(page.locator("[data-people-gallery]")).toHaveCount(0);
+});
+
+test("Menu People #tag filter uses person.tags and leaves others with the view still open", async ({
+  demoPage: page,
+}) => {
+  await openDemo(page);
+  await createAdaDemo(page);
+  await createBeaDemo(page);
+  await page.locator("[data-person-row='ada-demo']").click();
+  await page.locator("[data-person-tag-input]").fill("family");
+  await page.locator("[data-person-tag-input]").press("Enter");
+  await expect(page.locator("[data-person-tag='family']")).toBeVisible();
+  await leavePersonCard(page);
+
+  await openPeopleFromMenu(page);
+  await expect(page.locator('[data-people-gallery-thumb="ada-demo"]')).toBeVisible();
+  await expect(page.locator('[data-people-gallery-thumb="bea-demo"]')).toBeVisible();
+
+  await page.locator("[data-people-gallery-filter]").fill("#family");
+  await expect(page.locator('[data-people-gallery-thumb="bea-demo"]')).toHaveCount(0);
+  await expect(page.locator('[data-people-gallery-thumb="ada-demo"]')).toBeVisible();
+  await expect(page.locator("[data-people-gallery]")).toBeVisible();
+
+  await page.locator("[data-people-gallery-filter]").fill("# family");
+  await expect(page.locator('[data-people-gallery-thumb="bea-demo"]')).toHaveCount(0);
+  await expect(page.locator('[data-people-gallery-thumb="ada-demo"]')).toBeVisible();
+  await expect(page.locator("[data-people-gallery]")).toBeVisible();
 });
