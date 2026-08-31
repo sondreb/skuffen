@@ -1,5 +1,5 @@
 import { DEMO } from "../helpers/demo-data";
-import { createAdaDemo, createBeaDemo, expect, openDemo, openPersonTab, test } from "../helpers/app";
+import { createAdaDemo, createBeaDemo, expect, leavePersonCard, openDemo, openPersonTab, test } from "../helpers/app";
 
 const BUNDLE_KEY = "skuffen.bundle.files";
 const BLOBS_KEY = "skuffen.bundle.blobs";
@@ -93,9 +93,9 @@ test("deleting This is me clears selfSlug and drops follow/memory for that slug"
 test("people-list context menu Delete opens the same confirm path", async ({ demoPage: page }) => {
   await openDemo(page);
   await createAdaDemo(page);
-  await page.getByRole("button", { name: "People" }).click();
+  await leavePersonCard(page);
   await createBeaDemo(page);
-  await page.getByRole("button", { name: "People" }).click();
+  await leavePersonCard(page);
 
   const adaCard = page.locator(".person-card").filter({ has: page.locator("b", { hasText: /^Ada Demo$/ }) });
   await adaCard.click({ button: "right" });

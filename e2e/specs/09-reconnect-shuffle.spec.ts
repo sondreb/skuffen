@@ -1,5 +1,5 @@
 import { DEMO } from "../helpers/demo-data";
-import { createAdaDemo, createBeaDemo, expect, openDemo, pinNote, test } from "../helpers/app";
+import { createAdaDemo, createBeaDemo, expect, leavePersonCard, openDemo, pinNote, test } from "../helpers/app";
 import { hold, showDemoLabel } from "../helpers/labels";
 
 test("local reconnect suggestions from notes; pick drafts; skip/dismiss write nothing; Accept saves; nothing is sent", async ({
@@ -8,7 +8,7 @@ test("local reconnect suggestions from notes; pick drafts; skip/dismiss write no
   await openDemo(page);
   await createAdaDemo(page);
   await pinNote(page, "Asked about the park pin and the land-plot slip.", "Last coffee");
-  await page.getByRole("button", { name: "People" }).click();
+  await leavePersonCard(page);
 
   await createBeaDemo(page);
   await pinNote(page, DEMO.bea.noteBody, DEMO.bea.noteTitle);
@@ -52,7 +52,7 @@ test("local reconnect suggestions from notes; pick drafts; skip/dismiss write no
   await expect(page.locator("[data-demo='shuffle-pick-ada-demo']")).toHaveCount(0);
 
   await page.locator("[data-demo='shuffle-back']").click();
-  await page.getByRole("button", { name: "People" }).click();
+  await leavePersonCard(page);
   await page.locator(".person-card b").filter({ hasText: /^Ada Demo$/ }).click();
   await expect(page.getByRole("heading", { name: "Last coffee" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Reconnect draft — Ada Demo" })).toHaveCount(0);
