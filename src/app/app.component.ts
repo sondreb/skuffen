@@ -15,6 +15,7 @@ import { DEMO_COMMITMENTS, DEMO_MERGE, DEMO_SHUFFLE, isDemoMode } from "./demo-m
 import { ImagePreviewComponent } from "./image-preview.component";
 import { type ImagePreview, previewImageSrc } from "./image-preview";
 import { mapRelationEdges, type MapRelationEdge } from "./map/map-edges";
+import { mapPinsForGraph } from "./map/map-pins";
 import { PeopleMapComponent, type MapPin } from "./map/people-map.component";
 import {
   graphKindLabel,
@@ -30,6 +31,8 @@ import type {
   MergeProposal,
   NameResearchProposal,
   PersonView,
+  PlaceLinkRole,
+  PlaceView,
   ProviderId,
 } from "./models";
 import {
@@ -175,6 +178,11 @@ import {
   relationRoleOptions,
   relationCue,
 } from "./services/relations";
+import {
+  PLACE_LINK_ROLES,
+  emptyPlacesCopy,
+  placeRoleLabel,
+} from "./services/places";
 import { UPDATE_WHISPER } from "./services/update";
 import { UpdateService } from "./services/update.service";
 
@@ -192,7 +200,9 @@ type Panel =
   | "brief"
   | "capture"
   | "shuffle"
-  | "commitments";
+  | "commitments"
+  | "places"
+  | "place-create";
 
 type SpeechSession = {
   stop: () => void;
@@ -271,6 +281,10 @@ export class AppComponent implements OnInit, OnDestroy {
   socialHandle = "";
   socialUrl = "";
   addingRelation = false;
+  addingPlaceLink = false;
+  placeLinkTarget = "";
+  placeLinkRole: PlaceLinkRole = "lives";
+  placeDraft = blankPlaceDraft();
   relationTarget = "";
   relationKind: RelationKind = "family";
   relationRole = "sibling";
@@ -319,16 +333,16 @@ export class AppComponent implements OnInit, OnDestroy {
       this.people.ready() &&
       this.panelState() === "none" &&
       !this.people.selected() &&
+      !this.people.selectedPlace() &&
       this.people.people().length > 0,
   );
+  readonly placesEmptyCopy = emptyPlacesCopy();
+  readonly placeLinkRoles = PLACE_LINK_ROLES;
   readonly activeProvider = computed(() => this.providers.activeProvider());
   readonly bothProviders = computed(() => this.providers.availableProviders().length === 2);
   readonly personCount = computed(() => this.people.people().length);
   readonly mapPins = computed<MapPin[]>(() =>
-    this.people
-      .people()
-      .filter((person): person is PersonView & { location: NonNullable<PersonView["location"]> } => !!person.location)
-      .map((person) => ({ slug: person.slug, title: person.title, location: person.location })),
+    mapPinsForGraph({ places: this.people.places(), people: this.people.people() }),
   );
   readonly mapEdges = computed<MapRelationEdge[]>(() => mapRelationEdges(this.people.people()));
   readonly mapLegendKinds = computed(() => {
@@ -503,7 +517,9 @@ export class AppComponent implements OnInit, OnDestroy {
       this.panel === "edit" ||
       this.panel === "map" ||
       this.panel === "graph" ||
-      this.panel === "memory"
+      this.panel === "memory" ||
+      this.panel === "places" ||
+      this.panel === "place-create"
     ) {
       this.panel = "none";
     }
@@ -570,6 +586,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.pinDropped = false;
     this.addingSocial = false;
     this.addingRelation = false;
+    this.addingPlaceLink = false;
     this.providers.clearSuggestions();
     this.nameProposal = null;
     this.researchRequestedWithoutProvider = false;
@@ -604,6 +621,99 @@ export class AppComponent implements OnInit, OnDestroy {
     return graphKindLabel(kind);
   }
 
+  openPlaces(): void {
+    this.menuOpen = false;
+    this.panel = "places";
+    this.fact = "none";
+    this.people.selected.set(null);
+    this.people.selectedPlace.set(null);
+  }
+
+  startCreatePlace(): void {
+    this.placeDraft = blankPlaceDraft();
+    this.notice = null;
+    this.actionError = null;
+    this.pendingPin = null;
+    this.geocodeHits = [];
+    this.geocodeError = "";
+    this.addressQuery = "";
+    this.pinDropped = false;
+    this.panel = "place-create";
+    this.menuOpen = false;
+    this.people.selected.set(null);
+    this.people.selectedPlace.set(null);
+  }
+
+  async savePlaceDraft(): Promise<void> {
+    if (!this.placeDraft.title.trim()) return;
+    this.actionError = null;
+    try {
+      const created = await this.people.createPlace({
+        title: this.placeDraft.title,
+        notes: this.placeDraft.notes,
+        address: this.pendingPin?.address || this.placeDraft.address || undefined,
+        latitude: this.pendingPin?.latitude,
+        longitude: this.pendingPin?.longitude,
+        source: this.pendingPin?.source,
+      });
+      this.panel = "none";
+      await this.people.selectPlace(created.slug);
+    } catch (err) {
+      this.actionError = err instanceof Error ? err.message : "Could not save this place.";
+    }
+  }
+
+  async openPlaceCard(place: PlaceView): Promise<void> {
+    this.panel = "none";
+    this.menuOpen = false;
+    this.fact = "none";
+    this.notice = null;
+    this.actionError = null;
+    await this.people.selectPlace(place.slug);
+  }
+
+  async openPlaceBySlug(slug: string): Promise<void> {
+    const place = this.people.places().find((item) => item.slug === slug);
+    if (place) await this.openPlaceCard(place);
+  }
+
+  async closePlaceCard(): Promise<void> {
+    this.panel = "none";
+    this.notice = null;
+    this.actionError = null;
+    await this.people.selectPlace(null);
+  }
+
+  async addPlaceLink(): Promise<void> {
+    const person = this.people.selected();
+    if (!person || !this.placeLinkTarget) return;
+    this.actionError = null;
+    try {
+      await this.people.linkPersonToPlace(person.slug, {
+        placeSlug: this.placeLinkTarget,
+        role: this.placeLinkRole,
+      });
+      this.addingPlaceLink = false;
+      this.placeLinkTarget = "";
+    } catch (err) {
+      this.actionError = err instanceof Error ? err.message : "Could not link that place.";
+    }
+  }
+
+  async removePlaceLink(link: { slug: string; role: PlaceLinkRole }): Promise<void> {
+    const person = this.people.selected();
+    if (!person) return;
+    await this.people.unlinkPersonFromPlace(person.slug, { placeSlug: link.slug, role: link.role });
+  }
+
+  roleLabelForPlace(role: string): string {
+    return placeRoleLabel(role);
+  }
+
+  placesForLink(): PlaceView[] {
+    return this.people.places();
+  }
+
   async closeFile(): Promise<void> {
     this.panel = "none";
     this.fact = "none";
@@ -614,11 +724,13 @@ export class AppComponent implements OnInit, OnDestroy {
     this.pinDropped = false;
     this.addingSocial = false;
     this.addingRelation = false;
+    this.addingPlaceLink = false;
     this.closeImagePreview();
     this.providers.clearSuggestions();
     this.nameProposal = null;
     this.resetLocationDraft(null);
     await this.people.select(null);
+    await this.people.selectPlace(null);
   }
 
   startCreate(): void {
@@ -1541,11 +1653,15 @@ export class AppComponent implements OnInit, OnDestroy {
     if (skipped) {
       this.notice = "That photo could not be fetched. Nothing else was skipped.";
     }
-    this.providers.reject(suggestion.id);
+    const twins = equivalentSuggestionIds(this.suggestionPool(), suggestion);
     const next = new Set(this.checkedSuggestionIds);
-    next.delete(suggestion.id);
+    this.rejectedSuggestionIds.update((ids) => new Set([...ids, ...twins]));
+    for (const id of twins) {
+      this.providers.reject(id);
+      next.delete(id);
+      await this.follow.acceptLocalOnly(id);
+    }
     this.checkedSuggestionIds = next;
-    await this.follow.acceptLocalOnly(suggestion.id);
   }
 
   async acceptCheckedSuggestions(): Promise<void> {
@@ -1666,6 +1782,8 @@ export class AppComponent implements OnInit, OnDestroy {
           kind: write.relationKind,
           role: write.relationRole,
         });
+      } else if (write.type === "place") {
+        await this.people.acceptProposedPlace(write);
       } else {
         await this.people.addNote(write.slug, write.title, write.body, generatedBy);
       }
@@ -2465,6 +2583,14 @@ export class AppComponent implements OnInit, OnDestroy {
       first.focus();
     }
   }
+}
+
+function blankPlaceDraft() {
+  return {
+    title: "",
+    notes: "",
+    address: "",
+  };
 }
 
 function blankDraft() {

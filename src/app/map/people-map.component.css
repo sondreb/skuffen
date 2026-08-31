@@ -45,6 +45,12 @@
   background: var(--accent);
 }
 
+:host ::ng-deep .skuffen-pin-place span {
+  background: var(--paper);
+  border-radius: 3px;
+  box-shadow: 0 0 0 2px var(--accent), 0 0 12px var(--accent-wash);
+}
+
 :host ::ng-deep .skuffen-pin-active span {
   background: var(--accent-soft);
   box-shadow: 0 0 0 2px var(--accent-soft), 0 0 14px var(--accent-line);

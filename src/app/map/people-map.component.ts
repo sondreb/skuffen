@@ -18,6 +18,8 @@ export interface MapPin {
   slug: string;
   title: string;
   location: PersonLocation;
+  /** First-class Place vs leftover people/{slug}/place.md pin. */
+  kind?: "place" | "person";
 }
 
 @Component({
@@ -36,6 +38,8 @@ export class PeopleMapComponent implements AfterViewInit, OnChanges, OnDestroy {
   @Input() ariaLabel = "People map";
   @Output() readonly dropPin = new EventEmitter<{ latitude: number; longitude: number }>();
   @Output() readonly openPerson = new EventEmitter<string>();
+  @Output() readonly openPlace = new EventEmitter<string>();
+  @Output() readonly openPin = new EventEmitter<MapPin>();
 
   private map?: L.Map;
   private markers = L.layerGroup();
@@ -115,15 +119,18 @@ export class PeopleMapComponent implements AfterViewInit, OnChanges, OnDestroy {
       tagEdge(line, edge.id, edge.kind);
     }
     for (const pin of this.pins) {
-      const kind = pin.slug === this.selectedSlug ? "active" : "person";
+      const selected = pin.slug === this.selectedSlug;
+      const markerKind = selected ? "active" : pin.kind === "place" ? "place" : "person";
       const marker = L.marker([pin.location.latitude, pin.location.longitude], {
-        icon: pinIcon(kind, pin.slug),
+        icon: pinIcon(markerKind, pin.slug, pin.kind),
         title: pin.title,
       });
       marker.bindTooltip(pin.title + (pin.location.address ? ` — ${pin.location.address}` : ""));
       marker.on("click", (event) => {
         L.DomEvent.stopPropagation(event);
-        this.openPerson.emit(pin.slug);
+        this.openPin.emit(pin);
+        if (pin.kind === "place") this.openPlace.emit(pin.slug);
+        else this.openPerson.emit(pin.slug);
       });
       marker.addTo(this.markers);
     }
@@ -167,11 +174,12 @@ function tagEdge(line: L.Polyline, id: string, kind: RelationKind): void {
   path.setAttribute("data-map-kind", kind);
 }
 
-function pinIcon(kind: "person" | "active" | "pending", slug?: string): L.DivIcon {
+function pinIcon(kind: "person" | "place" | "active" | "pending", slug?: string, pinKind?: string): L.DivIcon {
   const pinAttr = slug ? ` data-map-pin="${escapeAttr(slug)}"` : "";
+  const kindAttr = pinKind ? ` data-map-pin-kind="${escapeAttr(pinKind)}"` : "";
   return L.divIcon({
     className: `skuffen-pin skuffen-pin-${kind}`,
-    html: `<span${pinAttr}></span>`,
+    html: `<span${pinAttr}${kindAttr}></span>`,
     iconSize: [22, 22],
     iconAnchor: [11, 11],
   });

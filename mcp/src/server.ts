@@ -166,6 +166,39 @@ const tools = [
     },
   },
   {
+    name: "list_places",
+    description: "List first-class Places in the local OKF bundle. Path is identity. Does not upload.",
+    inputSchema: { type: "object", properties: {} },
+  },
+  {
+    name: "create_place",
+    description: "Create a first-class Place at places/{slug}/place.md. Optional lat/lng. Stays on disk.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        title: { type: "string" },
+        notes: { type: "string" },
+        address: { type: "string" },
+        latitude: { type: "number" },
+        longitude: { type: "number" },
+      },
+      required: ["title"],
+    },
+  },
+  {
+    name: "link_person_place",
+    description: "Link a local person to a Place as lives, works, or met-at. Does not upload.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        slug: { type: "string" },
+        placeSlug: { type: "string" },
+        role: { type: "string", description: "lives | works | met-at" },
+      },
+      required: ["slug", "placeSlug", "role"],
+    },
+  },
+  {
     name: "clear_person_location",
     description: "Remove a person's local Place pin from the OKF bundle.",
     inputSchema: {
@@ -268,6 +301,24 @@ async function callTool(name: string, args: Record<string, unknown>): Promise<un
         bundle.removeRelation(String(args.slug ?? ""), {
           relatedSlug: String(args.relatedSlug ?? ""),
           kind: args.kind === "family" || args.kind === "business" || args.kind === "other" ? args.kind : "other",
+          role: String(args.role ?? ""),
+        }) as unknown as Record<string, unknown>,
+        { includeRelations: true },
+      );
+    case "list_places":
+      return bundle.listPlaces();
+    case "create_place":
+      return bundle.createPlace({
+        title: String(args.title ?? ""),
+        notes: optional(args.notes),
+        address: optional(args.address),
+        latitude: typeof args.latitude === "number" ? args.latitude : undefined,
+        longitude: typeof args.longitude === "number" ? args.longitude : undefined,
+      });
+    case "link_person_place":
+      return publicPersonView(
+        bundle.linkPersonToPlace(String(args.slug ?? ""), {
+          placeSlug: String(args.placeSlug ?? ""),
           role: String(args.role ?? ""),
         }) as unknown as Record<string, unknown>,
         { includeRelations: true },

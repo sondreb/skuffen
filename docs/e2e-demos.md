@@ -62,6 +62,7 @@ Geocode is stubbed in `?demo=1` (and again in Playwright) so the park pin is alw
 23. `e2e/specs/23-people-map.spec.ts` — Menu → Map on an empty graph is a local empty state (no network people); people with places appear as pins; a family edge draws a line when both have places; click a pin opens that person. Live AI hosts blocked. OSM tiles stubbed.
 24. `e2e/specs/24-person-card-tabs-gallery.spec.ts` — person card tabs switch one section at a time (keyboard arrows); photos gallery uses local bytes and opens the existing preview; files list opens a local document; tabs become a scrollable strip on a narrow viewport. Live AI hosts blocked.
 25. `e2e/specs/25-people-graph.spec.ts` — Menu → Graph on an empty graph is a local empty state (no network people); two related people show as nodes with a typed family edge; click a node opens that person; no score/heat/rank UI. Live AI hosts blocked.
+26. `e2e/specs/26-places.spec.ts` — empty Places is a local empty state; create a Place locally; link a person (lives); map prefers that Place pin; people without a Place still show from `people/{slug}/place.md`; Suggest/Research Place offer: uncheck and Reject write nothing, Accept writes. Live AI hosts blocked.
 
 Curated clips:
 

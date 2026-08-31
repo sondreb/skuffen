@@ -8,7 +8,9 @@ import {
   createDocumentDocument,
   createNoteDocument,
   createPersonDocument,
+  createEntityPlaceDocument,
   createPlaceDocument,
+  createPlaceLinksDocument,
   createSocialDocument,
   documentConceptPath,
   documentDir,
@@ -17,16 +19,23 @@ import {
   emptyLog,
   createRelationsDocument,
   inverseRelationRole,
+  entityPlacePath,
   locationFromDocument,
+  normalizePlaceLinkRole,
   normalizeRelationRole,
   parseDocument,
   personImageResource,
   personPath,
+  placeLinksFromDocument,
+  placeLinksPath,
   placePath,
+  serializePlacesIndex,
+  slugFromPlacePath,
   relationsFromDocument,
   relationsPath,
   removeRelation,
   slugFromPersonPath,
+  upsertPlaceLink,
   upsertRelation,
   type OkfRelation,
   type RelationKind,
@@ -76,6 +85,24 @@ export interface PersonView {
     path: string;
     title: string;
   }>;
+  places: Array<{
+    role: string;
+    slug: string;
+    path: string;
+    title: string;
+  }>;
+}
+
+export interface PlaceView {
+  id: string;
+  slug: string;
+  path: string;
+  title: string;
+  notes: string;
+  address?: string;
+  latitude?: number;
+  longitude?: number;
+  location?: PlaceLocation;
 }
 
 export function defaultBundleRoot(): string {
@@ -101,6 +128,7 @@ export class OkfBundle {
 
   ensure(): void {
     mkdirSync(join(this.root, "people"), { recursive: true });
+    mkdirSync(join(this.root, "places"), { recursive: true });
     mkdirSync(join(this.root, "documents"), { recursive: true });
     if (!this.read("index.md")) {
       this.writeRaw("index.md", serializeBundleIndex([]));
@@ -110,6 +138,9 @@ export class OkfBundle {
     }
     if (!this.read("people/index.md")) {
       this.writeRaw("people/index.md", serializePeopleIndex([]));
+    }
+    if (!this.read("places/index.md")) {
+      this.writeRaw("places/index.md", serializePlacesIndex([]));
     }
   }
 
@@ -179,6 +210,7 @@ export class OkfBundle {
       location,
       documents: this.documentsFor(slug),
       relations: this.relationsFor(slug),
+      places: this.placeLinksFor(slug),
     };
   }
 
@@ -242,6 +274,64 @@ export class OkfBundle {
     const path = placePath(slug);
     deleteBundleFile(this.root, path);
     this.log("Update", `Cleared location [/${path}].`);
+    return this.getPerson(slug)!;
+  }
+
+  listPlaces(): PlaceView[] {
+    return this.listPlaceSlugs()
+      .map((slug) => this.getPlace(slug))
+      .filter((item): item is PlaceView => !!item);
+  }
+
+  getPlace(slug: string): PlaceView | null {
+    const path = entityPlacePath(slug);
+    const raw = this.read(path);
+    if (!raw) return null;
+    const doc = parseDocument(path, raw);
+    const pin = locationFromDocument(doc);
+    return {
+      id: doc.id,
+      slug,
+      path: doc.path,
+      title: String(doc.frontmatter.title ?? slug),
+      notes: doc.body,
+      address: optionalString(doc.frontmatter.address),
+      latitude: typeof doc.frontmatter.latitude === "number" ? doc.frontmatter.latitude : undefined,
+      longitude: typeof doc.frontmatter.longitude === "number" ? doc.frontmatter.longitude : undefined,
+      location: pin ?? undefined,
+    };
+  }
+
+  createPlace(input: {
+    title: string;
+    notes?: string;
+    address?: string;
+    latitude?: number;
+    longitude?: number;
+  }): PlaceView {
+    const slug = uniqueSlug(slugify(input.title), (candidate) => exists(join(this.root, entityPlacePath(candidate))));
+    const doc = createEntityPlaceDocument({ slug, ...input });
+    this.writeDoc(doc);
+    this.log("Creation", `Added place [${doc.frontmatter.title}](/${doc.path}).`);
+    this.rebuildIndexes();
+    return this.getPlace(slug)!;
+  }
+
+  linkPersonToPlace(slug: string, input: { placeSlug: string; role: string }): PersonView {
+    if (!this.getPerson(slug) || !this.getPlace(input.placeSlug)) {
+      throw new Error("Person and place must already be in this local graph");
+    }
+    const role = normalizePlaceLinkRole(input.role);
+    if (!role) throw new Error("Place link needs lives, works, or met-at");
+    const path = placeLinksPath(slug);
+    const raw = this.read(path);
+    const current = raw ? placeLinksFromDocument(parseDocument(path, raw)) : [];
+    const next = upsertPlaceLink(current, { role, place: entityPlacePath(input.placeSlug) });
+    this.writeDoc(createPlaceLinksDocument({ slug, links: next }));
+    this.log(
+      "Update",
+      `Linked [${slug}](/${personPath(slug)}) as ${role} of [${input.placeSlug}](/${entityPlacePath(input.placeSlug)}).`,
+    );
     return this.getPerson(slug)!;
   }
 
@@ -361,6 +451,25 @@ export class OkfBundle {
       .filter((item): item is PersonView["relations"][number] => item !== null);
   }
 
+  private placeLinksFor(slug: string): PersonView["places"] {
+    const path = placeLinksPath(slug);
+    const raw = this.read(path);
+    if (!raw) return [];
+    return placeLinksFromDocument(parseDocument(path, raw))
+      .map((link) => {
+        const placeSlug = slugFromPlacePath(link.place);
+        if (!placeSlug) return null;
+        const place = this.getPlace(placeSlug);
+        return {
+          role: link.role,
+          slug: placeSlug,
+          path: link.place,
+          title: place?.title ?? placeSlug,
+        };
+      })
+      .filter((item): item is PersonView["places"][number] => item !== null);
+  }
+
   private readRelations(slug: string): OkfRelation[] {
     const path = relationsPath(slug);
     const raw = this.read(path);
@@ -401,6 +510,15 @@ export class OkfBundle {
         note: documentNote(doc.body),
         subjects: subjectPaths(doc.frontmatter.subjects),
       }));
+  }
+
+  private listPlaceSlugs(): string[] {
+    const dir = join(this.root, "places");
+    if (!exists(dir)) return [];
+    return readdirSync(dir)
+      .filter((name) => statSync(join(dir, name)).isDirectory())
+      .filter((name) => exists(join(this.root, entityPlacePath(name))))
+      .sort();
   }
 
   private listSlugs(): string[] {
@@ -447,8 +565,14 @@ export class OkfBundle {
       path: person.path,
       description: person.description,
     }));
-    this.writeRaw("index.md", serializeBundleIndex(people));
+    const places = this.listPlaces().map((place) => ({
+      title: place.title,
+      path: place.path,
+      description: place.address,
+    }));
+    this.writeRaw("index.md", serializeBundleIndex(people, places));
     this.writeRaw("people/index.md", serializePeopleIndex(people));
+    this.writeRaw("places/index.md", serializePlacesIndex(places));
   }
 }
 

@@ -1,6 +1,6 @@
 /** Person-card content tabs. View-only — never writes OKF or settings. */
 
-export const CARD_SECTIONS = ["about", "photos", "files", "timeline", "commitments", "relations"] as const;
+export const CARD_SECTIONS = ["about", "photos", "files", "timeline", "commitments", "relations", "places"] as const;
 
 export type CardSection = (typeof CARD_SECTIONS)[number];
 
@@ -11,6 +11,7 @@ export const CARD_SECTION_LABELS: Record<CardSection, string> = {
   timeline: "Timeline",
   commitments: "Commitments",
   relations: "Relations",
+  places: "Places",
 };
 
 export function isCardSection(value: string): value is CardSection {

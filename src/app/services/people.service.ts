@@ -2,50 +2,70 @@ import { Injectable, signal } from "@angular/core";
 import {
   DOCUMENT_KIND,
   DOCUMENT_TYPE,
+  PLACE_FILE_TYPE,
+  PLACE_TYPE,
   addDocumentSubject,
   appendLog,
   removeDocumentSubject,
   createDocumentDocument,
+  createEntityPlaceDocument,
   createNoteDocument,
   createPersonDocument,
   createPhotoDocument,
   createPlaceDocument,
+  createPlaceFileDocument,
+  createPlaceLinksDocument,
   createRelationsDocument,
   createSocialDocument,
   documentConceptPath,
   documentFilePath,
   documentLinkedToPerson,
+  documentLinkedToPlace,
   emptyLog,
+  entityPlaceDir,
+  entityPlacePath,
   inverseRelationRole,
   locationFromDocument,
+  normalizePlaceLinkRole,
   normalizeRelationRole,
   parseDocument,
   personDir,
   personImageResource,
   personPath,
   photoFilePath,
+  placeFilePath,
+  placeLinksFromDocument,
+  placeLinksPath,
   placePath,
   relationsFromDocument,
   relationsPath,
+  removePlaceLink,
   removeRelation,
   retargetRelationsForSlug,
   sanitizeFileName,
   serializeBundleIndex,
   serializeDocument,
   serializePeopleIndex,
+  serializePlacesIndex,
   slugFromPersonPath,
+  slugFromPlacePath,
   slugify,
   subjectPaths,
+  upsertPlaceLink,
   upsertRelation,
   verifiedList,
+  wipePlaceLinksForPlace,
   wipeRelationsForSlug,
   type OkfDocument,
   type OkfFrontmatter,
+  type OkfPlaceLink,
   type OkfRelation,
+  type PlaceLinkRole,
   type PlaceSource,
   type RelationKind,
 } from "../../../packages/okf/src/index";
-import type { PersonLocation, PersonRelation, PersonView } from "../models";
+import type { PersonLocation, PersonPlaceLink, PersonRelation, PersonView, PlaceView } from "../models";
+import type { PlaceWrite } from "./places";
 import { localPhotoBundlePath, localPhotoDataUrl, personListPhotoUrl } from "../list-photo";
 import type { MergePlan } from "./merge";
 import { IoService } from "./io.service";
@@ -55,6 +75,8 @@ import { resolveRelationTitles } from "./relations";
 export class PeopleService {
   readonly people = signal<PersonView[]>([]);
   readonly selected = signal<PersonView | null>(null);
+  readonly places = signal<PlaceView[]>([]);
+  readonly selectedPlace = signal<PlaceView | null>(null);
   readonly bundleRoot = signal<string>("");
   readonly ready = signal(false);
   readonly leftoverCiphertext = signal(false);
@@ -105,6 +127,7 @@ export class PeopleService {
   }
 
   async reload(): Promise<void> {
+    await this.reloadPlaces();
     const root = this.bundleRoot();
     const files = await this.io.listFiles(root, "people/");
     const slugs = [
@@ -127,7 +150,33 @@ export class PeopleService {
     this.people.set(titled);
     const current = this.selected();
     this.selected.set(current ? titled.find((p) => p.slug === current.slug) ?? null : null);
+    this.places.set(
+      this.places().map((place) => ({
+        ...place,
+        people: titled.flatMap((person) =>
+          (person.places ?? [])
+            .filter((link) => link.slug === place.slug)
+            .map((link) => ({ slug: person.slug, title: person.title, role: link.role })),
+        ),
+      })),
+    );
+    const currentPlace = this.selectedPlace();
+    this.selectedPlace.set(
+      currentPlace ? this.places().find((item) => item.slug === currentPlace.slug) ?? null : null,
+    );
     await this.refreshVaultStatus();
+  }
+
+  async selectPlace(slug: string | null): Promise<void> {
+    if (!slug) {
+      this.selectedPlace.set(null);
+      return;
+    }
+    this.selected.set(null);
+    const cached = this.places().find((item) => item.slug === slug);
+    if (cached) this.selectedPlace.set(cached);
+    await this.reloadPlaces();
+    this.selectedPlace.set(this.places().find((item) => item.slug === slug) ?? cached ?? null);
   }
 
   async select(slug: string | null): Promise<void> {
@@ -135,6 +184,7 @@ export class PeopleService {
       this.selected.set(null);
       return;
     }
+    this.selectedPlace.set(null);
     const cached = this.people().find((item) => item.slug === slug);
     if (cached) this.selected.set(cached);
     const fresh = await this.loadPerson(slug);
@@ -255,6 +305,188 @@ export class PeopleService {
     await this.log("Update", `Cleared location [/${path}].`);
     await this.reload();
     await this.select(slug);
+  }
+
+  async createPlace(input: {
+    title: string;
+    notes?: string;
+    address?: string;
+    latitude?: number;
+    longitude?: number;
+    source?: PlaceSource;
+  }): Promise<PlaceView> {
+    const slug = await this.uniquePlaceSlug(slugify(input.title));
+    const doc = createEntityPlaceDocument({ slug, ...input });
+    await this.writeDoc(doc);
+    await this.log("Creation", `Added place [${doc.frontmatter.title}](/${doc.path}).`);
+    await this.reload();
+    await this.rebuildIndexes();
+    const created = this.places().find((item) => item.slug === slug);
+    if (!created) throw new Error("Place missing after write");
+    return created;
+  }
+
+  async updatePlace(
+    slug: string,
+    patch: Partial<{
+      title: string;
+      notes: string;
+      address: string;
+      latitude: number;
+      longitude: number;
+      source: PlaceSource | string;
+    }>,
+  ): Promise<void> {
+    const path = entityPlacePath(slug);
+    const raw = await this.io.readText(this.bundleRoot(), path);
+    if (!raw) throw new Error("Place not found");
+    const current = parseDocument(path, raw);
+    const doc = createEntityPlaceDocument({
+      slug,
+      title: patch.title ?? String(current.frontmatter.title ?? slug),
+      notes: patch.notes ?? current.body,
+      address: patch.address !== undefined ? patch.address : optionalString(current.frontmatter.address),
+      latitude: patch.latitude !== undefined ? patch.latitude : parseOptionalCoord(current.frontmatter.latitude),
+      longitude: patch.longitude !== undefined ? patch.longitude : parseOptionalCoord(current.frontmatter.longitude),
+      source: (patch.source ?? optionalString(current.frontmatter.source)) as PlaceSource | undefined,
+    });
+    doc.frontmatter.generated = current.frontmatter.generated;
+    await this.writeDoc(doc);
+    await this.log("Update", `Updated place [${doc.frontmatter.title}](/${doc.path}).`);
+    await this.reload();
+    await this.rebuildIndexes();
+    await this.selectPlace(slug);
+  }
+
+  async deletePlace(slug: string): Promise<void> {
+    const place = this.places().find((item) => item.slug === slug);
+    const title = place?.title ?? slug;
+    await this.wipePlaceLinksForPlaceSlug(slug);
+    await this.unlinkPlaceFromDocuments(slug);
+    await this.deletePlaceFolder(slug);
+    await this.log("Update", `Deleted place [${title}](/${entityPlacePath(slug)}).`);
+    if (this.selectedPlace()?.slug === slug) this.selectedPlace.set(null);
+    await this.reload();
+    await this.rebuildIndexes();
+  }
+
+  async addPlaceFile(
+    slug: string,
+    input: { fileName: string; bytes?: Uint8Array; sourcePath?: string; title?: string },
+  ): Promise<void> {
+    const dest = placeFilePath(slug, input.fileName);
+    if (input.bytes) {
+      await this.io.writeBytes(this.bundleRoot(), dest, input.bytes);
+    } else if (input.sourcePath) {
+      await this.io.copyFileIntoBundle(this.bundleRoot(), input.sourcePath, dest);
+    } else {
+      throw new Error("Place file needs bytes or a local path");
+    }
+    const doc = createPlaceFileDocument({ slug, fileName: input.fileName, title: input.title });
+    await this.writeDoc(doc);
+    await this.log("Creation", `Added file [${doc.frontmatter.title}](/${doc.path}).`);
+    await this.reload();
+    await this.selectPlace(slug);
+  }
+
+  async addPlaceDocument(
+    slug: string,
+    input: {
+      fileName: string;
+      title: string;
+      kind?: string;
+      note?: string;
+      bytes?: Uint8Array;
+      sourcePath?: string;
+    },
+  ): Promise<void> {
+    const docSlug = await this.uniqueDocSlug(slugify(input.title || input.fileName));
+    const dest = documentFilePath(docSlug, input.fileName);
+    if (input.bytes) {
+      await this.io.writeBytes(this.bundleRoot(), dest, input.bytes);
+    } else if (input.sourcePath) {
+      await this.io.copyFileIntoBundle(this.bundleRoot(), input.sourcePath, dest);
+    } else {
+      throw new Error("Document needs file bytes or a local path");
+    }
+    const doc = createDocumentDocument({
+      docSlug,
+      fileName: input.fileName,
+      title: input.title,
+      kind: input.kind?.trim() || DOCUMENT_KIND,
+      note: input.note,
+      subjectSlugs: [],
+      placeSlugs: [slug],
+    });
+    await this.writeDoc(doc);
+    await this.log("Creation", `Added document [${doc.frontmatter.title}](/${doc.path}) to place [${slug}].`);
+    await this.reload();
+    await this.selectPlace(slug);
+  }
+
+  async linkPersonToPlace(
+    slug: string,
+    input: { placeSlug: string; role: PlaceLinkRole | string },
+  ): Promise<void> {
+    const placeSlug = input.placeSlug.trim();
+    if (!placeSlug) throw new Error("Pick a place");
+    const place = this.places().find((item) => item.slug === placeSlug);
+    if (!place) throw new Error("That place is not in this local graph");
+    const role = normalizePlaceLinkRole(input.role);
+    if (!role) throw new Error("Pick lives, works, or met-at");
+    const next = upsertPlaceLink(await this.readPlaceLinks(slug), {
+      role,
+      place: entityPlacePath(placeSlug),
+    });
+    await this.writePlaceLinks(slug, next);
+    await this.log(
+      "Update",
+      `Linked [${slug}](/${personPath(slug)}) as ${role} of [${place.title}](/${entityPlacePath(placeSlug)}).`,
+    );
+    await this.reload();
+    await this.select(slug);
+  }
+
+  async unlinkPersonFromPlace(
+    slug: string,
+    input: { placeSlug: string; role?: PlaceLinkRole },
+  ): Promise<void> {
+    const next = removePlaceLink(await this.readPlaceLinks(slug), {
+      place: entityPlacePath(input.placeSlug),
+      role: input.role,
+    });
+    await this.writePlaceLinks(slug, next);
+    await this.log("Update", `Removed place link [${input.placeSlug}](/${entityPlacePath(input.placeSlug)}).`);
+    await this.reload();
+    await this.select(slug);
+  }
+
+  /** Accept-only write for a model-proposed Place. */
+  async acceptProposedPlace(write: PlaceWrite): Promise<PlaceView> {
+    let placeSlug = write.placeSlug?.trim();
+    if (placeSlug && !this.places().some((item) => item.slug === placeSlug)) {
+      placeSlug = undefined;
+    }
+    if (!placeSlug) {
+      placeSlug = this.existingPlaceSlugForWrite(write);
+    }
+    if (!placeSlug) {
+      const created = await this.createPlace({
+        title: write.placeName,
+        notes: write.notes,
+        address: write.address,
+        latitude: write.latitude,
+        longitude: write.longitude,
+        source: write.latitude !== undefined ? "search" : undefined,
+      });
+      placeSlug = created.slug;
+    }
+    if (write.placeRole) {
+      await this.linkPersonToPlace(write.slug, { placeSlug, role: write.placeRole });
+    }
+    const place = this.places().find((item) => item.slug === placeSlug);
+    if (!place) throw new Error("Place missing after Accept");
+    return place;
   }
 
   async pickDocument(): Promise<string | null> {
@@ -701,7 +933,14 @@ export class PeopleService {
     const photos = [];
     let location: PersonLocation | undefined;
     for (const file of files) {
-      if (!file.endsWith(".md") || file.endsWith("/person.md") || file.endsWith("/relations.md")) continue;
+      if (
+        !file.endsWith(".md") ||
+        file.endsWith("/person.md") ||
+        file.endsWith("/relations.md") ||
+        file.endsWith("/place-links.md")
+      ) {
+        continue;
+      }
       const text = await this.io.readText(this.bundleRoot(), file);
       if (!text) continue;
       const item = parseDocument(file, text);
@@ -757,6 +996,7 @@ export class PeopleService {
       location,
       documents: await this.loadDocumentsForPerson(slug),
       relations: await this.loadRelationsForPerson(slug),
+      places: await this.loadPlaceLinksForPerson(slug),
     };
   }
 
@@ -940,9 +1180,220 @@ export class PeopleService {
       path: person.path,
       description: person.description,
     }));
-    await this.io.writeText(this.bundleRoot(), "index.md", serializeBundleIndex(entries));
+    const placeEntries = this.places().map((place) => ({
+      title: place.title,
+      path: place.path,
+      description: place.address,
+    }));
+    await this.io.writeText(this.bundleRoot(), "index.md", serializeBundleIndex(entries, placeEntries));
     await this.io.writeText(this.bundleRoot(), "people/index.md", serializePeopleIndex(entries));
+    await this.io.writeText(this.bundleRoot(), "places/index.md", serializePlacesIndex(placeEntries));
   }
+
+  private async reloadPlaces(): Promise<void> {
+    const files = await this.io.listFiles(this.bundleRoot(), "places/");
+    const slugs = [
+      ...new Set(
+        files
+          .filter((path) => path.endsWith("/place.md") && path.startsWith("places/"))
+          .map((path) => path.slice("places/".length, -"/place.md".length)),
+      ),
+    ].sort();
+    const places: PlaceView[] = [];
+    for (const slug of slugs) {
+      const place = await this.loadPlace(slug);
+      if (place) places.push(place);
+    }
+    this.places.set(places);
+    const current = this.selectedPlace();
+    this.selectedPlace.set(current ? places.find((item) => item.slug === current.slug) ?? null : null);
+  }
+
+  private async loadPlace(slug: string): Promise<PlaceView | null> {
+    const path = entityPlacePath(slug);
+    const raw = await this.io.readText(this.bundleRoot(), path);
+    if (!raw) return null;
+    const doc = parseDocument(path, raw);
+    if (doc.frontmatter.type !== PLACE_TYPE) return null;
+    const pin = locationFromDocument(doc);
+    const files = await this.io.listFiles(this.bundleRoot(), `${entityPlaceDir(slug)}/`);
+    const placeFiles = [];
+    const notesList = [];
+    for (const file of files) {
+      if (!file.endsWith(".md") || file.endsWith("/place.md")) continue;
+      const text = await this.io.readText(this.bundleRoot(), file);
+      if (!text) continue;
+      const item = parseDocument(file, text);
+      if (item.frontmatter.type === PLACE_FILE_TYPE) {
+        placeFiles.push({
+          id: item.id,
+          path: item.path,
+          title: String(item.frontmatter.title ?? item.id),
+          resource: optionalString(item.frontmatter.resource),
+        });
+      } else if (item.frontmatter.type === "Note") {
+        notesList.push({
+          id: item.id,
+          path: item.path,
+          title: String(item.frontmatter.title ?? item.id),
+          body: item.body,
+        });
+      }
+    }
+    return {
+      id: doc.id,
+      slug,
+      path: doc.path,
+      title: String(doc.frontmatter.title ?? slug),
+      notes: doc.body,
+      address: optionalString(doc.frontmatter.address),
+      latitude: parseOptionalCoord(doc.frontmatter.latitude),
+      longitude: parseOptionalCoord(doc.frontmatter.longitude),
+      source: optionalString(doc.frontmatter.source),
+      location: pin ?? undefined,
+      files: placeFiles,
+      notesList,
+      people: this.people()
+        .flatMap((person) =>
+          (person.places ?? [])
+            .filter((link) => link.slug === slug)
+            .map((link) => ({ slug: person.slug, title: person.title, role: link.role })),
+        ),
+      documents: await this.loadDocumentsForPlace(slug),
+    };
+  }
+
+  private async loadDocumentsForPlace(slug: string): Promise<PlaceView["documents"]> {
+    const files = await this.io.listFiles(this.bundleRoot(), "documents/");
+    const documents: PlaceView["documents"] = [];
+    for (const file of files) {
+      if (!file.endsWith("/document.md")) continue;
+      const text = await this.io.readText(this.bundleRoot(), file);
+      if (!text) continue;
+      const item = parseDocument(file, text);
+      if (item.frontmatter.type !== DOCUMENT_TYPE) continue;
+      if (!documentLinkedToPlace(item.frontmatter, slug)) continue;
+      const docSlug = file.slice("documents/".length, -"/document.md".length);
+      documents.push({
+        id: item.id,
+        slug: docSlug,
+        path: item.path,
+        title: String(item.frontmatter.title ?? item.id),
+        resource: optionalString(item.frontmatter.resource),
+        kind: optionalString(item.frontmatter.kind),
+        subjects: subjectPaths(item.frontmatter.subjects),
+      });
+    }
+    return documents;
+  }
+
+  private async loadPlaceLinksForPerson(slug: string): Promise<PersonPlaceLink[]> {
+    const raw = await this.io.readText(this.bundleRoot(), placeLinksPath(slug));
+    if (!raw) return [];
+    const doc = parseDocument(placeLinksPath(slug), raw);
+    const out: PersonPlaceLink[] = [];
+    for (const link of placeLinksFromDocument(doc)) {
+      const placeSlug = slugFromPlacePath(link.place);
+      if (!placeSlug) continue;
+      const place = this.places().find((item) => item.slug === placeSlug);
+      const row: PersonPlaceLink = {
+        role: link.role,
+        slug: placeSlug,
+        path: link.place,
+        title: place?.title ?? placeSlug,
+      };
+      if (place?.location) row.location = place.location;
+      out.push(row);
+    }
+    return out;
+  }
+
+  private async readPlaceLinks(slug: string): Promise<OkfPlaceLink[]> {
+    const path = placeLinksPath(slug);
+    const raw = await this.io.readText(this.bundleRoot(), path);
+    if (!raw) return [];
+    return placeLinksFromDocument(parseDocument(path, raw));
+  }
+
+  private async writePlaceLinks(slug: string, links: OkfPlaceLink[]): Promise<void> {
+    const path = placeLinksPath(slug);
+    if (links.length === 0) {
+      await this.io.deleteFile(this.bundleRoot(), path);
+      return;
+    }
+    await this.writeDoc(createPlaceLinksDocument({ slug, links }));
+  }
+
+  private async wipePlaceLinksForPlaceSlug(placeSlug: string): Promise<void> {
+    for (const person of this.people()) {
+      const next = wipePlaceLinksForPlace(await this.readPlaceLinks(person.slug), placeSlug);
+      await this.writePlaceLinks(person.slug, next);
+    }
+  }
+
+  private async unlinkPlaceFromDocuments(placeSlug: string): Promise<void> {
+    const files = await this.io.listFiles(this.bundleRoot(), "documents/");
+    for (const file of files) {
+      if (!file.endsWith("/document.md")) continue;
+      const text = await this.io.readText(this.bundleRoot(), file);
+      if (!text) continue;
+      const item = parseDocument(file, text);
+      if (item.frontmatter.type !== DOCUMENT_TYPE) continue;
+      if (!documentLinkedToPlace(item.frontmatter, placeSlug)) continue;
+      const next = { ...item, frontmatter: { ...item.frontmatter } };
+      next.frontmatter.subjects = subjectPaths(item.frontmatter.subjects).filter(
+        (path) => path !== entityPlacePath(placeSlug),
+      );
+      await this.writeDoc(next);
+    }
+  }
+
+  private async deletePlaceFolder(slug: string): Promise<void> {
+    const prefix = `${entityPlaceDir(slug)}/`;
+    const files = await this.io.listFiles(this.bundleRoot(), prefix);
+    for (const file of files) {
+      await this.io.deleteFile(this.bundleRoot(), file);
+    }
+  }
+
+  private existingPlaceSlugForWrite(write: PlaceWrite): string | undefined {
+    const name = write.placeName.trim().toLowerCase();
+    if (!name) return undefined;
+    const match = this.places().find((place) => {
+      if (place.title.trim().toLowerCase() !== name) return false;
+      if (write.latitude === undefined || write.longitude === undefined) return true;
+      if (!place.location) return true;
+      return (
+        Math.abs(place.location.latitude - write.latitude) < 1e-5 &&
+        Math.abs(place.location.longitude - write.longitude) < 1e-5
+      );
+    });
+    return match?.slug;
+  }
+
+  private async uniquePlaceSlug(base: string): Promise<string> {
+    const files = await this.io.listFiles(this.bundleRoot(), "places/");
+    const taken = new Set(
+      files
+        .filter((path) => path.endsWith("/place.md"))
+        .map((path) => path.slice("places/".length, -"/place.md".length)),
+    );
+    if (!taken.has(base)) return base;
+    for (let i = 2; i < 1000; i++) {
+      const candidate = `${base}-${i}`;
+      if (!taken.has(candidate)) return candidate;
+    }
+    return `${base}-${Date.now()}`;
+  }
+}
+
+function parseOptionalCoord(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return undefined;
 }
 
 function optionalString(value: unknown): string | undefined {

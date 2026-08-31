@@ -17,6 +17,7 @@ test("card sections are the sections that already live on the person card", () =
     "timeline",
     "commitments",
     "relations",
+    "places",
   ]);
   assert.equal(CARD_SECTION_LABELS.about, "About");
   assert.equal(isCardSection("photos"), true);
@@ -25,11 +26,11 @@ test("card sections are the sections that already live on the person card", () =
 
 test("arrow keys wrap; Home and End jump the strip", () => {
   assert.equal(nextCardSection("about", "ArrowRight"), "photos");
-  assert.equal(nextCardSection("relations", "ArrowRight"), "about");
-  assert.equal(nextCardSection("about", "ArrowLeft"), "relations");
+  assert.equal(nextCardSection("places", "ArrowRight"), "about");
+  assert.equal(nextCardSection("about", "ArrowLeft"), "places");
   assert.equal(nextCardSection("photos", "ArrowLeft"), "about");
   assert.equal(nextCardSection("files", "Home"), "about");
-  assert.equal(nextCardSection("about", "End"), "relations");
+  assert.equal(nextCardSection("about", "End"), "places");
   assert.equal(nextCardSection("about", "Enter"), null);
   assert.equal(nextCardSection("about", " "), null);
 });

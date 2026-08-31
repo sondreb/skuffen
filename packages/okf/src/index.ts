@@ -6,6 +6,8 @@ export const NOTE_TYPE = "Note";
 export const PHOTO_TYPE = "Photo";
 export const SOCIAL_TYPE = "SocialProfile";
 export const PLACE_TYPE = "Place";
+export const PLACE_LINKS_TYPE = "PlaceLinks";
+export const PLACE_FILE_TYPE = "File";
 export const DOCUMENT_TYPE = "Document";
 export const DOCUMENT_KIND = "document";
 export const RELATIONS_TYPE = "Relations";
@@ -16,6 +18,8 @@ export type OkfType =
   | typeof PHOTO_TYPE
   | typeof SOCIAL_TYPE
   | typeof PLACE_TYPE
+  | typeof PLACE_LINKS_TYPE
+  | typeof PLACE_FILE_TYPE
   | typeof DOCUMENT_TYPE
   | typeof RELATIONS_TYPE
   | string;
@@ -38,6 +42,16 @@ export interface OkfRelation {
   role: string;
   /** Bundle path of the other person. File path is identity. */
   person: string;
+}
+
+/** How a person is tied to a first-class Place. No land-plot kind. */
+export const PLACE_LINK_ROLES = ["lives", "works", "met-at"] as const;
+export type PlaceLinkRole = (typeof PLACE_LINK_ROLES)[number];
+
+export interface OkfPlaceLink {
+  role: PlaceLinkRole;
+  /** Bundle path of the Place. File path is identity. */
+  place: string;
 }
 
 export type PlaceSource = "search" | "pin";
@@ -80,6 +94,8 @@ export interface OkfFrontmatter {
   image?: string;
   /** Typed links to other local people. Only on relations.md. */
   relations?: OkfRelation[];
+  /** Typed links from a person to first-class Places. Only on place-links.md. */
+  links?: OkfPlaceLink[];
 }
 
 export interface OkfDocument {
@@ -200,7 +216,10 @@ export function parseIndex(raw: string): { okfVersion?: string; body: string } {
   };
 }
 
-export function serializeBundleIndex(entries: { title: string; path: string; description?: string }[]): string {
+export function serializeBundleIndex(
+  entries: { title: string; path: string; description?: string }[],
+  places: { title: string; path: string; description?: string }[] = [],
+): string {
   const lines = [
     "---",
     `okf_version: "${OKF_VERSION}"`,
@@ -222,6 +241,16 @@ export function serializeBundleIndex(entries: { title: string; path: string; des
     }
     lines.push("");
   }
+  lines.push("# Places", "");
+  if (places.length === 0) {
+    lines.push("*Empty — add a place in Skuffen. Data stays on disk.*", "");
+  } else {
+    for (const entry of places) {
+      const desc = entry.description?.trim() ? ` - ${entry.description.trim()}` : "";
+      lines.push(`* [${entry.title}](${entry.path}) ${desc}`.trimEnd());
+    }
+    lines.push("");
+  }
   return lines.join("\n");
 }
 
@@ -229,6 +258,20 @@ export function serializePeopleIndex(entries: { title: string; path: string; des
   const lines = ["# People", ""];
   if (entries.length === 0) {
     lines.push("*No people yet.*", "");
+  } else {
+    for (const entry of entries) {
+      const desc = entry.description?.trim() ? ` - ${entry.description.trim()}` : "";
+      lines.push(`* [${entry.title}](${entry.path}) ${desc}`.trimEnd());
+    }
+    lines.push("");
+  }
+  return lines.join("\n");
+}
+
+export function serializePlacesIndex(entries: { title: string; path: string; description?: string }[]): string {
+  const lines = ["# Places", ""];
+  if (entries.length === 0) {
+    lines.push("*No places yet.*", "");
   } else {
     for (const entry of entries) {
       const desc = entry.description?.trim() ? ` - ${entry.description.trim()}` : "";
@@ -290,6 +333,35 @@ export function photoFilePath(slug: string, fileName: string): string {
 
 export function placePath(slug: string): string {
   return `${personDir(slug)}/place.md`;
+}
+
+/** First-class Place folder. Path is identity — not a person pin. */
+export function entityPlaceDir(slug: string): string {
+  return `places/${slug}`;
+}
+
+export function entityPlacePath(slug: string): string {
+  return `${entityPlaceDir(slug)}/place.md`;
+}
+
+export function placeLinksPath(slug: string): string {
+  return `${personDir(slug)}/place-links.md`;
+}
+
+export function placeNotePath(slug: string, noteSlug: string): string {
+  return `${entityPlaceDir(slug)}/notes/${noteSlug}.md`;
+}
+
+export function placeFileDir(slug: string): string {
+  return `${entityPlaceDir(slug)}/files`;
+}
+
+export function placeFilePath(slug: string, fileName: string): string {
+  return `${placeFileDir(slug)}/${sanitizeFileName(fileName)}`;
+}
+
+export function placeFileConceptPath(slug: string, fileStem: string): string {
+  return `${placeFileDir(slug)}/${fileStem}.md`;
 }
 
 export function relationsPath(slug: string): string {
@@ -553,6 +625,125 @@ export function createPlaceDocument(input: {
   };
 }
 
+/**
+ * First-class Place at places/{slug}/place.md.
+ * Path is identity. Lat/lng optional. No land-plot kind.
+ */
+export function createEntityPlaceDocument(input: {
+  slug: string;
+  title: string;
+  notes?: string;
+  address?: string;
+  latitude?: number;
+  longitude?: number;
+  source?: PlaceSource | string;
+  generatedBy?: string;
+  verifiedBy?: string;
+}): OkfDocument {
+  const title = input.title.trim();
+  if (!title) throw new Error("Place requires a name");
+  const hasLat = input.latitude !== undefined && input.latitude !== null;
+  const hasLng = input.longitude !== undefined && input.longitude !== null;
+  if (hasLat !== hasLng) {
+    throw new Error("Place coordinates must include both latitude and longitude");
+  }
+  if (hasLat && (!isValidLatitude(input.latitude!) || !isValidLongitude(input.longitude!))) {
+    throw new Error("Place requires a finite latitude [-90, 90] and longitude [-180, 180]");
+  }
+  const at = nowUtc();
+  const address = input.address?.trim() || undefined;
+  const notes = input.notes?.trim();
+  const frontmatter: OkfFrontmatter = {
+    type: PLACE_TYPE,
+    title,
+    address,
+    generated: { by: input.generatedBy ?? actorHuman(), at },
+    verified: { by: input.verifiedBy ?? actorHuman(), at },
+  };
+  if (hasLat) {
+    frontmatter.latitude = input.latitude;
+    frontmatter.longitude = input.longitude;
+    frontmatter.source = input.source;
+  }
+  return {
+    id: conceptId(entityPlacePath(input.slug)),
+    path: entityPlacePath(input.slug),
+    frontmatter,
+    body: notes
+      ? `${notes}\n`
+      : `Place on this machine. Path is identity. Map tiles and address search may use the public internet. The record stays on disk.\n`,
+  };
+}
+
+export function createPlaceNoteDocument(input: {
+  slug: string;
+  noteSlug: string;
+  title: string;
+  body: string;
+  generatedBy?: string;
+  verifiedBy?: string;
+}): OkfDocument {
+  const at = nowUtc();
+  return {
+    id: conceptId(placeNotePath(input.slug, input.noteSlug)),
+    path: placeNotePath(input.slug, input.noteSlug),
+    frontmatter: {
+      type: NOTE_TYPE,
+      title: input.title,
+      generated: { by: input.generatedBy ?? actorHuman(), at },
+      verified: { by: input.verifiedBy ?? actorHuman(), at },
+    },
+    body: `${input.body.trim()}\n\nSee [${input.slug}](/${entityPlacePath(input.slug)}).\n`,
+  };
+}
+
+export function createPlaceFileDocument(input: {
+  slug: string;
+  fileName: string;
+  title?: string;
+  generatedBy?: string;
+  verifiedBy?: string;
+}): OkfDocument {
+  const at = nowUtc();
+  const fileName = sanitizeFileName(input.fileName);
+  const fileStem = fileName.replace(/\.[^.]+$/, "");
+  const resource = `/${placeFilePath(input.slug, fileName)}`;
+  return {
+    id: conceptId(placeFileConceptPath(input.slug, fileStem)),
+    path: placeFileConceptPath(input.slug, fileStem),
+    frontmatter: {
+      type: PLACE_FILE_TYPE,
+      title: input.title ?? fileName,
+      resource,
+      generated: { by: input.generatedBy ?? actorHuman(), at },
+      verified: { by: input.verifiedBy ?? actorHuman(), at },
+    },
+    body: `File stored beside this Place at \`${resource}\`. Not inlined as a markdown blob.\n\nPlace: [${input.slug}](/${entityPlacePath(input.slug)}).\n`,
+  };
+}
+
+export function createPlaceLinksDocument(input: {
+  slug: string;
+  links?: OkfPlaceLink[];
+  generatedBy?: string;
+  verifiedBy?: string;
+}): OkfDocument {
+  const at = nowUtc();
+  const links = normalizePlaceLinkList(input.links);
+  return {
+    id: conceptId(placeLinksPath(input.slug)),
+    path: placeLinksPath(input.slug),
+    frontmatter: {
+      type: PLACE_LINKS_TYPE,
+      title: "Places",
+      links,
+      generated: { by: input.generatedBy ?? actorHuman(), at },
+      verified: { by: input.verifiedBy ?? actorHuman(), at },
+    },
+    body: `Typed links from [${input.slug}](/${personPath(input.slug)}) to local Places (lives, works, met-at). File path is identity. Never uploaded.\n`,
+  };
+}
+
 export function createDocumentDocument(input: {
   docSlug: string;
   fileName: string;
@@ -560,6 +751,7 @@ export function createDocumentDocument(input: {
   kind?: string;
   note?: string;
   subjectSlugs: string[];
+  placeSlugs?: string[];
   generatedBy?: string;
   verifiedBy?: string;
 }): OkfDocument {
@@ -571,9 +763,14 @@ export function createDocumentDocument(input: {
   if (!fileName) {
     throw new Error("Document requires a file");
   }
-  const subjects = [...new Set(input.subjectSlugs.map((slug) => personPath(slug)))];
+  const subjects = [
+    ...new Set([
+      ...input.subjectSlugs.map((slug) => personPath(slug)),
+      ...(input.placeSlugs ?? []).map((slug) => entityPlacePath(slug)),
+    ]),
+  ];
   if (subjects.length === 0) {
-    throw new Error("Document must link to at least one person");
+    throw new Error("Document must link to at least one person or place");
   }
   const at = nowUtc();
   const resource = `/${documentFilePath(input.docSlug, fileName)}`;
@@ -581,7 +778,9 @@ export function createDocumentDocument(input: {
   const note = input.note?.trim();
   const links = subjects
     .map((path) => {
-      const slug = path.replace(/^people\//, "").replace(/\/person\.md$/, "");
+      const person = slugFromPersonPath(path);
+      const place = slugFromPlacePath(path);
+      const slug = person ?? place ?? path;
       return `- [${slug}](/${path})`;
     })
     .join("\n");
@@ -632,6 +831,99 @@ export function slugFromPersonPath(path: string): string | undefined {
   const normalized = path.replace(/\\/g, "/").replace(/^\//, "");
   const match = normalized.match(/^people\/([^/]+)\/person\.md$/);
   return match?.[1];
+}
+
+export function slugFromPlacePath(path: string): string | undefined {
+  const normalized = path.replace(/\\/g, "/").replace(/^\//, "");
+  const match = normalized.match(/^places\/([^/]+)\/place\.md$/);
+  return match?.[1];
+}
+
+export function isPlaceLinkRole(value: unknown): value is PlaceLinkRole {
+  return value === "lives" || value === "works" || value === "met-at";
+}
+
+export function normalizePlaceLinkRole(role: string): PlaceLinkRole | "" {
+  const trimmed = role.trim().toLowerCase();
+  if (trimmed === "met at" || trimmed === "met_at" || trimmed === "metat") return "met-at";
+  return isPlaceLinkRole(trimmed) ? trimmed : "";
+}
+
+export function normalizePlaceLink(value: unknown): OkfPlaceLink | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const raw = value as Record<string, unknown>;
+  const role = typeof raw["role"] === "string" ? normalizePlaceLinkRole(raw["role"]) : "";
+  if (!role) return null;
+  const place = typeof raw["place"] === "string" ? raw["place"].replace(/\\/g, "/").replace(/^\//, "").trim() : "";
+  if (!slugFromPlacePath(place)) return null;
+  return { role, place };
+}
+
+export function normalizePlaceLinkList(value: unknown): OkfPlaceLink[] {
+  if (!Array.isArray(value)) return [];
+  const out: OkfPlaceLink[] = [];
+  const seen = new Set<string>();
+  for (const item of value) {
+    const link = normalizePlaceLink(item);
+    if (!link) continue;
+    const key = placeLinkKey(link);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(link);
+  }
+  return out;
+}
+
+export function placeLinkKey(link: Pick<OkfPlaceLink, "role" | "place">): string {
+  return `${link.role}|${link.place}`;
+}
+
+export function placeLinksFromDocument(doc: OkfDocument): OkfPlaceLink[] {
+  if (doc.frontmatter.type !== PLACE_LINKS_TYPE) return [];
+  return normalizePlaceLinkList(doc.frontmatter.links);
+}
+
+export function upsertPlaceLink(links: OkfPlaceLink[], link: OkfPlaceLink): OkfPlaceLink[] {
+  const next = normalizePlaceLink(link);
+  if (!next) return normalizePlaceLinkList(links);
+  const without = normalizePlaceLinkList(links).filter((item) => placeLinkKey(item) !== placeLinkKey(next));
+  return [...without, next];
+}
+
+export function removePlaceLink(
+  links: OkfPlaceLink[],
+  match: { place: string; role?: PlaceLinkRole },
+): OkfPlaceLink[] {
+  const place = match.place.replace(/\\/g, "/").replace(/^\//, "");
+  return normalizePlaceLinkList(links).filter((item) => {
+    if (item.place !== place) return true;
+    if (match.role && item.role !== match.role) return true;
+    return false;
+  });
+}
+
+export function wipePlaceLinksForPlace(links: OkfPlaceLink[], placeSlug: string): OkfPlaceLink[] {
+  const path = entityPlacePath(placeSlug);
+  return normalizePlaceLinkList(links).filter((item) => item.place !== path);
+}
+
+export function documentLinkedToPlace(frontmatter: OkfFrontmatter, placeSlug: string): boolean {
+  return subjectPaths(frontmatter.subjects).includes(entityPlacePath(placeSlug));
+}
+
+export function addDocumentPlaceSubject(doc: OkfDocument, placeSlug: string): OkfDocument {
+  const path = entityPlacePath(placeSlug);
+  const current = subjectPaths(doc.frontmatter.subjects);
+  if (!current.includes(path)) {
+    doc.frontmatter.subjects = [...current, path];
+  }
+  return doc;
+}
+
+export function removeDocumentPlaceSubject(doc: OkfDocument, placeSlug: string): OkfDocument {
+  const path = entityPlacePath(placeSlug);
+  doc.frontmatter.subjects = subjectPaths(doc.frontmatter.subjects).filter((item) => item !== path);
+  return doc;
 }
 
 export function isRelationKind(value: unknown): value is RelationKind {

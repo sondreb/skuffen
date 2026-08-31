@@ -173,6 +173,29 @@ export async function pinPersonPlace(
   await expect(page.getByText(place.label)).toBeVisible();
 }
 
+export async function openPlacesFromMenu(page: Page): Promise<void> {
+  await page.getByRole("button", { name: "Menu", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Menu" })).toBeVisible();
+  await page.locator("[data-open-places='menu']").click();
+  await expect(page.locator("[data-places]")).toBeVisible();
+}
+
+export async function createParkPlace(
+  page: Page,
+  place: { query: string; label: string } = DEMO.park,
+): Promise<void> {
+  await page.locator("[data-add-place]").click();
+  await expect(page.locator("[data-create-place]")).toBeVisible();
+  await page.locator("[data-place-name]").fill(DEMO.place.title);
+  await page.locator("[data-place-notes]").fill(DEMO.place.notes);
+  await page.locator("[data-place-address]").fill(place.query);
+  await page.getByRole("button", { name: "Search", exact: true }).click();
+  await page.getByRole("button", { name: place.label }).click();
+  await page.locator("[data-save-place]").click();
+  await expect(page.locator("[data-place-card]")).toBeVisible();
+  await expect(page.getByRole("heading", { name: DEMO.place.title })).toBeVisible();
+}
+
 export async function openMapFromMenu(page: Page): Promise<void> {
   await page.getByRole("button", { name: "Menu", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Menu" })).toBeVisible();

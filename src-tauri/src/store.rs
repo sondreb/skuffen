@@ -45,6 +45,7 @@ pub fn ensure_bundle_dirs(app: &tauri::AppHandle, root: Option<String>) -> Resul
         None => default_bundle_path(app)?,
     };
     fs::create_dir_all(PathBuf::from(&path).join("people")).map_err(|e| e.to_string())?;
+    fs::create_dir_all(PathBuf::from(&path).join("places")).map_err(|e| e.to_string())?;
     fs::create_dir_all(PathBuf::from(&path).join("documents")).map_err(|e| e.to_string())?;
     Ok(path)
 }
@@ -55,7 +56,7 @@ pub fn missing_seeds(root: &str) -> Result<Vec<(String, String)>, String> {
     if !index.exists() {
         seeds.push((
             "index.md".into(),
-            "---\nokf_version: \"0.2\"\n---\n\n# Skuffen\n\nLocal personal intelligence. The people-graph lives on this machine as an Open Knowledge Format v0.2 bundle.\n\n# People\n\n*Empty — add a person in Skuffen. Data stays on disk.*\n".into(),
+            "---\nokf_version: \"0.2\"\n---\n\n# Skuffen\n\nLocal personal intelligence. The people-graph lives on this machine as an Open Knowledge Format v0.2 bundle.\n\n# People\n\n*Empty — add a person in Skuffen. Data stays on disk.*\n\n# Places\n\n*Empty — add a place in Skuffen. Data stays on disk.*\n".into(),
         ));
     }
     let log = safe_join(root, "log.md")?;
@@ -71,6 +72,10 @@ pub fn missing_seeds(root: &str) -> Result<Vec<(String, String)>, String> {
     let people_index = safe_join(root, "people/index.md")?;
     if !people_index.exists() {
         seeds.push(("people/index.md".into(), "# People\n\n*No people yet.*\n".into()));
+    }
+    let places_index = safe_join(root, "places/index.md")?;
+    if !places_index.exists() {
+        seeds.push(("places/index.md".into(), "# Places\n\n*No places yet.*\n".into()));
     }
     Ok(seeds)
 }

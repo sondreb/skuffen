@@ -36,7 +36,18 @@ export type OkfWriteIntent =
   | { type: "social"; slug: string; network: string; url: string; handle?: string }
   | { type: "field"; slug: string; field: PersonField; value: string }
   | { type: "photo"; slug: string; url: string; title?: string }
-  | { type: "relation"; slug: string; relatedSlug: string; relationKind: NonNullable<FactSuggestion["relationKind"]>; relationRole: string };
+  | { type: "relation"; slug: string; relatedSlug: string; relationKind: NonNullable<FactSuggestion["relationKind"]>; relationRole: string }
+  | {
+      type: "place";
+      slug: string;
+      placeName: string;
+      notes?: string;
+      address?: string;
+      latitude?: number;
+      longitude?: number;
+      placeRole?: NonNullable<FactSuggestion["placeRole"]>;
+      placeSlug?: string;
+    };
 
 export type PersonDraft = {
   title: string;
@@ -159,7 +170,11 @@ export function parseSuggestions(text: string, source: FactSuggestion["source"] 
     id: `${source}-${Date.now()}-${index}`,
     source,
     kind:
-      item.kind === "social" || item.kind === "field" || item.kind === "photo" || item.kind === "relation"
+      item.kind === "social" ||
+      item.kind === "field" ||
+      item.kind === "photo" ||
+      item.kind === "relation" ||
+      item.kind === "place"
         ? item.kind
         : "note",
     title: String(item.title ?? "Suggestion"),
@@ -172,6 +187,12 @@ export function parseSuggestions(text: string, source: FactSuggestion["source"] 
     relationKind: item.relationKind,
     relationRole: item.relationRole,
     relatedSlug: item.relatedSlug,
+    placeName: item.placeName,
+    placeSlug: item.placeSlug,
+    address: item.address,
+    latitude: item.latitude,
+    longitude: item.longitude,
+    placeRole: item.placeRole,
   }));
 }
 
@@ -242,6 +263,19 @@ export function writesForAcceptedSuggestion(slug: string, suggestion: FactSugges
       relatedSlug: suggestion.relatedSlug,
       relationKind: suggestion.relationKind,
       relationRole: suggestion.relationRole,
+    };
+  }
+  if (suggestion.kind === "place" && (suggestion.placeName || suggestion.title)) {
+    return {
+      type: "place",
+      slug,
+      placeName: (suggestion.placeName || suggestion.title).trim(),
+      notes: suggestion.body,
+      address: suggestion.address,
+      latitude: suggestion.latitude,
+      longitude: suggestion.longitude,
+      placeRole: suggestion.placeRole,
+      placeSlug: suggestion.placeSlug,
     };
   }
   return {

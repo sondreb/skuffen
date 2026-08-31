@@ -59,6 +59,7 @@ function person(overrides: Partial<PersonView> = {}): PersonView {
     },
     documents: [],
     relations: [],
+    places: [],
     ...overrides,
   };
 }

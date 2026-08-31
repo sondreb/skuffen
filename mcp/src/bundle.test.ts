@@ -147,6 +147,27 @@ test("MCP add sibling writes both cards; delete slug edges; no tokens", () => {
   assert.equal(bundle.getPerson(bea.slug)?.relations.length, 0);
 });
 
+test("MCP creates a first-class Place and links a person — stays on disk", () => {
+  const root = mkdtempSync(join(tmpdir(), "skuffen-mcp-entity-place-"));
+  const bundle = new OkfBundle(root);
+  bundle.ensure();
+  const ada = bundle.createPerson({ title: "Ada Demo" });
+  const place = bundle.createPlace({
+    title: "Golden Gate Park",
+    notes: "Met at the tea garden.",
+    latitude: 37.7694,
+    longitude: -122.4862,
+  });
+  assert.equal(place.path, "places/golden-gate-park/place.md");
+  const linked = bundle.linkPersonToPlace(ada.slug, { placeSlug: place.slug, role: "met-at" });
+  assert.equal(linked.places[0]?.slug, "golden-gate-park");
+  assert.equal(linked.places[0]?.role, "met-at");
+  const onDisk = readFileSync(join(root, "places/golden-gate-park/place.md"), "utf8");
+  assert.match(onDisk, /type: Place/);
+  assert.doesNotMatch(onDisk, /skuffen\.cloud|land-plot|token/i);
+  assert.equal(bundle.listPlaces().length, 1);
+});
+
 test("MCP leftover ciphertext decrypts once, then refuses without the key", () => {
   const root = mkdtempSync(join(tmpdir(), "skuffen-mcp-leftover-"));
   const key = generateKey();

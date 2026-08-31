@@ -1,4 +1,5 @@
 import type { PersonView, RelationKind } from "../models";
+import { personMapLocation } from "./map-pins";
 
 export interface MapRelationEnd {
   slug: string;
@@ -22,7 +23,7 @@ export interface MapRelationEdge {
 export function mapRelationEdges(people: readonly PersonView[]): MapRelationEdge[] {
   const located = new Map<string, PersonView>();
   for (const person of people) {
-    if (person.location) located.set(person.slug, person);
+    if (personMapLocation(person)) located.set(person.slug, person);
   }
   const seen = new Set<string>();
   const edges: MapRelationEdge[] = [];
@@ -50,7 +51,7 @@ export function edgeId(a: string, b: string, kind: RelationKind): string {
 }
 
 function endOf(person: PersonView): MapRelationEnd {
-  const location = person.location!;
+  const location = personMapLocation(person)!;
   return {
     slug: person.slug,
     title: person.title,
