@@ -123,7 +123,11 @@ test("Accept writes a model-proposed Place", async ({ demoPage: page }) => {
   await expect(page.locator("[data-demo='accept']")).toHaveCount(0);
   await openPersonTab(page, "Places");
   await expect(page.locator("[data-place-link='golden-gate-park']")).toBeVisible();
+  await expect(page.locator("[data-place-link]")).toHaveCount(1);
   const afterAccept = await bundleFiles(page);
   expect(afterAccept["places/golden-gate-park/place.md"]).toMatch(/type: Place/);
   expect(afterAccept["people/ada-demo/place-links.md"]).toMatch(/met-at/);
+  expect(
+    Object.keys(afterAccept).filter((path) => /^places\/[^/]+\/place\.md$/.test(path)),
+  ).toEqual(["places/golden-gate-park/place.md"]);
 });

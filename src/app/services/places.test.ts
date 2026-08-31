@@ -58,6 +58,14 @@ test("demo Place suggestion is propose-only and stays local", () => {
   assert.ok(placeOfferKey(item));
 });
 
+test("demo ask and research mint the same Place id so Accept cannot write a twin", () => {
+  const fromAsk = demoPlaceSuggestion("ask");
+  const fromResearch = demoPlaceSuggestion("research");
+  assert.equal(fromAsk.id, "demo-place-park");
+  assert.equal(fromResearch.id, fromAsk.id);
+  assert.equal(placeOfferKey(fromAsk), placeOfferKey(fromResearch));
+});
+
 test("empty Places copy is a local empty state — no network", () => {
   const copy = emptyPlacesCopy();
   assert.equal(copy.lede, "No places yet");

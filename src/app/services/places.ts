@@ -100,9 +100,10 @@ export function dismissPlaceProposal(): null {
   return null;
 }
 
+/** Same park from Suggest facts vs Research — one row, one Accept. */
 export function demoPlaceSuggestion(source: FactSuggestion["source"] = "research"): FactSuggestion {
   return {
-    id: `demo-${source}-place-park`,
+    id: "demo-place-park",
     source,
     kind: "place",
     title: "Golden Gate Park (demo)",

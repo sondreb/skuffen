@@ -468,6 +468,9 @@ export class PeopleService {
       placeSlug = undefined;
     }
     if (!placeSlug) {
+      placeSlug = this.existingPlaceSlugForWrite(write);
+    }
+    if (!placeSlug) {
       const created = await this.createPlace({
         title: write.placeName,
         notes: write.notes,
@@ -1351,6 +1354,21 @@ export class PeopleService {
     for (const file of files) {
       await this.io.deleteFile(this.bundleRoot(), file);
     }
+  }
+
+  private existingPlaceSlugForWrite(write: PlaceWrite): string | undefined {
+    const name = write.placeName.trim().toLowerCase();
+    if (!name) return undefined;
+    const match = this.places().find((place) => {
+      if (place.title.trim().toLowerCase() !== name) return false;
+      if (write.latitude === undefined || write.longitude === undefined) return true;
+      if (!place.location) return true;
+      return (
+        Math.abs(place.location.latitude - write.latitude) < 1e-5 &&
+        Math.abs(place.location.longitude - write.longitude) < 1e-5
+      );
+    });
+    return match?.slug;
   }
 
   private async uniquePlaceSlug(base: string): Promise<string> {

@@ -1653,11 +1653,15 @@ export class AppComponent implements OnInit, OnDestroy {
     if (skipped) {
       this.notice = "That photo could not be fetched. Nothing else was skipped.";
     }
-    this.providers.reject(suggestion.id);
+    const twins = equivalentSuggestionIds(this.suggestionPool(), suggestion);
     const next = new Set(this.checkedSuggestionIds);
-    next.delete(suggestion.id);
+    this.rejectedSuggestionIds.update((ids) => new Set([...ids, ...twins]));
+    for (const id of twins) {
+      this.providers.reject(id);
+      next.delete(id);
+      await this.follow.acceptLocalOnly(id);
+    }
     this.checkedSuggestionIds = next;
-    await this.follow.acceptLocalOnly(suggestion.id);
   }
 
   async acceptCheckedSuggestions(): Promise<void> {
