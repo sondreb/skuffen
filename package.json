@@ -27,6 +27,7 @@
     "test:self": "tsx --test src/app/services/self.test.ts",
     "test:theme": "tsx --test src/app/services/theme.test.ts",
     "test:people-pane": "tsx --test src/app/services/people-pane.test.ts",
+    "test:people-sort": "tsx --test src/app/services/people-sort.test.ts",
     "test:merge": "tsx --test src/app/services/merge.test.ts",
     "test:brief": "tsx --test src/app/services/brief.test.ts",
     "test:capture": "tsx --test src/app/services/capture.test.ts",

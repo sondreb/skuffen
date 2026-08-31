@@ -260,7 +260,8 @@ button:disabled {
 }
 
 .pane-toggle,
-.find-icon {
+.find-icon,
+.sort-icon {
   flex-shrink: 0;
   display: grid;
   place-items: center;
@@ -275,7 +276,9 @@ button:disabled {
 .pane-toggle:hover,
 .pane-toggle:focus-visible,
 .find-icon:hover,
-.find-icon:focus-visible {
+.find-icon:focus-visible,
+.sort-icon:hover,
+.sort-icon:focus-visible {
   color: var(--paper);
   border-color: var(--line);
   background: var(--hover);
@@ -333,6 +336,54 @@ button:disabled {
 .sidebar.collapsed .find-row:hover .find,
 .sidebar.collapsed .find-row.open .find,
 .sidebar.collapsed .find-row:focus-within .find {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.sort-row {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.sort {
+  margin: 0;
+}
+
+.sort select {
+  width: auto;
+  max-width: 9.5rem;
+  padding: 0.28rem 0.45rem;
+  font-size: 0.75rem;
+  background: var(--input);
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+
+.sidebar.collapsed .sort {
+  position: absolute;
+  left: calc(100% + 0.35rem);
+  top: 0;
+  z-index: 4;
+  width: 12.5rem;
+  padding: 0.35rem;
+  background: var(--chrome);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sidebar.collapsed .sort select {
+  max-width: none;
+  width: 100%;
+}
+
+.sidebar.collapsed .sort-row:hover .sort,
+.sidebar.collapsed .sort-row.open .sort,
+.sidebar.collapsed .sort-row:focus-within .sort {
   opacity: 1;
   pointer-events: auto;
 }

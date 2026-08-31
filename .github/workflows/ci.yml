@@ -54,6 +54,9 @@ jobs:
       - name: People pane collapse (photo strip) tests
         run: npm run test:people-pane
 
+      - name: People list sort (local order, never a score) tests
+        run: npm run test:people-sort
+
       - name: Duplicate-person merge (propose-only) tests
         run: npm run test:merge
 

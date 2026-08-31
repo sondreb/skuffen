@@ -50,6 +50,15 @@ export interface Settings {
    * Desktop source of truth is OS-backed settings.json — never OKF, never tokens.
    */
   peoplePaneCollapsed?: boolean | null;
+  /**
+   * People list order: name-az (default) | name-za | updated | added | opened.
+   * Local list order only — never a score. Not OKF. Never tokens.
+   */
+  peopleSort?: "name-az" | "name-za" | "updated" | "added" | "opened" | null;
+  /**
+   * Local last-opened ISO stamps by person slug. Not OKF. Never a score. Never tokens.
+   */
+  peopleLastOpened?: Record<string, string> | null;
 }
 
 export interface AgentMemoryTurn {
@@ -120,6 +129,10 @@ export interface PersonView {
   }>;
   /** Typed links to other local people. File path is identity. */
   relations: PersonRelation[];
+  /** ISO from person.md generated.at — when the card was added. Not a score. */
+  addedAt?: string;
+  /** Latest local document stamp on this card. Recency only — not a score. */
+  updatedAt?: string;
 }
 
 export type RelationKind = "family" | "business" | "other";

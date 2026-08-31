@@ -69,6 +69,8 @@ import type { PlaceWrite } from "./places";
 import { localPhotoBundlePath, localPhotoDataUrl, personListPhotoUrl } from "../list-photo";
 import type { MergePlan } from "./merge";
 import { IoService } from "./io.service";
+import { latestStamp } from "./people-sort";
+import { PeopleSortService } from "./people-sort.service";
 import { resolveRelationTitles } from "./relations";
 
 @Injectable({ providedIn: "root" })
@@ -83,7 +85,10 @@ export class PeopleService {
   readonly vaultMessage = signal<string | null>(null);
   readonly error = signal<string | null>(null);
 
-  constructor(private readonly io: IoService) {}
+  constructor(
+    private readonly io: IoService,
+    private readonly peopleSort: PeopleSortService,
+  ) {}
 
   async bootstrap(): Promise<void> {
     this.error.set(null);
@@ -180,6 +185,7 @@ export class PeopleService {
   }
 
   async select(slug: string | null): Promise<void> {
+    const previous = this.selected()?.slug ?? null;
     if (!slug) {
       this.selected.set(null);
       return;
@@ -195,6 +201,7 @@ export class PeopleService {
       const titled = resolveRelationTitles(pool);
       this.selected.set(titled.find((person) => person.slug === slug) ?? fresh);
     }
+    if (slug !== previous) await this.peopleSort.rememberOpened(slug);
   }
 
   async createPerson(input: {
@@ -216,6 +223,7 @@ export class PeopleService {
     await this.rebuildIndexes();
     const created = this.people().find((p) => p.slug === slug)!;
     this.selected.set(created);
+    await this.peopleSort.rememberOpened(slug);
     return created;
   }
 
@@ -932,18 +940,14 @@ export class PeopleService {
     const social = [];
     const photos = [];
     let location: PersonLocation | undefined;
+    let folderLatest = documentDatedAt(doc.frontmatter);
     for (const file of files) {
-      if (
-        !file.endsWith(".md") ||
-        file.endsWith("/person.md") ||
-        file.endsWith("/relations.md") ||
-        file.endsWith("/place-links.md")
-      ) {
-        continue;
-      }
+      if (!file.endsWith(".md") || file.endsWith("/person.md")) continue;
       const text = await this.io.readText(this.bundleRoot(), file);
       if (!text) continue;
       const item = parseDocument(file, text);
+      folderLatest = latestStamp(folderLatest, documentDatedAt(item.frontmatter));
+      if (file.endsWith("/relations.md") || file.endsWith("/place-links.md")) continue;
       if (item.frontmatter.type === "Place") {
         const pin = locationFromDocument(item);
         location = pin ? { ...pin, at: documentDatedAt(item.frontmatter) } : undefined;
@@ -977,6 +981,16 @@ export class PeopleService {
       }
     }
     const image = personImageResource(doc.frontmatter.image);
+    const documents = await this.loadDocumentsForPerson(slug);
+    const addedAt = optionalString(doc.frontmatter.generated?.at);
+    const updatedAt = latestStamp(
+      addedAt,
+      folderLatest,
+      location?.at,
+      ...notes.map((note) => note.at),
+      ...photos.map((photo) => photo.at),
+      ...documents.map((item) => item.at),
+    );
     return {
       id: doc.id,
       slug,
@@ -994,9 +1008,11 @@ export class PeopleService {
       social,
       photos,
       location,
-      documents: await this.loadDocumentsForPerson(slug),
+      documents,
       relations: await this.loadRelationsForPerson(slug),
       places: await this.loadPlaceLinksForPerson(slug),
+      addedAt,
+      updatedAt,
     };
   }
 

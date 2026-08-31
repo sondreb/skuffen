@@ -50,6 +50,12 @@ pub struct Settings {
     /// Left people pane photo strip. Not OKF. Never tokens.
     #[serde(default)]
     pub people_pane_collapsed: Option<bool>,
+    /// People list order: name-az | name-za | updated | added | opened. Not OKF. Never a score.
+    #[serde(default)]
+    pub people_sort: Option<String>,
+    /// Local last-opened ISO stamps by slug. Not OKF. Never a score. Never tokens.
+    #[serde(default)]
+    pub people_last_opened: Option<std::collections::HashMap<String, String>>,
 }
 
 #[tauri::command]
