@@ -33,8 +33,8 @@ type DrawnEdge = GraphRelationEdge & {
         (wheel)="onWheel($event)"
         (pointerdown)="onPointerDown($event)"
         (pointermove)="onPointerMove($event)"
-        (pointerup)="onPointerUp($event)"
-        (pointercancel)="onPointerUp($event)"
+        (pointerup)="onPointerUp()"
+        (pointercancel)="onPointerUp()"
       >
         <g [attr.transform]="sceneTransform">
           @for (edge of drawnEdges; track edge.id) {
