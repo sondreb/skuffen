@@ -2,12 +2,15 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { PersonView } from "../models.ts";
 import {
+  collapseEquivalentSuggestions,
   dismissRelationProposal,
+  equivalentSuggestionIds,
   filterPeopleByRelation,
   inverseWrite,
   peopleMatchingRelationKind,
   planAcceptedRelation,
   proposeRelation,
+  relationOfferKey,
   relationWritesWithoutAccept,
   resolveRelationTitles,
   setRelationChecked,
@@ -137,6 +140,43 @@ test("relation rows resolve the other person's title, not their slug", () => {
   const [adaTitled, beaTitled] = resolveRelationTitles([ada, bea]);
   assert.equal(adaTitled?.relations[0]?.title, "Bea Demo");
   assert.equal(beaTitled?.relations[0]?.title, "Ada Demo");
+});
+
+test("Suggest facts and Research collapse to one sibling offer; dismiss covers both ids", () => {
+  const ask = {
+    id: "demo-ask-relation-bea-demo",
+    source: "ask" as const,
+    kind: "relation" as const,
+    title: "Sibling of Bea Demo (demo)",
+    relationKind: "family" as const,
+    relationRole: "sibling",
+    relatedSlug: "bea-demo",
+  };
+  const research = {
+    id: "demo-research-relation-bea-demo",
+    source: "research" as const,
+    kind: "relation" as const,
+    title: "Sibling of Bea Demo (demo)",
+    relationKind: "family" as const,
+    relationRole: "sibling",
+    relatedSlug: "bea-demo",
+  };
+  const note = {
+    id: "demo-research-ada-note",
+    source: "research" as const,
+    kind: "note" as const,
+    title: "Public park mention (demo)",
+  };
+  assert.equal(relationOfferKey(ask), relationOfferKey(research));
+  const collapsed = collapseEquivalentSuggestions([ask, research, note]);
+  assert.deepEqual(
+    collapsed.map((item) => item.id),
+    ["demo-ask-relation-bea-demo", "demo-research-ada-note"],
+  );
+  assert.deepEqual(equivalentSuggestionIds([ask, research, note], research).sort(), [
+    "demo-ask-relation-bea-demo",
+    "demo-research-relation-bea-demo",
+  ]);
 });
 
 test("never uploads and never stores tokens on a relation write", () => {

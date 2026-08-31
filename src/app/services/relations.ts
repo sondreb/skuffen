@@ -143,6 +143,42 @@ export function demoRelationSuggestion(
   };
 }
 
+/** Same edge from Suggest facts vs Research — one row, one dismiss. */
+export function relationOfferKey(item: FactSuggestion): string | null {
+  if (item.kind !== "relation") return null;
+  const slug = item.relatedSlug?.trim();
+  const kind = item.relationKind;
+  const role = item.relationRole?.trim();
+  if (!slug || !kind || !role) return null;
+  return `${slug}\0${kind}\0${role}`;
+}
+
+export function collapseEquivalentSuggestions(items: FactSuggestion[]): FactSuggestion[] {
+  const seenIds = new Set<string>();
+  const seenRelations = new Set<string>();
+  const out: FactSuggestion[] = [];
+  for (const item of items) {
+    if (seenIds.has(item.id)) continue;
+    const key = relationOfferKey(item);
+    if (key && seenRelations.has(key)) continue;
+    seenIds.add(item.id);
+    if (key) seenRelations.add(key);
+    out.push(item);
+  }
+  return out;
+}
+
+export function equivalentSuggestionIds(items: FactSuggestion[], target: FactSuggestion): string[] {
+  const key = relationOfferKey(target);
+  return [
+    ...new Set(
+      items
+        .filter((item) => item.id === target.id || (key !== null && relationOfferKey(item) === key))
+        .map((item) => item.id),
+    ),
+  ];
+}
+
 export function relationCue(person: PersonView): string {
   if (person.relations.length === 0) return "";
   const first = person.relations[0]!;

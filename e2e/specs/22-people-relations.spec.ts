@@ -66,16 +66,23 @@ test("add sibling shows on both cards; filter by family; delete wipes edges", as
   expect(afterDelete["people/bea-demo/relations.md"]).toBeUndefined();
 });
 
+async function proposeSiblingViaAskThenResearch(page: import("@playwright/test").Page) {
+  await page.locator("[data-person-row='ada-demo']").click();
+  await page.locator("[data-demo='suggest']").click();
+  await page.locator("[data-demo='suggest-facts']").click();
+  await page.locator("[data-demo='research']").click();
+  const siblingOffer = page.locator("[data-suggestion-kind='relation']");
+  await expect(siblingOffer).toHaveCount(1);
+  await expect(siblingOffer.getByText("Sibling of Bea Demo (demo)")).toBeVisible();
+  return siblingOffer;
+}
+
 test("uncheck a proposed relation writes nothing", async ({ demoPage: page }) => {
   await openDemo(page);
   await createAdaDemo(page);
   await createBeaDemo(page);
 
-  await page.locator("[data-person-row='ada-demo']").click();
-  await page.locator("[data-demo='suggest']").click();
-  await page.locator("[data-demo='research']").click();
-  const siblingOffer = page.locator("[data-suggestion-kind='relation']");
-  await expect(siblingOffer.getByText("Sibling of Bea Demo (demo)")).toBeVisible();
+  const siblingOffer = await proposeSiblingViaAskThenResearch(page);
   await expect(page.getByText("Nothing is written until you accept.")).toBeVisible();
 
   await siblingOffer.getByRole("checkbox").uncheck();
@@ -92,11 +99,7 @@ test("reject a proposed relation writes nothing", async ({ demoPage: page }) => 
   await createAdaDemo(page);
   await createBeaDemo(page);
 
-  await page.locator("[data-person-row='ada-demo']").click();
-  await page.locator("[data-demo='suggest']").click();
-  await page.locator("[data-demo='research']").click();
-  const siblingOffer = page.locator("[data-suggestion-kind='relation']");
-  await expect(siblingOffer.getByText("Sibling of Bea Demo (demo)")).toBeVisible();
+  const siblingOffer = await proposeSiblingViaAskThenResearch(page);
 
   await siblingOffer.getByRole("button", { name: "Delete" }).click();
   await expect(page.locator("[data-suggestion-kind='relation']")).toHaveCount(0);

@@ -147,9 +147,12 @@ import {
 } from "./services/capture";
 import {
   RELATION_KINDS,
+  collapseEquivalentSuggestions,
+  equivalentSuggestionIds,
   filterPeopleByRelation,
   otherPeopleForRelation,
   relationKindLabel,
+  relationOfferKey,
   relationRoleLabel,
   relationRoleOptions,
   relationCue,
@@ -277,6 +280,8 @@ export class AppComponent implements OnInit, OnDestroy {
   checkedSuggestionIds = new Set<string>();
   /** Delete/Reject: never write these ids, even if a leftover proposal is still stored. */
   readonly rejectedSuggestionIds = signal(new Set<string>());
+  /** Suggest facts + Research mint two ids for the same sibling edge. One dismiss covers both. */
+  readonly rejectedRelationKeys = signal(new Set<string>());
   readonly desktop = isTauri();
   readonly demoMode = isDemoMode();
 
@@ -304,18 +309,15 @@ export class AppComponent implements OnInit, OnDestroy {
   );
   readonly mapAssignPeople = computed(() => this.people.people());
   readonly visibleSuggestions = computed(() => {
-    const slug = this.people.selected()?.slug;
-    const live = this.providers.suggestions();
-    const stored = slug ? this.follow.suggestionsFor(slug) : [];
-    const seen = new Set<string>();
-    const out: FactSuggestion[] = [];
-    const rejected = this.rejectedSuggestionIds();
-    for (const item of [...live, ...stored]) {
-      if (seen.has(item.id) || rejected.has(item.id)) continue;
-      seen.add(item.id);
-      out.push(item);
-    }
-    return out;
+    const rejectedIds = this.rejectedSuggestionIds();
+    const rejectedKeys = this.rejectedRelationKeys();
+    return collapseEquivalentSuggestions(
+      this.suggestionPool().filter((item) => {
+        if (rejectedIds.has(item.id)) return false;
+        const key = relationOfferKey(item);
+        return !key || !rejectedKeys.has(key);
+      }),
+    );
   });
   readonly selectedFollow = computed(() => {
     const slug = this.people.selected()?.slug;
@@ -1053,7 +1055,7 @@ export class AppComponent implements OnInit, OnDestroy {
       return;
     }
     if (person) {
-      this.rejectedSuggestionIds.set(new Set());
+      this.clearRejectedSuggestions();
       await this.providers.suggest(person, this.relationOthers(person.slug));
       await this.follow.storeResearch(person.slug, this.providers.suggestions(), {
         source: "ask",
@@ -1071,7 +1073,7 @@ export class AppComponent implements OnInit, OnDestroy {
       return;
     }
     if (!person) return;
-    this.rejectedSuggestionIds.set(new Set());
+    this.clearRejectedSuggestions();
     await this.providers.research(person, this.relationOthers(person.slug));
     await this.follow.storeResearch(person.slug, this.providers.suggestions(), {
       source: "research",
@@ -1428,29 +1430,53 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   async acceptCheckedSuggestions(): Promise<void> {
-    const rejected = this.rejectedSuggestionIds();
-    const selected = this.visibleSuggestions().filter(
-      (item) => this.checkedSuggestionIds.has(item.id) && !rejected.has(item.id),
-    );
+    const rejectedIds = this.rejectedSuggestionIds();
+    const rejectedKeys = this.rejectedRelationKeys();
+    const selected = this.visibleSuggestions().filter((item) => {
+      if (!this.checkedSuggestionIds.has(item.id) || rejectedIds.has(item.id)) return false;
+      const key = relationOfferKey(item);
+      return !key || !rejectedKeys.has(key);
+    });
     for (const item of selected) {
       await this.accept(item);
     }
   }
 
   reject(suggestion: FactSuggestion): void {
-    this.rejectedSuggestionIds.update((ids) => new Set([...ids, suggestion.id]));
-    this.providers.reject(suggestion.id);
+    const twins = equivalentSuggestionIds(this.suggestionPool(), suggestion);
+    const key = relationOfferKey(suggestion);
+    this.rejectedSuggestionIds.update((ids) => new Set([...ids, ...twins]));
+    if (key) this.rejectedRelationKeys.update((keys) => new Set([...keys, key]));
     const next = new Set(this.checkedSuggestionIds);
-    next.delete(suggestion.id);
+    for (const id of twins) {
+      this.providers.reject(id);
+      next.delete(id);
+      void this.follow.rejectSuggestion(id);
+    }
     this.checkedSuggestionIds = next;
-    void this.follow.rejectSuggestion(suggestion.id);
   }
 
   toggleSuggestionCheck(id: string, checked: boolean): void {
+    const target = this.suggestionPool().find((item) => item.id === id);
+    const twins = target ? equivalentSuggestionIds(this.suggestionPool(), target) : [id];
     const next = new Set(this.checkedSuggestionIds);
-    if (checked) next.add(id);
-    else next.delete(id);
+    for (const twin of twins) {
+      if (checked) next.add(twin);
+      else next.delete(twin);
+    }
     this.checkedSuggestionIds = next;
+  }
+
+  private suggestionPool(): FactSuggestion[] {
+    const slug = this.people.selected()?.slug;
+    const live = this.providers.suggestions();
+    const stored = slug ? this.follow.suggestionsFor(slug) : [];
+    return [...live, ...stored];
+  }
+
+  private clearRejectedSuggestions(): void {
+    this.rejectedSuggestionIds.set(new Set());
+    this.rejectedRelationKeys.set(new Set());
   }
 
   selectAllVisibleSuggestions(checked: boolean): void {

@@ -1794,7 +1794,12 @@
             } @else if (fact === "suggest") {
               <div class="surface suggest">
                 <div class="row">
-                  <button type="button" (click)="ask()" [disabled]="providers.busy()">
+                  <button
+                    type="button"
+                    (click)="ask()"
+                    [disabled]="providers.busy()"
+                    [attr.data-demo]="demoMode ? 'suggest-facts' : null"
+                  >
                     {{ providers.busy() ? "Listening…" : "Suggest facts" }}
                   </button>
                   <button
