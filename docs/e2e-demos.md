@@ -65,6 +65,7 @@ Geocode is stubbed in `?demo=1` (and again in Playwright) so the park pin is alw
 26. `e2e/specs/26-places.spec.ts` — empty Places is a local empty state; create a Place locally; link a person (lives); map prefers that Place pin; people without a Place still show from `people/{slug}/place.md`; Suggest/Research Place offer: uncheck and Reject write nothing, Accept writes. Live AI hosts blocked.
 27. `e2e/specs/27-people-sort.spec.ts` — people list defaults to Name A–Z; Recently added / updated / opened change local list order; the choice survives reload in app settings, not OKF or tokens. Sort control stays reachable when the pane is collapsed. Never a friend-heat or importance score. Live AI hosts blocked.
 28. `e2e/specs/28-people-tags.spec.ts` — add a tag as a chip; `#tag` / `# tag` filter shows that person; name filter still works; uncheck/reject a proposed tag writes nothing; Accept writes `tags:` / family onto `people/ada-demo/person.md`. Live AI hosts blocked.
+29. `e2e/specs/29-people-gallery.spec.ts` — Menu → People shows large local thumbs; name and `#tag` (from `person.tags`) hide others with the view still open; click a thumb opens that person; empty graph is a local empty state; Dense layout exists. Live AI hosts blocked.
 
 Curated clips:
 

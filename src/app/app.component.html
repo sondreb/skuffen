@@ -132,6 +132,7 @@
           >
             Capture
           </button>
+          <button type="button" (click)="openPeople()" data-open-people="menu">People</button>
           <button type="button" (click)="openMap()" data-open-map="menu">Map</button>
           <button type="button" (click)="openGraph()" data-open-graph="menu">Graph</button>
           <button type="button" (click)="openPlaces()" data-open-places="menu">Places</button>
@@ -440,7 +441,12 @@
         </nav>
       </aside>
 
-    <main class="main well" [class.map-open]="panel === 'map'" [class.graph-open]="panel === 'graph'">
+    <main
+      class="main well"
+      [class.map-open]="panel === 'map'"
+      [class.graph-open]="panel === 'graph'"
+      [class.people-open]="panel === 'people'"
+    >
       @if (!desktop) {
         <p class="ribbon">
           Preview people-graph stays in this tab. Tokens stay in this tab — never localStorage.
@@ -563,6 +569,78 @@
                     <li [attr.data-map-legend-kind]="kind">{{ kindLabelForRelation(kind) }}</li>
                   }
                 </ul>
+              }
+            </div>
+          }
+        </section>
+      } @else if (panel === "people") {
+        <section class="sheet map-sheet map-fill" data-people-gallery>
+          <header class="sheet-head map-chrome">
+            <div>
+              <p class="kicker">Local people-graph</p>
+              <h1>People</h1>
+            </div>
+            <div class="gallery-chrome-tools">
+              @if (people.people().length) {
+                <label class="gallery-filter">
+                  <span class="sr">Filter people</span>
+                  <input
+                    data-people-gallery-filter
+                    [ngModel]="galleryQuery()"
+                    (ngModelChange)="galleryQuery.set($event)"
+                    placeholder="Name or #tag"
+                    autocomplete="off"
+                  />
+                </label>
+                <div class="gallery-modes" role="group" aria-label="Layout">
+                  <button
+                    type="button"
+                    [class.on]="galleryMode() === 'large'"
+                    [attr.aria-pressed]="galleryMode() === 'large'"
+                    data-people-gallery-mode="large"
+                    (click)="galleryMode.set('large')"
+                  >
+                    Large
+                  </button>
+                  <button
+                    type="button"
+                    [class.on]="galleryMode() === 'dense'"
+                    [attr.aria-pressed]="galleryMode() === 'dense'"
+                    data-people-gallery-mode="dense"
+                    (click)="galleryMode.set('dense')"
+                  >
+                    Dense
+                  </button>
+                </div>
+              }
+              <button class="ghost" type="button" (click)="panel = 'none'">Back</button>
+            </div>
+          </header>
+          @if (people.people().length === 0) {
+            <div class="map-empty" data-people-gallery-empty>
+              <p class="kicker">On this machine</p>
+              <p class="lede">No people in this local graph</p>
+              <p class="whisper">
+                This view only shows people already in the people-graph on this machine. Skuffen
+                does not fetch people from the network. Profile photos stay as local
+                <code>data:</code> or <code>blob:</code> bytes from the OKF bundle. There is no
+                Skuffen people backend, no people-graph upload, and no ranking.
+              </p>
+            </div>
+          } @else {
+            <div
+              class="map-stage people-gallery-stage"
+              data-people-gallery-stage
+              [attr.data-people-gallery-layout]="galleryMode()"
+            >
+              <app-people-gallery
+                [people]="galleryPeople()"
+                [mode]="galleryMode()"
+                [selectedSlug]="people.selected()?.slug || null"
+                (openPerson)="openBySlug($event)"
+              />
+              @if (galleryQuery().trim() && galleryPeople().length === 0) {
+                <p class="gallery-none" data-people-gallery-none>No one matches in this local graph.</p>
               }
             </div>
           }

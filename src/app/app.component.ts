@@ -25,6 +25,11 @@ import {
   type GraphRelationEdge,
 } from "./graph/graph-edges";
 import { PeopleGraphComponent } from "./graph/people-graph.component";
+import { PeopleGalleryComponent } from "./gallery/people-gallery.component";
+import {
+  filterPeopleForGallery,
+  type PeopleGalleryMode,
+} from "./gallery/people-gallery";
 import type {
   FactSuggestion,
   FollowInterval,
@@ -201,6 +206,7 @@ type Panel =
   | "providers"
   | "map"
   | "graph"
+  | "people"
   | "propose"
   | "merge"
   | "delete"
@@ -227,7 +233,7 @@ type FactSurface = "none" | "drop" | "pin" | "note" | "suggest" | "timeline" | "
 
 @Component({
   selector: "app-root",
-  imports: [FormsModule, PeopleMapComponent, PeopleGraphComponent, ImagePreviewComponent],
+  imports: [FormsModule, PeopleMapComponent, PeopleGraphComponent, PeopleGalleryComponent, ImagePreviewComponent],
   templateUrl: "./app.component.html",
   styleUrl: "./app.component.css",
 })
@@ -252,6 +258,8 @@ export class AppComponent implements OnInit, OnDestroy {
   private readonly nameField = viewChild<ElementRef<HTMLInputElement>>("nameField");
 
   readonly query = signal("");
+  readonly galleryQuery = signal("");
+  readonly galleryMode = signal<PeopleGalleryMode>("large");
   readonly relationKindFilter = signal<RelationKind | "">("");
   /** Signal-backed so `@if (panel === "create")` and `browsing` stay in sync after Add person. */
   private readonly panelState = signal<Panel>("none");
@@ -339,6 +347,9 @@ export class AppComponent implements OnInit, OnDestroy {
       this.peopleSort.method(),
       this.peopleSort.lastOpened(),
     ),
+  );
+  readonly galleryPeople = computed(() =>
+    filterPeopleForGallery(this.people.people(), this.galleryQuery()),
   );
   readonly relationKinds = RELATION_KINDS;
 
@@ -533,6 +544,7 @@ export class AppComponent implements OnInit, OnDestroy {
       this.panel === "edit" ||
       this.panel === "map" ||
       this.panel === "graph" ||
+      this.panel === "people" ||
       this.panel === "memory" ||
       this.panel === "places" ||
       this.panel === "place-create"
@@ -637,6 +649,13 @@ export class AppComponent implements OnInit, OnDestroy {
     this.menuOpen = false;
     this.panel = "graph";
     this.fact = "none";
+  }
+
+  openPeople(): void {
+    this.menuOpen = false;
+    this.panel = "people";
+    this.fact = "none";
+    this.galleryQuery.set("");
   }
 
   kindLabelForGraph(kind: string): string {

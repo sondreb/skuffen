@@ -37,6 +37,7 @@
     "test:relations": "tsx --test src/app/services/relations.test.ts",
     "test:map": "tsx --test src/app/map/map-edges.test.ts src/app/map/map-pins.test.ts",
     "test:graph": "tsx --test src/app/graph/graph-edges.test.ts",
+    "test:gallery": "tsx --test src/app/gallery/people-gallery.test.ts",
     "test:places": "tsx --test src/app/services/places.test.ts",
     "test:tags": "tsx --test src/app/services/tags.test.ts",
     "test:card-tabs": "tsx --test src/app/card-tabs.test.ts src/app/file-open.test.ts",
