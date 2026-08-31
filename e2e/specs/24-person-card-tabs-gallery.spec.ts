@@ -73,7 +73,7 @@ test("person card tabs switch sections; photos and files are local galleries", a
 
   await openPersonTab(page, "Timeline");
   await expect(page.locator("[data-timeline]")).toBeVisible();
-  await expect(page.getByText("No timeline yet.")).toBeVisible();
+  await expect(page.locator("[data-timeline] [data-timeline-kind='photo']")).toHaveCount(2);
   await expect(page.locator("[data-card-panel='photos']")).toBeHidden();
   await expect(page.locator("[data-card-panel='files']")).toBeHidden();
 });

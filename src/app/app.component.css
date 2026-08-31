@@ -809,6 +809,10 @@ button:disabled {
     overscroll-behavior-x: contain;
     scrollbar-width: thin;
   }
+
+  .card-tabs [role="tab"] {
+    min-width: 9.25rem;
+  }
 }
 
 .person-menu {

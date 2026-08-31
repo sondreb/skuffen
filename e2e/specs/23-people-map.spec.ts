@@ -1,4 +1,4 @@
-import { createAdaDemo, createBeaDemo, expect, openDemo, openMapFromMenu, pinPersonPlace, test } from "../helpers/app";
+import { createAdaDemo, createBeaDemo, expect, openDemo, openMapFromMenu, openPersonTab, pinPersonPlace, test } from "../helpers/app";
 import { DEMO } from "../helpers/demo-data";
 
 test("empty graph map is a local empty state — no network people", async ({ demoPage: page }) => {
@@ -24,6 +24,7 @@ test("map shows located people, relation lines, and a pin opens that person", as
   await pinPersonPlace(page, DEMO.field);
 
   await page.locator("[data-person-row='ada-demo']").click();
+  await openPersonTab(page, "Relations");
   await page.locator("[data-add-relation-open]").click();
   await page.locator("[data-relation-target]").selectOption({ label: DEMO.bea.title });
   await page.locator("[data-relation-kind]").selectOption("family");

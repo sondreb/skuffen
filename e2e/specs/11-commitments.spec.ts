@@ -78,8 +78,10 @@ test("Accept of a promise adds a row; dismiss does not; marking done is explicit
   await expect(page.getByRole("button", { name: /^Send/i })).toHaveCount(0);
 
   await page.locator("[data-demo='commitments-back']").click();
+  await openPersonTab(page, "About");
   await expect(page.getByRole("heading", { name: "Commitment — send the park slip" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Done — send the park slip" })).toBeVisible();
+  await openPersonTab(page, "Commitments");
   await expect(page.locator("[data-commitments]")).toContainText("No commitments yet.");
 });
 
