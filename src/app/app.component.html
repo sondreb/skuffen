@@ -34,6 +34,15 @@
         >
           Capture
         </button>
+        <button
+          type="button"
+          class="tool"
+          [class.on]="panel === 'places' || panel === 'place-create'"
+          (click)="openPlaces()"
+          data-open-places
+        >
+          Places
+        </button>
         @if (!empty()) {
           <button type="button" class="tool" [class.on]="panel === 'map'" (click)="openMap()" data-open-map>
             Map
@@ -125,6 +134,7 @@
           </button>
           <button type="button" (click)="openMap()" data-open-map="menu">Map</button>
           <button type="button" (click)="openGraph()" data-open-graph="menu">Graph</button>
+          <button type="button" (click)="openPlaces()" data-open-places="menu">Places</button>
           <button
             type="button"
             (click)="openShuffle()"
@@ -483,9 +493,9 @@
               <p class="kicker">On this machine</p>
               <p class="lede">No places in this local graph</p>
               <p class="whisper">
-                This map only shows people who already have a location in the people-graph on this
-                machine. Skuffen does not fetch people from the network. Pins stay in
-                <code>place.md</code> on disk. There is no Skuffen map backend.
+                This map prefers first-class Places on this machine. People without a Place can still
+                appear from their local location field. Skuffen does not fetch people from the
+                network. Pins stay on disk. There is no Skuffen map backend.
               </p>
             </div>
           } @else {
@@ -493,9 +503,10 @@
               <app-people-map
                 [pins]="mapPins()"
                 [edges]="mapEdges()"
-                [selectedSlug]="people.selected()?.slug || null"
+                [selectedSlug]="people.selectedPlace()?.slug || people.selected()?.slug || null"
                 [clickToDrop]="false"
                 (openPerson)="openBySlug($event)"
+                (openPlace)="openPlaceBySlug($event)"
               />
               @if (mapLegendKinds().length) {
                 <ul class="map-legend" data-map-legend>
@@ -545,6 +556,116 @@
               }
             </div>
           }
+        </section>
+      } @else if (panel === "places") {
+        <section class="sheet places-sheet" data-places>
+          <header class="sheet-head">
+            <div>
+              <p class="kicker">Local OKF</p>
+              <h1>Places</h1>
+            </div>
+            <div class="row">
+              <button class="brass" type="button" data-add-place (click)="startCreatePlace()">Add place</button>
+              <button class="ghost" type="button" (click)="panel = 'none'">Back</button>
+            </div>
+          </header>
+          <p class="whisper">
+            Path is identity (<code>places/&lt;slug&gt;/place.md</code>). Records stay on this machine.
+            Geocode and map tiles may use the public network. There is no Skuffen backend.
+          </p>
+          @if (people.places().length === 0) {
+            <div class="map-empty" data-places-empty>
+              <p class="kicker">{{ placesEmptyCopy.kicker }}</p>
+              <p class="lede">{{ placesEmptyCopy.lede }}</p>
+              <p class="whisper">{{ placesEmptyCopy.whisper }}</p>
+            </div>
+          } @else {
+            <nav class="place-list" data-place-list aria-label="Places">
+              @for (place of people.places(); track place.slug) {
+                <button
+                  type="button"
+                  class="person-card"
+                  [attr.data-place-row]="place.slug"
+                  (click)="openPlaceCard(place)"
+                >
+                  <span class="person-meta">
+                    <b>{{ place.title }}</b>
+                    <small>
+                      @if (place.address) {
+                        {{ place.address }}
+                      } @else if (place.location) {
+                        {{ place.location.latitude.toFixed(4) }}, {{ place.location.longitude.toFixed(4) }}
+                      } @else {
+                        No pin yet
+                      }
+                    </small>
+                  </span>
+                </button>
+              }
+            </nav>
+          }
+        </section>
+      } @else if (panel === "place-create") {
+        <section class="sheet card-form" data-create-place>
+          <h1>Where?</h1>
+          <label>Name <input [(ngModel)]="placeDraft.title" name="place-name" autocomplete="off" data-place-name /></label>
+          <label>Notes <textarea [(ngModel)]="placeDraft.notes" name="place-notes" rows="3" data-place-notes></textarea></label>
+          <p class="whisper">
+            Coordinates are optional. Search an address or drop a pin. Written to
+            <code>places/&lt;slug&gt;/place.md</code> on this machine.
+          </p>
+          <div class="row">
+            <label class="grow">
+              Address
+              <input
+                [(ngModel)]="addressQuery"
+                name="place-address"
+                placeholder="Search an address"
+                data-place-address
+                (keyup.enter)="searchAddress()"
+              />
+            </label>
+            <button type="button" (click)="searchAddress()" [disabled]="geocodeBusy || !addressQuery.trim()">
+              {{ geocodeBusy ? "Searching…" : "Search" }}
+            </button>
+          </div>
+          @if (geocodeError) {
+            <p class="error">{{ geocodeError }}</p>
+          }
+          @if (geocodeHits.length) {
+            <ul class="geocode-hits">
+              @for (hit of geocodeHits; track hit.label) {
+                <li>
+                  <button type="button" (click)="pickGeocodeHit(hit)">{{ hit.label }}</button>
+                </li>
+              }
+            </ul>
+          }
+          <div class="map-frame">
+            <app-people-map
+              [pins]="[]"
+              [pending]="pendingPin"
+              [clickToDrop]="true"
+              [focus]="mapFocus"
+              ariaLabel="Place pin"
+              (dropPin)="onMapDrop($event)"
+            />
+          </div>
+          @if (actionError) {
+            <p class="error">{{ actionError }}</p>
+          }
+          <div class="row create-actions">
+            <button
+              class="brass"
+              type="button"
+              data-save-place
+              (click)="savePlaceDraft()"
+              [disabled]="!placeDraft.title.trim()"
+            >
+              Add place
+            </button>
+            <button class="ghost" type="button" (click)="openPlaces()">Cancel</button>
+          </div>
         </section>
       } @else if (panel === "memory") {
         <section class="sheet memory-sheet" data-demo="memory-panel">
@@ -1488,6 +1609,68 @@
             </button>
           </div>
         </section>
+      } @else if (people.selectedPlace(); as place) {
+        <section class="file" data-place-card>
+          <nav class="file-nav">
+            <button class="ghost back" type="button" (click)="closePlaceCard()">Places</button>
+          </nav>
+          <article class="card">
+            <header class="nameplate">
+              <div>
+                <p class="kicker">Place</p>
+                <h1>{{ place.title }}</h1>
+                @if (place.address) {
+                  <p class="whisper">{{ place.address }}</p>
+                }
+                @if (place.location) {
+                  <p class="whisper" [attr.data-okf-path]="place.path">
+                    {{ place.location.latitude.toFixed(5) }}, {{ place.location.longitude.toFixed(5) }}
+                  </p>
+                }
+              </div>
+            </header>
+            @if (actionError) {
+              <p class="error">{{ actionError }}</p>
+            }
+            <section class="slips">
+              <h2>Notes</h2>
+              <p class="whisper">{{ place.notes || "No notes yet." }}</p>
+            </section>
+            <section class="slips">
+              <h2>People</h2>
+              @if (!place.people.length) {
+                <p class="whisper">No one linked yet. Open a person card to add lives / works / met-at.</p>
+              }
+              @for (link of place.people; track link.slug + link.role) {
+                <article [attr.data-place-person]="link.slug">
+                  <button type="button" class="ghost" (click)="openBySlug(link.slug)">
+                    <strong>{{ link.title }}</strong>
+                    <small>{{ roleLabelForPlace(link.role) }}</small>
+                  </button>
+                </article>
+              }
+            </section>
+            <section class="slips">
+              <h2>Files</h2>
+              @if (!place.files.length && !place.documents.length) {
+                <p class="whisper">No files on this Place. Documents can link here.</p>
+              }
+              @for (file of place.files; track file.id) {
+                <article>
+                  <strong>{{ file.title }}</strong>
+                </article>
+              }
+              @for (doc of place.documents; track doc.id) {
+                <article>
+                  <strong>{{ doc.title }}</strong>
+                </article>
+              }
+            </section>
+            <p class="whisper">
+              Written to <code>{{ place.path }}</code>. Never uploaded. No land-plot kind.
+            </p>
+          </article>
+        </section>
       } @else if (empty()) {
         <section class="invite">
           <img src="assets/skuffen-icon.png" alt="Skuffen" />
@@ -2322,6 +2505,88 @@
                     [disabled]="relationOthers(person.slug).length === 0"
                   >
                     Add a relation
+                  </button>
+                }
+              </section>
+            </div>
+            <div
+              role="tabpanel"
+              data-card-panel="places"
+              [id]="cardPanelId('places')"
+              [attr.aria-labelledby]="cardTabId('places')"
+              [hidden]="cardSection !== 'places'"
+              tabindex="0"
+            >
+              <section class="slips" data-person-places>
+                <h2>Places</h2>
+                <p class="whisper">
+                  Lives, works, or met-at a first-class Place. Written to
+                  <code>people/{{ person.slug }}/place-links.md</code>.
+                  Never uploaded. No land-plot kind.
+                </p>
+                @for (link of person.places; track link.slug + link.role) {
+                  <article
+                    [attr.data-place-link]="link.slug"
+                    [attr.data-place-role]="link.role"
+                  >
+                    <button type="button" class="ghost relation-open" (click)="openPlaceBySlug(link.slug)">
+                      <strong>{{ link.title }}</strong>
+                      <small>{{ roleLabelForPlace(link.role) }}</small>
+                    </button>
+                    <button
+                      class="ghost"
+                      type="button"
+                      data-remove-place-link
+                      (click)="removePlaceLink(link)"
+                    >
+                      Remove
+                    </button>
+                  </article>
+                }
+                @if (!person.places.length && !addingPlaceLink) {
+                  <p class="whisper" data-person-places-empty>No places linked yet.</p>
+                }
+                @if (addingPlaceLink) {
+                  <div class="grid" data-add-place-link>
+                    <label>
+                      Place
+                      <select [(ngModel)]="placeLinkTarget" name="place-link-target" data-place-link-target>
+                        <option value="">Choose a place</option>
+                        @for (place of placesForLink(); track place.slug) {
+                          <option [value]="place.slug">{{ place.title }}</option>
+                        }
+                      </select>
+                    </label>
+                    <label>
+                      Role
+                      <select [(ngModel)]="placeLinkRole" name="place-link-role" data-place-link-role>
+                        @for (role of placeLinkRoles; track role) {
+                          <option [value]="role">{{ roleLabelForPlace(role) }}</option>
+                        }
+                      </select>
+                    </label>
+                  </div>
+                  <div class="row">
+                    <button
+                      class="brass"
+                      type="button"
+                      data-place-link-save
+                      (click)="addPlaceLink()"
+                      [disabled]="!placeLinkTarget"
+                    >
+                      Save place link
+                    </button>
+                    <button class="ghost" type="button" (click)="addingPlaceLink = false">Cancel</button>
+                  </div>
+                } @else {
+                  <button
+                    class="ghost"
+                    type="button"
+                    data-add-place-link-open
+                    (click)="addingPlaceLink = true"
+                    [disabled]="placesForLink().length === 0"
+                  >
+                    Link a place
                   </button>
                 }
               </section>

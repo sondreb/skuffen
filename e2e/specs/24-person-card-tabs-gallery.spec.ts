@@ -12,7 +12,7 @@ test("person card tabs switch sections; photos and files are local galleries", a
   await createAdaDemo(page);
 
   const tabs = page.locator("[data-card-tabs]");
-  await expect(tabs.getByRole("tab")).toHaveCount(6);
+  await expect(tabs.getByRole("tab")).toHaveCount(7);
   await expect(tabs.getByRole("tab", { name: "About" })).toHaveAttribute("aria-selected", "true");
   await expect(page.locator("[data-card-panel='about']")).toBeVisible();
   await expect(page.locator("[data-card-panel='photos']")).toBeHidden();

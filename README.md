@@ -96,6 +96,7 @@ npm run test:shuffle
 npm run test:timeline
 npm run test:commitments
 npm run test:relations
+npm run test:places
 npm run test:update
 npm run test:version
 npm run test:e2e
@@ -136,8 +137,14 @@ people/
   <slug>/social/*.md     # type: SocialProfile
   <slug>/photos/<file>   # photo bytes (profile + gallery)
   <slug>/photos/<file>.md # type: Photo, resource points at the file
-  <slug>/place.md        # type: Place (lat/lng/address pin)
+  <slug>/place.md        # type: Place (person pin; fallback when no Place link)
   <slug>/relations.md    # type: Relations; typed links to other person.md paths
+  <slug>/place-links.md  # type: PlaceLinks; lives / works / met-at → places/{slug}/place.md
+places/
+  <slug>/place.md        # type: Place; name, optional lat/lng, notes. Path is identity
+  <slug>/notes/*.md      # type: Note
+  <slug>/files/<file>    # file bytes beside the Place
+  <slug>/files/<file>.md # type: File, resource points at the file
 documents/
   <slug>/<file>          # file bytes (PDF, images, other docs)
   <slug>/document.md     # type: Document; kind: document; required title + resource
@@ -145,7 +152,11 @@ documents/
 
 Photos and documents are files, not markdown blobs. A Person may set `image` to a local bundle path under that person's folder — the people list uses those bytes only and never fetches `http(s)`. Extra photos live beside the person as Photo concepts. A Document has required `type`, `title`, and `resource` pointing at the file (`kind: document`). File path is identity. `subjects` link one or more people. Drop a file onto a person or use Add file — nothing is uploaded.
 
-A person's map pin is a linked `Place` concept (`people/<slug>/place.md`). Typed relations live in `people/<slug>/relations.md` next to the person — file path is identity. Adding “Ada is Bea’s sibling” writes both cards. Deleting a person wipes that slug’s edges. Suggested facts from Grok or Gemini are written only after you accept them. On desktop, those files are plaintext markdown+YAML (photos and documents stay as their own files).
+A first-class Place lives at `places/<slug>/place.md` — file path is identity. Name, optional lat/lng, notes, and files sit in that folder. People link to a Place as **lives**, **works**, or **met-at** (`people/<slug>/place-links.md`). Documents can list a Place path in `subjects`. There is no land-plot kind.
+
+A person may still keep a leftover pin at `people/<slug>/place.md`. The map prefers first-class Place pins when those exist; people without a Place still show from that location field.
+
+Typed relations live in `people/<slug>/relations.md` next to the person — file path is identity. Adding “Ada is Bea’s sibling” writes both cards. Deleting a person wipes that slug’s edges. Suggested facts from Grok or Gemini are written only after you accept them. On desktop, those files are plaintext markdown+YAML (photos and documents stay as their own files).
 
 ## People-graph relations
 
@@ -157,13 +168,21 @@ Edges stay in the local OKF bundle. The model may only *propose* a relation — 
 npm run test:relations
 ```
 
+## Places
+
+Menu → **Places** lists first-class Places on this machine. Empty Places is a local empty state — Skuffen does not fetch places from the network. Add a Place (name, optional pin, notes). Link a person as lives / works / met-at. The model may only *propose* a Place — Accept writes, uncheck or Reject writes nothing.
+
+```bash
+npm run test:places
+```
+
 ## People map
 
-Menu → **Map** shows everyone who already has a place in the local people-graph. Typed relation lines (family / business / other) overlay people who both appear. Click a pin to open that card. The map fills the content area, including a collapsed photo-strip sidebar.
+Menu → **Map** prefers first-class Place pins when Places exist. People without a Place can still appear from `people/<slug>/place.md`. Typed relation lines (family / business / other) overlay people who both appear. Click a Place pin to open that Place; click a person pin to open that card. The map fills the content area, including a collapsed photo-strip sidebar.
 
-Search an address or drop a pin from the person card (`people/<slug>/place.md`). **Pins, people, and edges stay on disk** in the OKF bundle. They are never sent to a Skuffen cloud backend (there is none). Map tiles and Nominatim geocoding may use the public internet (OpenStreetMap). The graph is never uploaded to a map provider. No analytics. No friend-heat or ranking.
+Search an address or drop a pin from the person card or when creating a Place. **Pins, people, Places, and edges stay on disk** in the OKF bundle. They are never sent to a Skuffen cloud backend (there is none). Map tiles and Nominatim geocoding may use the public internet (OpenStreetMap). The graph is never uploaded to a map provider. No analytics. No friend-heat or ranking.
 
-If nobody has a location, the map is a local empty state. Skuffen does not fetch people from the network.
+If nobody has a location and no Place has coordinates, the map is a local empty state. Skuffen does not fetch people from the network.
 
 ```bash
 npm run test:map

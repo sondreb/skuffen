@@ -17,6 +17,7 @@ export function publicPersonView(
     photos: person.photos,
     location: person.location,
     documents: person.documents,
+    places: person.places,
   };
   if (options?.includeRelations) view.relations = person.relations;
   return redactSensitiveRecord(view);

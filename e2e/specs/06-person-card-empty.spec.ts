@@ -7,7 +7,7 @@ test("new Ada Demo card shows empty Notes, Photos, Files, and Suggest copy", asy
   await createAdaDemo(page);
 
   await expect(page.getByRole("heading", { name: "Ada Demo" })).toBeVisible();
-  await expect(page.locator("[data-card-tabs]").getByRole("tab")).toHaveCount(6);
+  await expect(page.locator("[data-card-tabs]").getByRole("tab")).toHaveCount(7);
   await expect(page.getByRole("heading", { name: "Notes" })).toBeVisible();
   await expect(page.getByText("No notes yet.")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Threads" })).toBeVisible();

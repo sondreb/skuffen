@@ -66,6 +66,7 @@ function person(overrides: Partial<PersonView> = {}): PersonView {
     photos: [],
     documents: [],
     relations: [],
+    places: [],
     ...overrides,
   };
 }
@@ -193,6 +194,41 @@ test("relation suggestions write only on Accept — uncheck yields nothing", () 
     relatedSlug: "bea-demo",
     relationKind: "family",
     relationRole: "sibling",
+  });
+});
+
+test("place suggestions write only on Accept — uncheck yields nothing", () => {
+  const parsed = parseSuggestions(
+    JSON.stringify({
+      suggestions: [
+        {
+          kind: "place",
+          title: "Golden Gate Park (demo)",
+          placeName: "Golden Gate Park",
+          address: "Golden Gate Park, San Francisco",
+          latitude: 37.7694,
+          longitude: -122.4862,
+          placeRole: "met-at",
+        },
+      ],
+    }),
+    "research",
+  );
+  assert.equal(parsed[0]?.kind, "place");
+  assert.deepEqual(proposeOnly(parsed), []);
+  const proposal = proposeNameResearch("Ada", parsed);
+  const allOff = setAllFactsChecked(proposal, false);
+  assert.equal(planAcceptedNameProposal(allOff), null);
+  assert.deepEqual(writesForAcceptedSuggestion("ada-demo", parsed[0]!), {
+    type: "place",
+    slug: "ada-demo",
+    placeName: "Golden Gate Park",
+    notes: undefined,
+    address: "Golden Gate Park, San Francisco",
+    latitude: 37.7694,
+    longitude: -122.4862,
+    placeRole: "met-at",
+    placeSlug: undefined,
   });
 });
 

@@ -1,4 +1,5 @@
 import type { FactSuggestion } from "./models";
+import { demoPlaceSuggestion } from "./services/places";
 import { demoRelationSuggestion } from "./services/relations";
 
 /** Public-park pin used by `?demo=1` geocode. Not a real contact address. */
@@ -81,6 +82,7 @@ export function demoResearchSuggestions(
       url: demoPublicPhotoUrl(),
     },
     ...(other ? [demoRelationSuggestion(source, other)] : []),
+    demoPlaceSuggestion(source),
   ];
 }
 

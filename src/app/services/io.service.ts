@@ -73,12 +73,13 @@ export class IoService {
     const files = this.webFiles();
     if (!files["index.md"]) {
       files["index.md"] =
-        "---\nokf_version: \"0.2\"\n---\n\n# Skuffen\n\nLocal personal intelligence. The people-graph lives on this machine as an Open Knowledge Format v0.2 bundle.\n\n# People\n\n*Empty — add a person in Skuffen. Data stays on disk.*\n";
+        "---\nokf_version: \"0.2\"\n---\n\n# Skuffen\n\nLocal personal intelligence. The people-graph lives on this machine as an Open Knowledge Format v0.2 bundle.\n\n# People\n\n*Empty — add a person in Skuffen. Data stays on disk.*\n\n# Places\n\n*Empty — add a place in Skuffen. Data stays on disk.*\n";
       files["log.md"] =
         "# Directory Update Log\n\n## " +
         new Date().toISOString().slice(0, 10) +
         "\n* **Initialization**: Created Skuffen OKF v0.2 people-graph bundle.\n";
       files["people/index.md"] = "# People\n\n*No people yet.*\n";
+      files["places/index.md"] = "# Places\n\n*No places yet.*\n";
       this.setWebFiles(files);
     }
     return root || "localStorage://skuffen-people-graph";

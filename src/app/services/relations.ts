@@ -6,6 +6,7 @@ import {
   type RelationKind,
 } from "../../../packages/okf/src/index";
 import type { FactSuggestion, PersonView } from "../models";
+import { placeOfferKey } from "./places";
 
 export type RelationWrite = {
   slug: string;
@@ -156,13 +157,17 @@ export function relationOfferKey(item: FactSuggestion): string | null {
 export function collapseEquivalentSuggestions(items: FactSuggestion[]): FactSuggestion[] {
   const seenIds = new Set<string>();
   const seenRelations = new Set<string>();
+  const seenPlaces = new Set<string>();
   const out: FactSuggestion[] = [];
   for (const item of items) {
     if (seenIds.has(item.id)) continue;
     const key = relationOfferKey(item);
+    const placeKey = placeOfferKey(item);
     if (key && seenRelations.has(key)) continue;
+    if (placeKey && seenPlaces.has(placeKey)) continue;
     seenIds.add(item.id);
     if (key) seenRelations.add(key);
+    if (placeKey) seenPlaces.add(placeKey);
     out.push(item);
   }
   return out;

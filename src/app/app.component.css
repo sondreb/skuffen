@@ -1159,6 +1159,17 @@ label {
   background: var(--surface);
 }
 
+.place-list {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0.8rem 0 0;
+}
+
+.place-list .person-card {
+  width: 100%;
+  text-align: left;
+}
+
 .map-empty .lede {
   margin: 0 0 0.45rem;
   font-size: 1.25rem;

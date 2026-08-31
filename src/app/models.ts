@@ -105,6 +105,8 @@ export interface PersonView {
     listSrc?: string;
   }>;
   location?: PersonLocation;
+  /** Typed links to first-class Places (lives, works, met-at). */
+  places: PersonPlaceLink[];
   documents: Array<{
     id: string;
     slug: string;
@@ -141,12 +143,52 @@ export interface PersonLocation {
   at?: string;
 }
 
+export type PlaceLinkRole = "lives" | "works" | "met-at";
+
+export interface PersonPlaceLink {
+  role: PlaceLinkRole;
+  slug: string;
+  path: string;
+  title: string;
+  location?: PersonLocation;
+}
+
+export interface PlaceView {
+  id: string;
+  slug: string;
+  path: string;
+  title: string;
+  notes: string;
+  address?: string;
+  latitude?: number;
+  longitude?: number;
+  source?: string;
+  location?: PersonLocation;
+  files: Array<{
+    id: string;
+    path: string;
+    title: string;
+    resource?: string;
+  }>;
+  notesList: Array<{ id: string; path: string; title: string; body: string }>;
+  people: Array<{ slug: string; title: string; role: PlaceLinkRole }>;
+  documents: Array<{
+    id: string;
+    slug: string;
+    path: string;
+    title: string;
+    resource?: string;
+    kind?: string;
+    subjects: string[];
+  }>;
+}
+
 export type PersonField = "title" | "description" | "body" | "email" | "phone" | "givenName" | "familyName";
 
 export interface FactSuggestion {
   id: string;
   source?: SuggestionSource;
-  kind: "note" | "social" | "field" | "photo" | "relation";
+  kind: "note" | "social" | "field" | "photo" | "relation" | "place";
   title: string;
   body?: string;
   network?: string;
@@ -157,6 +199,12 @@ export interface FactSuggestion {
   relationKind?: RelationKind;
   relationRole?: string;
   relatedSlug?: string;
+  placeName?: string;
+  placeSlug?: string;
+  address?: string;
+  latitude?: number;
+  longitude?: number;
+  placeRole?: PlaceLinkRole;
 }
 
 export interface ProposedFact {

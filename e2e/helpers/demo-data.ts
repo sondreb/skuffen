@@ -32,6 +32,10 @@ export const DEMO = {
       sourceBody: "I said I'd return the land-plot copy. Synthetic — not a real contact.",
     },
   },
+  place: {
+    title: "Golden Gate Park",
+    notes: "Synthetic first-class Place — not a real land plot.",
+  },
   park: {
     query: "Golden Gate Park, San Francisco",
     label: "Golden Gate Park, San Francisco, California, United States (demo)",
