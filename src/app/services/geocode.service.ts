@@ -1,5 +1,5 @@
 import { Injectable } from "@angular/core";
-import { DEMO_PARK_HIT, isDemoMode } from "../demo-mode";
+import { DEMO_PARK_HIT, demoGeocodeHit, isDemoMode } from "../demo-mode";
 
 export interface GeocodeHit {
   label: string;
@@ -18,7 +18,7 @@ export class GeocodeService {
     const q = query.trim();
     if (!q) return [];
     if (isDemoMode()) {
-      return [{ ...DEMO_PARK_HIT }];
+      return [demoGeocodeHit(q)];
     }
     await this.throttle();
     const url = new URL(NOMINATIM_SEARCH);

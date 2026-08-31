@@ -62,12 +62,20 @@ export async function stubNetwork(page: Page): Promise<void> {
   });
 
   await page.route("https://nominatim.openstreetmap.org/**", async (route) => {
-    const hit = {
-      lat: String(DEMO.park.latitude),
-      lon: String(DEMO.park.longitude),
-      display_name: DEMO.park.label,
-    };
     const url = route.request().url();
+    const query = (() => {
+      try {
+        return new URL(url).searchParams.get("q") ?? "";
+      } catch {
+        return "";
+      }
+    })();
+    const place = query.toLowerCase().includes("crissy") ? DEMO.field : DEMO.park;
+    const hit = {
+      lat: String(place.latitude),
+      lon: String(place.longitude),
+      display_name: place.label,
+    };
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -143,6 +151,26 @@ export async function pinNote(page: Page, body: string, title?: string): Promise
   if (title) await page.getByPlaceholder("Title (optional)").fill(title);
   await page.getByRole("button", { name: "Pin note" }).click();
   await expect(page.getByRole("heading", { name: title || body.split(/\n/)[0].slice(0, 48) })).toBeVisible();
+}
+
+export async function pinPersonPlace(
+  page: Page,
+  place: { query: string; label: string } = DEMO.park,
+): Promise<void> {
+  await page.locator("[data-demo='pin']").click();
+  await page.locator('input[name="person-address"]').fill(place.query);
+  await page.getByRole("button", { name: "Search", exact: true }).click();
+  await page.getByRole("button", { name: place.label }).click();
+  await expect(page.locator("[data-demo='save-pin']")).toBeEnabled();
+  await page.locator("[data-demo='save-pin']").click();
+  await expect(page.getByText(place.label)).toBeVisible();
+}
+
+export async function openMapFromMenu(page: Page): Promise<void> {
+  await page.getByRole("button", { name: "Menu", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Menu" })).toBeVisible();
+  await page.locator("[data-open-map='menu']").click();
+  await expect(page.locator("[data-people-map]")).toBeVisible();
 }
 
 export async function createBeaDemo(page: Page): Promise<void> {

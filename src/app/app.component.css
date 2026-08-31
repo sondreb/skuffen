@@ -452,6 +452,21 @@ button:disabled {
   background: var(--well);
 }
 
+.main.map-open {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+}
+
+.main.map-open .ribbon {
+  flex-shrink: 0;
+  margin: 0;
+  border-radius: 0;
+  border-left: 0;
+  border-right: 0;
+}
+
 .ribbon {
   position: relative;
   margin: 0 0 1rem;
@@ -968,9 +983,130 @@ label {
   background: var(--map);
 }
 
+.map-frame app-people-map {
+  min-height: 260px;
+}
+
 .map-frame.tall {
   height: min(56vh, 560px);
   min-height: 320px;
+}
+
+.map-sheet.map-fill {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  max-width: none;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: var(--map);
+  animation: none;
+}
+
+.map-fill .map-chrome {
+  position: absolute;
+  z-index: 500;
+  top: 0.7rem;
+  left: 0.7rem;
+  right: 0.7rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--chrome) 90%, transparent);
+}
+
+.map-fill .map-empty ~ .map-chrome,
+.map-fill:has(.map-empty) .map-chrome {
+  position: static;
+  margin: 0.7rem 0.7rem 0;
+}
+
+.map-empty {
+  margin: 1.1rem auto;
+  max-width: 28rem;
+  padding: 1.1rem 1.15rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.map-empty .lede {
+  margin: 0 0 0.45rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--paper);
+}
+
+.map-stage {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.map-stage app-people-map {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.map-legend {
+  position: absolute;
+  z-index: 500;
+  left: 0.7rem;
+  bottom: 0.7rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.75rem;
+  margin: 0;
+  padding: 0.4rem 0.65rem;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--chrome) 90%, transparent);
+  color: var(--mute);
+  font-size: 0.78rem;
+}
+
+.map-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.map-legend li::before {
+  content: "";
+  width: 1.1rem;
+  height: 0;
+  border-top: 2px solid var(--accent);
+}
+
+.map-legend li[data-map-legend-kind="business"]::before {
+  border-top-color: var(--accent-soft);
+  border-top-style: dashed;
+}
+
+.map-legend li[data-map-legend-kind="other"]::before {
+  border-top-color: var(--mute);
+  border-top-style: dotted;
+}
+
+@media (max-width: 960px) {
+  .map-fill .map-chrome {
+    left: 0.45rem;
+    right: 0.45rem;
+    top: 0.45rem;
+  }
+
+  .map-legend {
+    left: 0.45rem;
+    right: 0.45rem;
+    bottom: 0.45rem;
+  }
 }
 
 .geocode-hits {

@@ -8,6 +8,17 @@ export const DEMO_PARK_HIT = {
   longitude: -122.4862,
 } as const;
 
+/** Second synthetic pin so two local cards can sit on the people map. */
+export const DEMO_FIELD_HIT = {
+  label: "Crissy Field, San Francisco, California, United States (demo)",
+  latitude: 37.8039,
+  longitude: -122.4662,
+} as const;
+
+export function demoGeocodeHit(query: string): { label: string; latitude: number; longitude: number } {
+  return query.toLowerCase().includes("crissy") ? { ...DEMO_FIELD_HIT } : { ...DEMO_PARK_HIT };
+}
+
 /** True when the web preview is opened with `?demo=1`. Never enables live provider calls. */
 export function isDemoMode(): boolean {
   if (typeof globalThis.location === "undefined") return false;
