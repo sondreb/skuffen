@@ -38,6 +38,9 @@
           <button type="button" class="tool" [class.on]="panel === 'map'" (click)="openMap()" data-open-map>
             Map
           </button>
+          <button type="button" class="tool" [class.on]="panel === 'graph'" (click)="openGraph()" data-open-graph>
+            Graph
+          </button>
           <button
             type="button"
             class="tool"
@@ -121,6 +124,7 @@
             Capture
           </button>
           <button type="button" (click)="openMap()" data-open-map="menu">Map</button>
+          <button type="button" (click)="openGraph()" data-open-graph="menu">Graph</button>
           <button
             type="button"
             (click)="openShuffle()"
@@ -377,7 +381,7 @@
         </nav>
       </aside>
 
-    <main class="main well" [class.map-open]="panel === 'map'">
+    <main class="main well" [class.map-open]="panel === 'map'" [class.graph-open]="panel === 'graph'">
       @if (!desktop) {
         <p class="ribbon">
           Preview people-graph stays in this tab. Tokens stay in this tab — never localStorage.
@@ -497,6 +501,45 @@
                 <ul class="map-legend" data-map-legend>
                   @for (kind of mapLegendKinds(); track kind) {
                     <li [attr.data-map-legend-kind]="kind">{{ kindLabelForRelation(kind) }}</li>
+                  }
+                </ul>
+              }
+            </div>
+          }
+        </section>
+      } @else if (panel === "graph") {
+        <section class="sheet map-sheet map-fill" data-people-graph>
+          <header class="sheet-head map-chrome">
+            <div>
+              <p class="kicker">Local people-graph</p>
+              <h1>Who knows who</h1>
+            </div>
+            <button class="ghost" type="button" (click)="panel = 'none'">Back</button>
+          </header>
+          @if (graphNodes().length === 0) {
+            <div class="map-empty" data-graph-empty>
+              <p class="kicker">On this machine</p>
+              <p class="lede">No people in this local graph</p>
+              <p class="whisper">
+                This view only shows people already in the people-graph on this machine. Skuffen
+                does not fetch people from the network. Nodes are local cards. Typed edges stay in
+                <code>relations.md</code> on disk — family, business, other, and knows or
+                introduced-by when those labels exist. File path is identity. Edges are typed,
+                never scored. There is no Skuffen graph backend and no people-graph upload.
+              </p>
+            </div>
+          } @else {
+            <div class="map-stage graph-stage">
+              <app-people-graph
+                [nodes]="graphNodes()"
+                [edges]="graphEdges()"
+                [selectedSlug]="people.selected()?.slug || null"
+                (openPerson)="openBySlug($event)"
+              />
+              @if (graphLegendKinds().length) {
+                <ul class="map-legend graph-legend" data-graph-legend>
+                  @for (kind of graphLegendKinds(); track kind) {
+                    <li [attr.data-graph-legend-kind]="kind">{{ kindLabelForGraph(kind) }}</li>
                   }
                 </ul>
               }

@@ -35,6 +35,7 @@
     "test:commitments": "tsx --test src/app/services/commitments.test.ts",
     "test:relations": "tsx --test src/app/services/relations.test.ts",
     "test:map": "tsx --test src/app/map/map-edges.test.ts",
+    "test:graph": "tsx --test src/app/graph/graph-edges.test.ts",
     "test:card-tabs": "tsx --test src/app/card-tabs.test.ts src/app/file-open.test.ts",
     "test:update": "tsx --test src/app/services/update.test.ts",
     "test:version": "tsx --test scripts/bump-version.test.ts",

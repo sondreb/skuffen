@@ -169,6 +169,18 @@ If nobody has a location, the map is a local empty state. Skuffen does not fetch
 npm run test:map
 ```
 
+## Who knows who
+
+Menu → **Graph** is a full-content-area view of local people as nodes and typed edges as links (family / business / other, plus knows / introduced-by when those labels exist). It is not the geographic map. Click a node to open that person. Pan and zoom. Works with the collapsed photo-strip sidebar.
+
+Edges are typed, never scored. No friend-heat. No ranking. No closeness score. **People and edges stay on disk** in the OKF bundle (`people/<slug>/person.md` and `relations.md`). File path is identity. There is no people-graph upload and no Skuffen graph backend.
+
+If nobody is in the local graph, this view is a local empty state. Skuffen does not fetch people from the network.
+
+```bash
+npm run test:graph
+```
+
 ## On-disk format
 
 Desktop Skuffen (`npm run tauri dev` or an installer) stores the people-graph as **plaintext markdown+YAML**. File path is identity. Photos and documents are ordinary files beside their concept markdown.

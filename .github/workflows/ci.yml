@@ -78,6 +78,9 @@ jobs:
       - name: People map overlay (local places + typed edges) tests
         run: npm run test:map
 
+      - name: Who-knows-who graph (typed edges, never scored) tests
+        run: npm run test:graph
+
       - name: Person-card tabs and local file open tests
         run: npm run test:card-tabs
 
