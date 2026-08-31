@@ -50,6 +50,13 @@ import { FollowService } from "./services/follow.service";
 import { grokConnectionLabel } from "./services/grok-oauth";
 import { IoService, isTauri } from "./services/io.service";
 import { PeoplePaneService } from "./services/people-pane.service";
+import {
+  PEOPLE_SORT_LABELS,
+  PEOPLE_SORT_METHODS,
+  sortPeople,
+  type PeopleSortMethod,
+} from "./services/people-sort";
+import { PeopleSortService } from "./services/people-sort.service";
 import { SelfService } from "./services/self.service";
 import { ThemeService } from "./services/theme.service";
 import { PeopleService } from "./services/people.service";
@@ -231,6 +238,8 @@ export class AppComponent implements OnInit, OnDestroy {
   readonly self = inject(SelfService);
   readonly theme = inject(ThemeService);
   readonly peoplePane = inject(PeoplePaneService);
+  readonly peopleSort = inject(PeopleSortService);
+  readonly peopleSortMethods = PEOPLE_SORT_METHODS;
   private readonly io = inject(IoService);
   private readonly cdr = inject(ChangeDetectorRef);
   readonly updates = inject(UpdateService);
@@ -323,7 +332,11 @@ export class AppComponent implements OnInit, OnDestroy {
   readonly demoMode = isDemoMode();
 
   readonly filtered = computed(() =>
-    filterPeopleByRelation(this.people.people(), this.query(), this.relationKindFilter()),
+    sortPeople(
+      filterPeopleByRelation(this.people.people(), this.query(), this.relationKindFilter()),
+      this.peopleSort.method(),
+      this.peopleSort.lastOpened(),
+    ),
   );
   readonly relationKinds = RELATION_KINDS;
 
@@ -422,6 +435,7 @@ export class AppComponent implements OnInit, OnDestroy {
   });
 
   async ngOnInit(): Promise<void> {
+    await this.peopleSort.load();
     await this.people.bootstrap();
     await this.providers.refresh();
     await this.follow.load();
@@ -563,6 +577,11 @@ export class AppComponent implements OnInit, OnDestroy {
     if (this.peoplePane.filterOpen() && this.peoplePane.collapsed()) {
       if (!(target instanceof Element) || !target.closest("[data-people-filter-wrap]")) {
         this.peoplePane.closeFilter();
+      }
+    }
+    if (this.peoplePane.sortOpen()) {
+      if (!(target instanceof Element) || !target.closest("[data-people-sort-wrap]")) {
+        this.peoplePane.closeSort();
       }
     }
     if (!this.menuOpen) return;
@@ -912,6 +931,15 @@ export class AppComponent implements OnInit, OnDestroy {
 
   setRelationKindFilter(kind: RelationKind | ""): void {
     this.relationKindFilter.set(kind);
+  }
+
+  peopleSortLabel(method: PeopleSortMethod): string {
+    return PEOPLE_SORT_LABELS[method];
+  }
+
+  async setPeopleSort(method: PeopleSortMethod): Promise<void> {
+    await this.peopleSort.set(method);
+    this.peoplePane.closeSort();
   }
 
   kindLabelForRelation(kind: RelationKind): string {
@@ -1515,6 +1543,7 @@ export class AppComponent implements OnInit, OnDestroy {
     await this.follow.retargetSlug(plan.incomingSlug, plan.keeperSlug);
     await this.follow.forgetSlug(plan.incomingSlug);
     await this.self.retarget(plan.incomingSlug, plan.keeperSlug);
+    await this.peopleSort.retarget(plan.incomingSlug, plan.keeperSlug);
     await this.people.applyMerge(plan);
     this.mergeProposal = null;
     this.panel = "none";
@@ -1623,6 +1652,7 @@ export class AppComponent implements OnInit, OnDestroy {
       await this.people.deletePerson(person.slug);
       await this.follow.forgetSlug(person.slug);
       await this.self.forget(person.slug);
+      await this.peopleSort.forget(person.slug);
       this.pendingDelete = null;
       this.personMenu = null;
       this.panel = "none";

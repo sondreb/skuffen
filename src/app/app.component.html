@@ -322,6 +322,48 @@
               />
             </label>
           </div>
+          <div
+            class="sort-row"
+            data-people-sort-wrap
+            [class.open]="peoplePane.sortOpen() || !peoplePane.collapsed()"
+            [attr.data-people-sort-method]="peopleSort.method()"
+          >
+            @if (peoplePane.collapsed()) {
+              <button
+                type="button"
+                class="sort-icon"
+                data-people-sort-toggle
+                aria-label="Sort people"
+                [attr.aria-expanded]="peoplePane.sortOpen()"
+                [attr.title]="peopleSortLabel(peopleSort.method())"
+                (click)="peoplePane.toggleSort()"
+              >
+                <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+                  <path
+                    d="M3 4.5 H13 M3 8 H10 M3 11.5 H7"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              </button>
+            }
+            <label class="sort">
+              <span class="sr">Sort people</span>
+              <select
+                data-people-sort
+                [ngModel]="peopleSort.method()"
+                (ngModelChange)="setPeopleSort($event)"
+                [attr.aria-label]="'Sort people, ' + peopleSortLabel(peopleSort.method())"
+                (focus)="peoplePane.openSort()"
+              >
+                @for (method of peopleSortMethods; track method) {
+                  <option [value]="method">{{ peopleSortLabel(method) }}</option>
+                }
+              </select>
+            </label>
+          </div>
         </div>
         <div class="kind-filters" data-relation-filters>
           <button

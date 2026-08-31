@@ -15,6 +15,7 @@ export class PeoplePaneService {
 
   readonly collapsed = signal(false);
   readonly filterOpen = signal(false);
+  readonly sortOpen = signal(false);
   private pinned = false;
 
   private readonly onWindowResize = () => {
@@ -32,7 +33,10 @@ export class PeoplePaneService {
     const stored = collapsedFromSettings(settings);
     this.pinned = stored !== null;
     this.collapsed.set(resolvePeoplePaneCollapsed(stored, this.windowWidth()));
-    if (this.collapsed()) this.filterOpen.set(false);
+    if (this.collapsed()) {
+      this.filterOpen.set(false);
+      this.sortOpen.set(false);
+    }
   }
 
   async toggle(): Promise<void> {
@@ -43,19 +47,42 @@ export class PeoplePaneService {
     this.pinned = true;
     this.collapsed.set(next);
     this.filterOpen.set(false);
+    this.sortOpen.set(false);
     await this.persist();
   }
 
   openFilter(): void {
+    this.sortOpen.set(false);
     this.filterOpen.set(true);
   }
 
   toggleFilter(): void {
-    this.filterOpen.update((open) => !open);
+    this.filterOpen.update((open) => {
+      const next = !open;
+      if (next) this.sortOpen.set(false);
+      return next;
+    });
   }
 
   closeFilter(): void {
     this.filterOpen.set(false);
+  }
+
+  openSort(): void {
+    this.filterOpen.set(false);
+    this.sortOpen.set(true);
+  }
+
+  toggleSort(): void {
+    this.sortOpen.update((open) => {
+      const next = !open;
+      if (next) this.filterOpen.set(false);
+      return next;
+    });
+  }
+
+  closeSort(): void {
+    this.sortOpen.set(false);
   }
 
   private windowWidth(): number {
