@@ -68,7 +68,7 @@ test("add sibling shows on both cards; filter by family; delete wipes edges", as
 
 async function proposeSiblingViaAskThenResearch(page: import("@playwright/test").Page) {
   await page.locator("[data-person-row='ada-demo']").click();
-  await page.locator("[data-demo='suggest']").click();
+  await page.getByRole("button", { name: "Suggest", exact: true }).click();
   await page.locator("[data-demo='suggest-facts']").click();
   await page.locator("[data-demo='research']").click();
   const siblingOffer = page.locator("[data-suggestion-kind='relation']");

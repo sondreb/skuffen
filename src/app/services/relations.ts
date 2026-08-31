@@ -133,7 +133,7 @@ export function demoRelationSuggestion(
   other: { slug: string; title: string },
 ): FactSuggestion {
   return {
-    id: `demo-${source}-relation-${other.slug}`,
+    id: `demo-relation-${other.slug}`,
     source,
     kind: "relation",
     title: `Sibling of ${other.title} (demo)`,

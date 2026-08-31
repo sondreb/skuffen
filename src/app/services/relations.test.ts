@@ -3,6 +3,7 @@ import { test } from "node:test";
 import type { PersonView } from "../models.ts";
 import {
   collapseEquivalentSuggestions,
+  demoRelationSuggestion,
   dismissRelationProposal,
   equivalentSuggestionIds,
   filterPeopleByRelation,
@@ -144,7 +145,7 @@ test("relation rows resolve the other person's title, not their slug", () => {
 
 test("Suggest facts and Research collapse to one sibling offer; dismiss covers both ids", () => {
   const ask = {
-    id: "demo-ask-relation-bea-demo",
+    id: "demo-relation-bea-demo",
     source: "ask" as const,
     kind: "relation" as const,
     title: "Sibling of Bea Demo (demo)",
@@ -153,7 +154,7 @@ test("Suggest facts and Research collapse to one sibling offer; dismiss covers b
     relatedSlug: "bea-demo",
   };
   const research = {
-    id: "demo-research-relation-bea-demo",
+    id: "legacy-research-relation-bea-demo",
     source: "research" as const,
     kind: "relation" as const,
     title: "Sibling of Bea Demo (demo)",
@@ -171,12 +172,21 @@ test("Suggest facts and Research collapse to one sibling offer; dismiss covers b
   const collapsed = collapseEquivalentSuggestions([ask, research, note]);
   assert.deepEqual(
     collapsed.map((item) => item.id),
-    ["demo-ask-relation-bea-demo", "demo-research-ada-note"],
+    ["demo-relation-bea-demo", "demo-research-ada-note"],
   );
   assert.deepEqual(equivalentSuggestionIds([ask, research, note], research).sort(), [
-    "demo-ask-relation-bea-demo",
-    "demo-research-relation-bea-demo",
+    "demo-relation-bea-demo",
+    "legacy-research-relation-bea-demo",
   ]);
+});
+
+test("demo ask and research mint the same sibling id so Accept cannot write a twin", () => {
+  const other = { slug: "bea-demo", title: "Bea Demo" };
+  const fromAsk = demoRelationSuggestion("ask", other);
+  const fromResearch = demoRelationSuggestion("research", other);
+  assert.equal(fromAsk.id, "demo-relation-bea-demo");
+  assert.equal(fromResearch.id, fromAsk.id);
+  assert.equal(relationOfferKey(fromAsk), relationOfferKey(fromResearch));
 });
 
 test("never uploads and never stores tokens on a relation write", () => {
