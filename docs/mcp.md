@@ -71,11 +71,20 @@ Run from the Skuffen repo root so `tsx` can resolve `mcp/src/server.ts`. After `
 
 ## Optional local HTTP
 
-Same tools, loopback only:
+Same tools, on the existing loopback server only. There is no remote HTTP MCP.
 
 ```bash
 npx tsx mcp/src/server.ts --http 8787 --http-only
 ```
+
+Bind is `127.0.0.1` by default. `::1` is allowed via `--http-host ::1`. `0.0.0.0` / `::` are refused.
+
+- Host must be loopback (`127.0.0.1`, `localhost`, `[::1]`). Other Host values are rejected (DNS rebinding).
+- If `Origin` is sent, it must exactly match `http://<loopback>:<port>` (scheme+host+port). Prefix / `startsWith` is not used.
+- `X-Forwarded-*` is ignored. This port is not behind a proxy.
+- `POST` requires `Content-Type: application/json`. `text/plain` JSON-RPC is rejected.
+- OS-credential tokens (service `me.grok.skuffen`) are not inbound HTTP auth.
+- Request bodies are capped at 1 MiB.
 
 - `GET /health` — bundle path
 - `GET /tools` — tool list

@@ -4,6 +4,13 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { defaultBundleRoot, OkfBundle } from "./bundle.ts";
+import {
+  evaluateLocalMcpHttp,
+  formatBindHost,
+  MAX_MCP_TOOL_NAME_CHARS,
+  parseMcpHttpCli,
+  readCappedBody,
+} from "./http-guard.ts";
 import { publicPersonView } from "./redact.ts";
 
 const bundle = new OkfBundle(defaultBundleRoot());
@@ -349,56 +356,69 @@ async function serveStdio(): Promise<void> {
   await server.connect(new StdioServerTransport());
 }
 
-function serveHttp(port: number): void {
+function json(res: ServerResponse, status: number, body: unknown): void {
+  res.writeHead(status, { "content-type": "application/json" });
+  res.end(JSON.stringify(body));
+}
+
+/** The only MCP HTTP server. Loopback bind + Host/Origin/Content-Type checks. */
+function serveHttp(port: number, bindHost: string): void {
   const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
+    const guard = evaluateLocalMcpHttp(
+      { method: req.method ?? "GET", headers: req.headers },
+      { bindHost, port },
+    );
+    if (!guard.ok) {
+      json(res, guard.status, { error: guard.error });
+      return;
+    }
     if (req.method === "GET" && req.url === "/health") {
-      res.writeHead(200, { "content-type": "application/json" });
-      res.end(JSON.stringify({ ok: true, bundle: bundle.root }));
+      json(res, 200, { ok: true, bundle: bundle.root });
       return;
     }
     if (req.method === "GET" && req.url === "/tools") {
-      res.writeHead(200, { "content-type": "application/json" });
-      res.end(JSON.stringify(tools));
+      json(res, 200, tools);
       return;
     }
     if (req.method === "POST" && req.url === "/tools") {
-      const body = await readBody(req);
       try {
+        const body = await readCappedBody(req);
         const parsed = JSON.parse(body || "{}") as { name?: string; arguments?: Record<string, unknown> };
-        const result = await callTool(String(parsed.name ?? ""), parsed.arguments ?? {});
-        res.writeHead(200, { "content-type": "application/json" });
-        res.end(JSON.stringify({ result }));
+        const name = String(parsed.name ?? "");
+        if (name.length > MAX_MCP_TOOL_NAME_CHARS) {
+          json(res, 400, { error: "tool name too long" });
+          return;
+        }
+        const result = await callTool(name, parsed.arguments ?? {});
+        json(res, 200, { result });
       } catch (error) {
-        res.writeHead(400, { "content-type": "application/json" });
-        res.end(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }));
+        const status =
+          error instanceof Error && "status" in error && typeof (error as { status?: unknown }).status === "number"
+            ? (error as { status: number }).status
+            : 400;
+        json(res, status, { error: error instanceof Error ? error.message : String(error) });
       }
       return;
     }
     res.writeHead(404);
     res.end("not found");
   });
-  httpServer.listen(port, "127.0.0.1", () => {
-    console.error(`Skuffen MCP HTTP on http://127.0.0.1:${port} (bundle ${bundle.root})`);
+  httpServer.listen(port, bindHost, () => {
+    console.error(`Skuffen MCP HTTP on http://${formatBindHost(bindHost)}:${port} (bundle ${bundle.root})`);
   });
 }
 
-function readBody(req: IncomingMessage): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    req.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
-    req.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
-    req.on("error", reject);
-  });
-}
-
-const httpFlag = process.argv.findIndex((arg) => arg === "--http");
-const httpPort = httpFlag >= 0 ? Number(process.argv[httpFlag + 1] ?? 8787) : undefined;
-
-if (httpPort) {
-  serveHttp(httpPort);
-  if (!process.argv.includes("--http-only")) {
+try {
+  const http = parseMcpHttpCli(process.argv);
+  if (http) {
+    serveHttp(http.port, http.host);
+    if (!http.httpOnly) {
+      void serveStdio();
+    }
+  } else {
     void serveStdio();
   }
-} else {
-  void serveStdio();
+} catch (error) {
+  console.error(error instanceof Error ? error.message : error);
+  process.exit(1);
 }
