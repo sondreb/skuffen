@@ -149,13 +149,14 @@
       >
         <header>
           <strong>Menu</strong>
-          <button type="button" (click)="closeMenu(true)">Close</button>
+          <button mat-button type="button" (click)="closeMenu(true)">Close</button>
         </header>
           <p class="provider-chip" [class.connected]="grokChipConnected()">
             Grok · {{ grokLabel() }}
           </p>
           <p class="menu-kicker">Today</p>
           <button
+            mat-button
             type="button"
             (click)="openMemory()"
             [attr.data-demo]="demoMode ? 'open-memory' : null"
@@ -166,6 +167,7 @@
             }
           </button>
           <button
+            mat-button
             type="button"
             (click)="openBrief()"
             [disabled]="people.people().length === 0"
@@ -174,17 +176,19 @@
             Pre-meeting brief
           </button>
           <button
+            mat-button
             type="button"
             (click)="openCapture()"
             [attr.data-demo]="demoMode ? 'open-capture' : null"
           >
             Capture
           </button>
-          <button type="button" (click)="openPeople()" data-open-people="menu">People</button>
-          <button type="button" (click)="openMap()" data-open-map="menu">Map</button>
-          <button type="button" (click)="openGraph()" data-open-graph="menu">Graph</button>
-          <button type="button" (click)="openPlaces()" data-open-places="menu">Places</button>
+          <button mat-button type="button" (click)="openPeople()" data-open-people="menu">People</button>
+          <button mat-button type="button" (click)="openMap()" data-open-map="menu">Map</button>
+          <button mat-button type="button" (click)="openGraph()" data-open-graph="menu">Graph</button>
+          <button mat-button type="button" (click)="openPlaces()" data-open-places="menu">Places</button>
           <button
+            mat-button
             type="button"
             (click)="openShuffle()"
             [attr.data-demo]="demoMode ? 'open-shuffle' : null"
@@ -192,6 +196,7 @@
             Reconnect Shuffle
           </button>
           <button
+            mat-button
             type="button"
             (click)="openCommitments()"
             [attr.data-demo]="demoMode ? 'open-commitments' : null"
@@ -238,14 +243,15 @@
               Dark
             </button>
           </div>
-          <button type="button" (click)="openProviders()">Providers</button>
-          <button type="button" (click)="people.chooseFolder(); menuOpen = false">
+          <button mat-button type="button" (click)="openProviders()">Providers</button>
+          <button mat-button type="button" (click)="people.chooseFolder(); menuOpen = false">
             Bundle folder
           </button>
-          <button type="button" (click)="exportPlain(); menuOpen = false">
+          <button mat-button type="button" (click)="exportPlain(); menuOpen = false">
             Export plaintext OKF
           </button>
           <button
+            mat-button
             type="button"
             (click)="checkForUpdate()"
             [disabled]="updates.busy() || updates.installing()"
