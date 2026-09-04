@@ -87,4 +87,12 @@ test("mark This is me; only one self; persists in settings not tokens", async ({
   await expect(adaCard).toContainText("This is me");
   await expect(beaCard).toBeVisible();
   await expect(beaCard).not.toContainText("This is me");
+  await expect(page.locator("[data-people-gallery]")).toBeVisible();
+  await expect(adaCard).not.toHaveClass(/\bon\b/);
+  await expect(beaCard).not.toHaveClass(/\bon\b/);
+
+  await adaCard.click();
+  await expect(page.getByRole("heading", { name: "Ada Demo" })).toBeVisible();
+  await expect(adaCard).toHaveClass(/\bon\b/);
+  await expect(beaCard).not.toHaveClass(/\bon\b/);
 });

@@ -382,6 +382,11 @@ export class AppComponent implements OnInit, OnDestroy {
   readonly activeProvider = computed(() => this.providers.activeProvider());
   readonly bothProviders = computed(() => this.providers.availableProviders().length === 2);
   readonly personCount = computed(() => this.people.people().length);
+  readonly personCountLabel = computed(() => {
+    const n = this.personCount();
+    if (!n) return "People";
+    return n === 1 ? "1 person" : `${n} people`;
+  });
   readonly mapPins = computed<MapPin[]>(() =>
     mapPinsForGraph({ places: this.people.places(), people: this.people.people() }),
   );
@@ -1081,6 +1086,14 @@ export class AppComponent implements OnInit, OnDestroy {
 
   setRelationKindFilter(kind: RelationKind | ""): void {
     this.relationKindFilter.set(kind);
+  }
+
+  onRelationKindFilterChange(value: unknown): void {
+    if (value === "family" || value === "business" || value === "other") {
+      this.relationKindFilter.set(value);
+      return;
+    }
+    this.relationKindFilter.set("");
   }
 
   peopleSortLabel(method: PeopleSortMethod): string {

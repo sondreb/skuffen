@@ -117,6 +117,23 @@ body {
   display: none;
 }
 
+.sidebar-tools {
+  @include mat.form-field-overrides(
+    (
+      container-height: 40px,
+      container-vertical-padding: 8px,
+    )
+  );
+}
+
+.kind-filters {
+  @include mat.chips-overrides(
+    (
+      container-height: 28px,
+    )
+  );
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
