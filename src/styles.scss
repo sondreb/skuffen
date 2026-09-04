@@ -30,6 +30,19 @@ html {
 
 :root {
   --font: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  /* M3 4dp grid. Chrome uses these instead of rem so 15px type does not fight the toolbar. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --control-height: 40px;
+  --chrome-height: 64px;
   color: var(--ink);
   background: var(--charcoal);
   font-family: var(--font);
@@ -117,7 +130,21 @@ body {
   display: none;
 }
 
-.sidebar-tools {
+.chrome {
+  @include mat.toolbar-overrides(
+    (
+      standard-height: 64px,
+    )
+  );
+}
+
+.sidebar-tools,
+.gallery-chrome-tools,
+.sheet,
+.card-form,
+.invite,
+.surface,
+.tag-add {
   @include mat.form-field-overrides(
     (
       container-height: 40px,
@@ -129,21 +156,21 @@ body {
 .kind-filters {
   @include mat.chips-overrides(
     (
-      container-height: 28px,
+      container-height: 32px,
     )
   );
 }
 
-.kind-filters .mdc-evolution-chip-set__chips {
+.kind-filters.mat-mdc-chip-set .mdc-evolution-chip-set__chips {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.3rem;
+  gap: var(--space-2);
   margin: 0;
   min-width: 0;
 }
 
-.kind-filters .mat-mdc-chip,
-.kind-filters .mdc-evolution-chip {
+.kind-filters.mat-mdc-chip-set .mat-mdc-chip,
+.kind-filters.mat-mdc-chip-set .mdc-evolution-chip {
   margin: 0;
   width: 100%;
   max-width: none;

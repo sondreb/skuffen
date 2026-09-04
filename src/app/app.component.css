@@ -16,8 +16,8 @@
   overflow: visible;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0 1rem;
+  gap: 4px;
+  padding: 0 8px;
   height: 64px;
   min-height: 64px;
   border-bottom: 1px solid var(--line);
@@ -25,28 +25,32 @@
   color: var(--ink);
 }
 
-.brand {
+.brand.mat-mdc-button {
   flex-shrink: 0;
   min-width: 0;
   height: 48px;
-  padding: 0 0.75rem 0 0.45rem;
+  min-height: 48px;
+  padding: 0 12px 0 8px;
   text-align: left;
 }
 
 .brand .mdc-button__label {
   display: inline-flex;
   align-items: center;
-  gap: 0.7rem;
+  gap: 12px;
+  line-height: 1;
 }
 
 .brand-copy {
   display: inline-flex;
-  align-items: baseline;
-  gap: 0.5rem;
+  align-items: center;
+  gap: 8px;
   white-space: nowrap;
+  line-height: 1;
 }
 
 .brand img {
+  display: block;
   width: 32px;
   height: 32px;
   border-radius: 8px;
@@ -56,14 +60,14 @@
   font-size: 1.15rem;
   font-weight: 600;
   letter-spacing: -0.02em;
-  line-height: 1.2;
+  line-height: 1;
   color: var(--paper);
 }
 
 .brand-count {
   font-size: 0.8125rem;
   font-weight: 400;
-  line-height: 1.2;
+  line-height: 1;
   color: var(--mute);
 }
 
@@ -78,8 +82,15 @@ small {
 .history-nav {
   display: flex;
   align-items: center;
-  gap: 0.1rem;
-  margin-left: 0.15rem;
+  gap: 0;
+  margin-left: 0;
+}
+
+.history-nav .mat-mdc-icon-button {
+  --mdc-icon-button-state-layer-size: 40px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
 }
 
 .history-nav button {
@@ -90,8 +101,13 @@ small {
 .tools {
   display: flex;
   align-items: center;
-  gap: 0.15rem;
-  margin-left: 0.25rem;
+  gap: 4px;
+  margin-left: 8px;
+}
+
+.tools .mat-mdc-button {
+  height: 40px;
+  min-height: 40px;
 }
 
 button.on {
@@ -109,7 +125,7 @@ button.on {
 }
 
 .menu-kicker {
-  margin: 0.45rem 0 0.1rem;
+  margin: 12px 8px 4px;
   font-size: 0.72rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -119,11 +135,14 @@ button.on {
 .theme-picker {
   display: flex;
   width: 100%;
-  gap: 0.25rem;
+  gap: 8px;
+  padding: 0 4px;
 }
 
 .theme-picker button {
   flex: 1;
+  height: 40px;
+  min-height: 40px;
 }
 
 .memory-count {
@@ -146,18 +165,18 @@ button.on {
 
 .menu-sheet {
   position: absolute;
-  left: 0.75rem;
+  left: 8px;
   right: auto;
-  top: calc(64px + 0.35rem);
+  top: calc(64px + 8px);
   z-index: 4;
-  width: min(22rem, calc(100% - 1.5rem));
+  width: min(22rem, calc(100% - 16px));
   max-height: min(72vh, 36rem);
   overflow: auto;
   overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
-  padding: 0.75rem 0.75rem 1rem;
+  gap: 0;
+  padding: 8px 8px 12px;
   background: var(--mat-sys-surface-container);
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -169,8 +188,10 @@ button.on {
 .menu-sheet header button {
   width: 100%;
   justify-content: flex-start;
+  height: 40px;
+  min-height: 40px;
   margin: 0;
-  padding: 0.4rem 0.65rem;
+  padding: 0 12px;
   border: 0;
   border-radius: 8px;
   background: transparent;
@@ -181,6 +202,7 @@ button.on {
 
 .menu-sheet header button {
   width: auto;
+  justify-content: center;
 }
 
 .menu-sheet > button:hover,
@@ -202,10 +224,11 @@ button.on {
 
 .menu-sheet header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
-  margin: 0 0 0.2rem;
+  gap: 8px;
+  margin: 0;
+  padding: 0 4px;
 }
 
 .menu-sheet header strong,
@@ -223,8 +246,8 @@ button.on {
 }
 
 .provider-chip {
-  margin: 0 0 0.15rem;
-  padding: 0.32rem 0.65rem;
+  margin: 4px 8px 8px;
+  padding: 4px 12px;
   width: fit-content;
   border-radius: 999px;
   border: 1px solid var(--line);
@@ -239,7 +262,7 @@ button.on {
 }
 
 .menu-sheet .whisper {
-  margin: 0.2rem 0 0;
+  margin: 4px 12px 0;
   word-break: break-all;
   font-size: 0.8rem;
 }
@@ -275,19 +298,20 @@ button.on {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 0.4rem;
-  padding: 0.65rem 0.75rem 0.35rem;
+  gap: 8px;
+  padding: 12px 16px 8px;
 }
 
 .sidebar-tools-primary {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 8px;
   min-width: 0;
+  min-height: 40px;
 }
 
 .sidebar.collapsed .sidebar-tools {
-  padding: 0.4rem 0.35rem 0.3rem;
+  padding: 8px 4px 8px;
 }
 
 .sidebar.collapsed .sidebar-tools-primary {
@@ -301,8 +325,9 @@ button.on {
   flex-shrink: 0;
   display: grid;
   place-items: center;
-  width: 2.1rem;
-  height: 2.1rem;
+  --mdc-icon-button-state-layer-size: 40px;
+  width: 40px;
+  height: 40px;
   padding: 0;
   background: transparent;
   border-color: transparent;
@@ -324,29 +349,15 @@ button.on {
   position: relative;
   flex: 1;
   display: flex;
-  gap: 0.4rem;
+  gap: 8px;
   align-items: center;
   min-width: 0;
+  min-height: 40px;
 }
 
 .kind-filters {
   display: block;
-  padding: 0 0.75rem 0.55rem;
-}
-
-.kind-filters .mdc-evolution-chip-set__chips {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.3rem;
-  margin: 0;
-  min-width: 0;
-}
-
-.kind-filters .mat-mdc-chip,
-.kind-filters .mdc-evolution-chip {
-  margin: 0;
-  width: 100%;
-  max-width: none;
+  padding: 0 16px 12px;
 }
 
 .sidebar.collapsed .kind-filters {
@@ -360,7 +371,6 @@ button.on {
 
 .find,
 .sort,
-.gallery-filter,
 .grow,
 .sheet mat-form-field,
 .card-form mat-form-field,
@@ -369,15 +379,27 @@ button.on {
   width: 100%;
 }
 
-.sidebar-tools mat-form-field {
+.sidebar-tools mat-form-field,
+.gallery-filter {
   margin: 0;
+  height: 40px;
 }
 
-.sidebar-tools .mat-mdc-form-field-subscript-wrapper {
+.sidebar-tools .mat-mdc-form-field-subscript-wrapper,
+.gallery-filter .mat-mdc-form-field-subscript-wrapper,
+.sheet .mat-mdc-form-field-subscript-wrapper,
+.card-form .mat-mdc-form-field-subscript-wrapper {
   display: none;
 }
 
-.sidebar-tools .mdc-notched-outline__notch {
+.sidebar-tools .mat-mdc-text-field-wrapper,
+.gallery-filter .mat-mdc-text-field-wrapper {
+  height: 40px;
+  margin: 0;
+}
+
+.sidebar-tools .mdc-notched-outline__notch,
+.gallery-filter .mdc-notched-outline__notch {
   border-right: none;
 }
 
@@ -408,6 +430,7 @@ button.on {
   flex-shrink: 0;
   display: flex;
   align-items: center;
+  min-height: 40px;
 }
 
 .sort {
@@ -460,9 +483,9 @@ button.on {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 0.7rem;
+  gap: 12px;
   width: 100%;
-  padding: 0.6rem 0.85rem;
+  padding: 12px 16px;
   text-align: left;
   border: 0;
   border-radius: 0;
@@ -487,7 +510,7 @@ button.on {
 .person-meta {
   min-width: 0;
   display: grid;
-  gap: 0.1rem;
+  gap: 4px;
 }
 
 .person-card b,
@@ -506,8 +529,8 @@ button.on {
 .person-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem;
-  margin-top: 0.15rem;
+  gap: 4px;
+  margin-top: 4px;
 }
 
 .person-tag {
@@ -526,8 +549,8 @@ button.on {
 }
 
 .node {
-  width: 2.1rem;
-  height: 2.1rem;
+  width: 40px;
+  height: 40px;
   flex-shrink: 0;
   border-radius: 999px;
   display: grid;
@@ -574,7 +597,7 @@ button.on {
   overflow: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  padding: 1.2rem 1.4rem 1.7rem;
+  padding: 16px 24px 24px;
   background: var(--well);
 }
 
@@ -599,8 +622,8 @@ button.on {
 
 .ribbon {
   position: relative;
-  margin: 0 0 1rem;
-  padding: 0.55rem 0.8rem;
+  margin: 0 0 16px;
+  padding: 12px 16px;
   border: 1px solid var(--accent-line);
   border-radius: 8px;
   background: var(--accent-wash);
@@ -620,8 +643,8 @@ button.on {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 0.55rem;
-  margin-top: 0.85rem;
+  gap: 12px;
+  margin-top: 16px;
 }
 
 .invite-actions button {
@@ -635,25 +658,25 @@ button.on {
 }
 
 .invite h1 {
-  margin: 0.85rem 0 0.65rem;
+  margin: 16px 0 12px;
 }
 
 .invite .lede {
-  margin: 0 0 0.35rem;
+  margin: 0 0 8px;
 }
 
 .invite .whisper {
-  margin: 0.55rem 0 0;
+  margin: 12px 0 0;
 }
 
 .invite-actions + .demo-quiet,
 .invite .demo-quiet {
-  margin-top: 0.85rem;
+  margin-top: 16px;
 }
 
 .invite-line {
   margin: 0;
-  padding: 0.65rem 0.85rem;
+  padding: 12px 16px;
   color: var(--mute);
 }
 
@@ -674,13 +697,20 @@ button.on {
 .card-form [data-ai-search] {
   display: block;
   width: fit-content;
-  margin: 0.2rem 0 0.85rem;
+  margin: 4px 0 12px;
 }
 
 .card-form .more-toggle {
   display: block;
   width: fit-content;
-  margin: 0 0 1.5rem;
+  margin: 0 0 16px;
+}
+
+.sheet mat-form-field,
+.card-form mat-form-field,
+.invite mat-form-field,
+.surface mat-form-field {
+  margin: 0 0 8px;
 }
 
 .card-form .create-actions {
@@ -688,7 +718,7 @@ button.on {
 }
 
 .file-nav {
-  margin-bottom: 0.75rem;
+  margin-bottom: 12px;
 }
 
 .card,
@@ -704,7 +734,7 @@ button.on {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 12px;
-  padding: 1.1rem 1.15rem;
+  padding: 16px;
 }
 
 .slips .timeline-row,
@@ -731,13 +761,13 @@ button.on {
 .nameplate {
   display: flex;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 16px;
   align-items: flex-start;
 }
 
 .portrait {
   display: grid;
-  gap: 0.45rem;
+  gap: 8px;
   justify-items: center;
   flex-shrink: 0;
 }
@@ -797,10 +827,10 @@ button.on {
 .card-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
-  margin: 1.05rem 0 0.65rem;
+  gap: 8px;
+  margin: 16px 0 12px;
   border-bottom: 1px solid var(--line);
-  padding-bottom: 0.35rem;
+  padding-bottom: 8px;
 }
 
 .card-tabs [role="tab"] {
@@ -974,12 +1004,12 @@ button.on {
 .nameplate-actions {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 8px;
   align-items: stretch;
 }
 
 .self-line {
-  margin: 0.2rem 0 0;
+  margin: 4px 0 0;
   color: var(--accent-soft);
   font-size: 0.86rem;
 }
@@ -990,7 +1020,7 @@ button.on {
 }
 
 .kicker {
-  margin: 0 0 0.25rem;
+  margin: 0 0 4px;
   font-size: 0.78rem;
   word-break: break-all;
 }
@@ -1007,8 +1037,8 @@ button.on {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.35rem;
-  margin: 0.55rem 0 0;
+  gap: 8px;
+  margin: 12px 0 0;
 }
 
 .tag-add {
@@ -1069,8 +1099,8 @@ button.on {
 .facts {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 0.4rem;
-  margin: 1.05rem 0 0.5rem;
+  gap: 8px;
+  margin: 16px 0 8px;
 }
 
 .facts button {
@@ -1080,8 +1110,8 @@ button.on {
 .card-go {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
-  margin: 0 0 0.75rem;
+  gap: 8px;
+  margin: 0 0 16px;
 }
 
 .card-go button {
@@ -1116,8 +1146,8 @@ button.on {
 
 .offers {
   display: grid;
-  gap: 0.65rem;
-  margin-top: 0.7rem;
+  gap: 12px;
+  margin-top: 12px;
 }
 
 .fact-offer {
@@ -1187,20 +1217,20 @@ button.on {
 .threads,
 .prints {
   display: grid;
-  gap: 0.55rem;
-  margin-top: 1.1rem;
+  gap: 12px;
+  margin-top: 16px;
 }
 
 .split,
 .grid {
   display: grid;
-  gap: 0.85rem;
+  gap: 16px;
   grid-template-columns: 1fr 1fr;
 }
 
 .row {
   display: flex;
-  gap: 0.55rem;
+  gap: 8px;
   flex-wrap: wrap;
   align-items: center;
 }
@@ -1230,7 +1260,11 @@ label {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 1rem;
+  gap: 16px;
+}
+
+.sheet-head h1 {
+  margin: 0;
 }
 
 .notice,
@@ -1264,7 +1298,7 @@ label {
 .map-controls {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.55rem;
+  gap: 12px;
   align-items: flex-end;
 }
 
@@ -1309,25 +1343,25 @@ label {
 .map-fill .map-chrome {
   position: absolute;
   z-index: 500;
-  top: 0.7rem;
-  left: 0.7rem;
-  right: 0.7rem;
-  padding: 0.55rem 0.7rem;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  padding: 8px 12px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 12px;
   background: color-mix(in srgb, var(--chrome) 90%, transparent);
 }
 
 .map-fill .map-empty ~ .map-chrome,
 .map-fill:has(.map-empty) .map-chrome {
   position: static;
-  margin: 0.7rem 0.7rem 0;
+  margin: 16px 16px 0;
 }
 
 .map-empty {
-  margin: 1.1rem auto;
+  margin: 24px auto;
   max-width: 28rem;
-  padding: 1.1rem 1.15rem;
+  padding: 16px;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: var(--surface);
@@ -1335,8 +1369,8 @@ label {
 
 .place-list {
   display: grid;
-  gap: 0.45rem;
-  margin: 0.8rem 0 0;
+  gap: 8px;
+  margin: 16px 0 0;
 }
 
 .place-list .person-card {
@@ -1368,22 +1402,24 @@ label {
 
 .map-fill[data-people-gallery] .map-chrome {
   position: static;
-  margin: 0.7rem 0.7rem 0;
-  flex-wrap: wrap;
+  margin: 16px 16px 0;
+  flex-wrap: nowrap;
   align-items: center;
 }
 
 .gallery-chrome-tools {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: flex-end;
-  gap: 0.45rem;
+  gap: 8px;
 }
 
-.gallery-filter {
+.map-fill[data-people-gallery] .gallery-filter {
   margin: 0;
   width: min(14.5rem, 42vw);
+  max-width: 14.5rem;
+  flex: 0 0 auto;
 }
 
 .gallery-filter input {
@@ -1392,12 +1428,23 @@ label {
 
 .gallery-modes {
   display: flex;
-  gap: 0.25rem;
+  align-items: center;
+  gap: 4px;
 }
 
+.gallery-chrome-tools .mat-mdc-button,
+.gallery-chrome-tools .mat-mdc-outlined-button,
 .gallery-modes button {
   width: auto;
-  padding: 0.35rem 0.7rem;
+  height: 40px;
+  min-height: 40px;
+}
+
+.sheet-head .mat-mdc-button,
+.sheet-head .mat-mdc-outlined-button,
+.sheet-head .mat-mdc-unelevated-button {
+  height: 40px;
+  min-height: 40px;
 }
 
 .gallery-none {
@@ -1646,7 +1693,7 @@ label {
 }
 
 .commitments-sheet h2 {
-  margin: 1.2rem 0 0.35rem;
+  margin: 20px 0 8px;
   font-size: 1rem;
 }
 
@@ -1654,11 +1701,11 @@ label {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.65rem;
-  margin: 0 0 0.75rem;
-  padding: 0.5rem 0.75rem;
+  gap: 12px;
+  margin: 0 0 12px;
+  padding: 8px 12px;
   border: 1px solid var(--accent-line);
-  border-radius: 10px;
+  border-radius: 12px;
   background: var(--accent-wash);
   color: var(--mute);
 }
@@ -1693,7 +1740,7 @@ label {
 }
 
 .sidebar .demo-quiet {
-  margin: 0.5rem 0.85rem 0.85rem;
+  margin: 12px 16px 16px;
 }
 
 @keyframes rise {

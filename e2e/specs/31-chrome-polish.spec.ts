@@ -1,6 +1,10 @@
 import { createAdaDemo, createBeaDemo, expect, leavePersonCard, openDemo, test } from "../helpers/app";
 import { DEMO } from "../helpers/demo-data";
 
+function midY(box: { y: number; height: number }): number {
+  return box.y + box.height / 2;
+}
+
 test("toolbar brand is a single-line Material treatment", async ({ demoPage: page }) => {
   await openDemo(page);
   await createAdaDemo(page);
@@ -13,6 +17,21 @@ test("toolbar brand is a single-line Material treatment", async ({ demoPage: pag
   expect(box, "Menu brand should be laid out").toBeTruthy();
   expect(box!.width).toBeGreaterThan(box!.height);
   expect(box!.height).toBeLessThanOrEqual(56);
+
+  const back = page.locator("[data-nav-back]");
+  const add = page.getByRole("button", { name: "Add person" }).first();
+  const backBox = await back.boundingBox();
+  const addBox = await add.boundingBox();
+  expect(backBox && addBox, "toolbar nav should be laid out").toBeTruthy();
+  expect(Math.abs(midY(box!) - midY(backBox!))).toBeLessThan(6);
+  expect(Math.abs(midY(box!) - midY(addBox!))).toBeLessThan(6);
+
+  const galleryFilter = page.locator("[data-people-gallery-filter]");
+  const large = page.locator("[data-people-gallery-mode='large']");
+  const filterBox = await galleryFilter.boundingBox();
+  const largeBox = await large.boundingBox();
+  expect(filterBox && largeBox, "gallery chrome should be laid out").toBeTruthy();
+  expect(Math.abs(midY(filterBox!) - midY(largeBox!))).toBeLessThan(8);
 });
 
 test("left-rail Find and Sort are full-width; relation chips sit in an even grid", async ({
@@ -33,11 +52,14 @@ test("left-rail Find and Sort are full-width; relation chips sit in an even grid
 
   const findBox = await find.boundingBox();
   const sortBox = await sort.boundingBox();
+  const toggleBox = await sidebar.locator("[data-people-pane-toggle]").boundingBox();
   expect(findBox, "Find field should be laid out").toBeTruthy();
   expect(sortBox, "Sort field should be laid out").toBeTruthy();
+  expect(toggleBox, "pane toggle should be laid out").toBeTruthy();
   expect(findBox!.width).toBeGreaterThan(140);
   expect(sortBox!.width).toBeGreaterThan(180);
   expect(sortBox!.y).toBeGreaterThan(findBox!.y + findBox!.height - 8);
+  expect(Math.abs(midY(findBox!) - midY(toggleBox!))).toBeLessThan(6);
 
   const allBox = await sidebar.locator("[data-relation-filter='all']").boundingBox();
   const familyBox = await sidebar.locator("[data-relation-filter='family']").boundingBox();
