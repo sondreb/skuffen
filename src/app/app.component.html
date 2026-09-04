@@ -137,6 +137,7 @@
     </mat-toolbar>
 
     @if (menuOpen) {
+      <div class="menu-scrim" (pointerdown)="closeMenu()"></div>
       <aside
         #menuSheet
         id="skuffen-menu"

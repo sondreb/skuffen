@@ -131,6 +131,15 @@ button.on {
   font-size: 0.78rem;
 }
 
+.menu-scrim {
+  position: absolute;
+  top: 64px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+}
+
 .menu-sheet {
   position: absolute;
   left: 0.75rem;
