@@ -360,7 +360,7 @@ button.on {
   padding: 0 var(--space-4) var(--space-3);
 }
 
-.kind-filters .mdc-evolution-chip-set__chips {
+.kind-filters.mat-mdc-chip-set .mdc-evolution-chip-set__chips {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-2);
@@ -368,8 +368,8 @@ button.on {
   min-width: 0;
 }
 
-.kind-filters .mat-mdc-chip,
-.kind-filters .mdc-evolution-chip {
+.kind-filters.mat-mdc-chip-set .mat-mdc-chip,
+.kind-filters.mat-mdc-chip-set .mdc-evolution-chip {
   margin: 0;
   width: 100%;
   max-width: none;
@@ -386,7 +386,6 @@ button.on {
 
 .find,
 .sort,
-.gallery-filter,
 .grow,
 .sheet mat-form-field,
 .card-form mat-form-field,
@@ -1431,9 +1430,10 @@ label {
   gap: var(--space-2);
 }
 
-.gallery-filter {
+.map-fill[data-people-gallery] .gallery-filter {
   margin: 0;
   width: min(14.5rem, 42vw);
+  max-width: 14.5rem;
   flex: 0 0 auto;
 }
 
@@ -1447,8 +1447,17 @@ label {
   gap: var(--space-1);
 }
 
+.gallery-chrome-tools .mat-mdc-button,
+.gallery-chrome-tools .mat-mdc-outlined-button,
 .gallery-modes button {
   width: auto;
+  height: var(--control-height);
+  min-height: var(--control-height);
+}
+
+.sheet-head .mat-mdc-button,
+.sheet-head .mat-mdc-outlined-button,
+.sheet-head .mat-mdc-unelevated-button {
   height: var(--control-height);
   min-height: var(--control-height);
 }
