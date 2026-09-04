@@ -18,7 +18,7 @@
 .gallery-grid {
   display: grid;
   align-content: start;
-  padding: calc(5.4rem + 20px) 1.35rem 1.6rem;
+  padding: 1.35rem 1.35rem 1.6rem;
   min-height: 100%;
 }
 
@@ -30,7 +30,7 @@
 .gallery-grid[data-mode="dense"] {
   grid-template-columns: repeat(auto-fill, minmax(5.4rem, 1fr));
   gap: 0.55rem 0.5rem;
-  padding-top: calc(5.15rem + 20px);
+  padding-top: 1.15rem;
 }
 
 .gallery-tile {
@@ -167,7 +167,7 @@
 
 @media (max-width: 960px) {
   .gallery-grid {
-    padding: calc(5.8rem + 20px) 0.85rem 1.2rem;
+    padding: 1.1rem 0.85rem 1.2rem;
   }
 
   .gallery-grid[data-mode="large"] {

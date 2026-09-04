@@ -9,7 +9,7 @@
     <button
       #menuBtn
       mat-button
-      class="brand"
+      class="brand menu-btn"
       type="button"
       [class.on]="menuOpen"
       (click)="toggleMenu()"
@@ -134,6 +134,7 @@
           </button>
         }
       </div>
+    </mat-toolbar>
 
     @if (menuOpen) {
       <aside
@@ -206,36 +207,41 @@
             <p class="whisper" data-self-owner>You · {{ you.title }}</p>
           }
           <p class="menu-kicker">Appearance</p>
-          <mat-button-toggle-group
-            class="theme-picker"
-            role="radiogroup"
-            aria-label="Theme"
-            data-theme-picker
-            [value]="theme.preference()"
-            (change)="setTheme($event.value)"
-          >
-            <mat-button-toggle
-              value="auto"
+          <div class="theme-picker" role="radiogroup" aria-label="Theme" data-theme-picker>
+            <button
+              mat-stroked-button
+              type="button"
+              role="radio"
               data-theme-choice="auto"
+              [class.on]="theme.preference() === 'auto'"
               [attr.aria-checked]="theme.preference() === 'auto'"
+              (click)="setTheme('auto')"
             >
               Auto
-            </mat-button-toggle>
-            <mat-button-toggle
-              value="light"
+            </button>
+            <button
+              mat-stroked-button
+              type="button"
+              role="radio"
               data-theme-choice="light"
+              [class.on]="theme.preference() === 'light'"
               [attr.aria-checked]="theme.preference() === 'light'"
+              (click)="setTheme('light')"
             >
               Light
-            </mat-button-toggle>
-            <mat-button-toggle
-              value="dark"
+            </button>
+            <button
+              mat-stroked-button
+              type="button"
+              role="radio"
               data-theme-choice="dark"
+              [class.on]="theme.preference() === 'dark'"
               [attr.aria-checked]="theme.preference() === 'dark'"
+              (click)="setTheme('dark')"
             >
               Dark
-            </mat-button-toggle>
-          </mat-button-toggle-group>
+            </button>
+          </div>
           <button mat-button type="button" (click)="openProviders()">Providers</button>
           <button mat-button type="button" (click)="people.chooseFolder(); menuOpen = false">
             Bundle folder
@@ -285,7 +291,6 @@
           </p>
         </aside>
       }
-    </mat-toolbar>
 
   <div class="workspace">
     <aside
@@ -620,7 +625,6 @@
             <div class="gallery-chrome-tools">
               @if (people.people().length) {
                 <mat-form-field class="gallery-filter" appearance="outline" subscriptSizing="dynamic">
-                  <mat-label>Filter people</mat-label>
                   <input
                     matInput
                     data-people-gallery-filter
@@ -925,6 +929,7 @@
             <h1>Pre-meeting brief</h1>
             <button mat-button type="button" (click)="dismissBrief()">Back</button>
           </header>
+          <p class="whisper">Nothing is written until you Accept.</p>
           @if (!people.selected()) {
             <mat-form-field appearance="outline" subscriptSizing="dynamic">
               <mat-label>Who</mat-label>
@@ -1365,6 +1370,7 @@
             <h1>Capture</h1>
             <button mat-button type="button" (click)="dismissCapture()">Back</button>
           </header>
+          <p class="whisper">Nothing is written until you Accept.</p>
           <mat-form-field appearance="outline" subscriptSizing="dynamic">
             <mat-label>Note</mat-label>
             <textarea

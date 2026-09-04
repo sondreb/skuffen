@@ -16,7 +16,7 @@ test("without Grok, 3D clay diorama opens Menu → Providers and writes nothing"
   await page.getByRole("button", { name: "Add person" }).first().click();
   await expect(page.getByRole("heading", { name: "Who?" })).toBeVisible();
   await page.locator('input[name="person-name"]').fill("Ada Demo");
-  await page.locator("[data-create-form] button.brass").click();
+  await page.locator("[data-create-form]").getByRole("button", { name: "Add person" }).click();
   await expect(page.getByRole("heading", { name: "Ada Demo" })).toBeVisible();
   await openPersonTab(page, "Photos");
   await expect(page.getByText("No photos yet.")).toBeVisible();
