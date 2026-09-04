@@ -58,20 +58,6 @@
   pointer-events: auto;
 }
 
-.preview-tools button {
-  border: 1px solid var(--line);
-  background: var(--button);
-  color: var(--ink);
-  border-radius: 8px;
-  padding: 0.4rem 0.7rem;
-  cursor: pointer;
-}
-
-.preview-tools button.ghost {
-  background: transparent;
-}
-
 .preview-tools button:disabled {
   opacity: 0.45;
-  cursor: not-allowed;
 }

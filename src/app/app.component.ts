@@ -11,6 +11,7 @@ import {
   viewChild,
 } from "@angular/core";
 import { FormsModule } from "@angular/forms";
+import { MATERIAL_IMPORTS } from "./material";
 import { DEMO_COMMITMENTS, DEMO_MERGE, DEMO_SHUFFLE, isDemoMode } from "./demo-mode";
 import { ImagePreviewComponent } from "./image-preview.component";
 import { type ImagePreview, previewImageSrc } from "./image-preview";
@@ -64,6 +65,7 @@ import {
 import { PeopleSortService } from "./services/people-sort.service";
 import { SelfService } from "./services/self.service";
 import { ThemeService } from "./services/theme.service";
+import { normalizeThemePreference, type ThemePreference } from "./services/theme";
 import { PeopleService } from "./services/people.service";
 import { ProvidersService } from "./services/providers.service";
 import {
@@ -234,7 +236,14 @@ type FactSurface = "none" | "drop" | "pin" | "note" | "suggest" | "timeline" | "
 
 @Component({
   selector: "app-root",
-  imports: [FormsModule, PeopleMapComponent, PeopleGraphComponent, PeopleGalleryComponent, ImagePreviewComponent],
+  imports: [
+    FormsModule,
+    ...MATERIAL_IMPORTS,
+    PeopleMapComponent,
+    PeopleGraphComponent,
+    PeopleGalleryComponent,
+    ImagePreviewComponent,
+  ],
   templateUrl: "./app.component.html",
   styleUrl: "./app.component.css",
 })
@@ -483,7 +492,7 @@ export class AppComponent implements OnInit, OnDestroy {
     void this.providers.refresh();
     this.focusSoon(() => {
       const sheet = this.menuSheet()?.nativeElement;
-      return sheet?.querySelector<HTMLElement>("button.ghost, button") ?? sheet ?? undefined;
+      return sheet?.querySelector<HTMLElement>("button") ?? sheet ?? undefined;
     });
   }
 
@@ -1081,6 +1090,10 @@ export class AppComponent implements OnInit, OnDestroy {
   async setPeopleSort(method: PeopleSortMethod): Promise<void> {
     await this.peopleSort.set(method);
     this.peoplePane.closeSort();
+  }
+
+  setTheme(preference: unknown): void {
+    void this.theme.set(normalizeThemePreference(preference));
   }
 
   knownPersonTags(): string[] {

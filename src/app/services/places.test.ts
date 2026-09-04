@@ -69,6 +69,6 @@ test("demo ask and research mint the same Place id so Accept cannot write a twin
 test("empty Places copy is a local empty state — no network", () => {
   const copy = emptyPlacesCopy();
   assert.equal(copy.lede, "No places yet");
-  assert.match(copy.whisper, /does not fetch places from the network/);
-  assert.doesNotMatch(copy.whisper, /skuffen\.cloud|upload/i);
+  assert.equal(copy.whisper, "");
+  assert.doesNotMatch(copy.lede, /skuffen\.cloud|upload|network/i);
 });

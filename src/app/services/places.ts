@@ -125,10 +125,9 @@ export function placeOfferKey(item: FactSuggestion): string | null {
 
 export function emptyPlacesCopy(): { kicker: string; lede: string; whisper: string } {
   return {
-    kicker: "On this machine",
+    kicker: "",
     lede: "No places yet",
-    whisper:
-      "Places stay in the local OKF bundle on this machine. Skuffen does not fetch places from the network. There is no Skuffen backend.",
+    whisper: "",
   };
 }
 

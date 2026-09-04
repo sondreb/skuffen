@@ -32,7 +32,7 @@ test("mark This is me; only one self; persists in settings not tokens", async ({
   await expect(page.locator("[data-self-badge]")).toHaveCount(0);
 
   await page.locator("[data-self-toggle]").click();
-  await expect(page.locator("[data-self-badge]")).toHaveText("This is me · this local copy");
+  await expect(page.locator("[data-self-badge]")).toHaveText("This is me");
   await expect(page.locator("[data-self-toggle]")).toHaveCount(0);
   expect(await settingsSelfSlug(page)).toBe("ada-demo");
 
@@ -69,7 +69,7 @@ test("mark This is me; only one self; persists in settings not tokens", async ({
   expect(await settingsSelfSlug(page)).toBe("ada-demo");
 
   await page.locator("[data-self-card='ada-demo']").click();
-  await expect(page.locator("[data-self-badge]")).toHaveText("This is me · this local copy");
+  await expect(page.locator("[data-self-badge]")).toHaveText("This is me");
   await expect(page.locator("[data-self-toggle]")).toHaveCount(0);
 
   await leavePersonCard(page);

@@ -18,7 +18,7 @@ test("empty graph People view is a local empty state — no network people", asy
   await openPeopleFromMenu(page);
   await expect(page.locator("[data-people-gallery-empty]")).toBeVisible();
   await expect(page.getByRole("heading", { name: "People", exact: true })).toBeVisible();
-  await expect(page.getByText("No people in this local graph")).toBeVisible();
+  await expect(page.getByText("No people yet")).toBeVisible();
   await expect(page.locator("[data-people-gallery-empty]")).toContainText(
     "does not fetch people from the network",
   );
