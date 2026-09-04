@@ -21,7 +21,7 @@
       <img src="assets/skuffen-icon.png" alt="" />
       <span class="brand-copy">
         <strong>Skuffen</strong>
-        <span>{{ personCount() ? personCount() + (personCount() === 1 ? " person" : " people") : "People" }}</span>
+        <span class="brand-count">{{ personCountLabel() }}</span>
       </span>
       @if (follow.pendingCount()) {
         <span class="memory-count">{{ follow.pendingCount() }}</span>
@@ -296,84 +296,86 @@
       [attr.data-people-pane-collapsed]="peoplePane.collapsed() ? 'true' : 'false'"
     >
         <div class="sidebar-tools">
-          <button
-            mat-icon-button
-            type="button"
-            class="pane-toggle"
-            data-people-pane-toggle
-            [attr.aria-expanded]="!peoplePane.collapsed()"
-            [attr.aria-label]="peoplePane.collapsed() ? 'Expand to names' : 'Collapse to photos'"
-            (click)="peoplePane.toggle()"
-          >
-            <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
-              @if (peoplePane.collapsed()) {
-                <path
-                  d="M6 3.5 L11 8 L6 12.5"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.6"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              } @else {
-                <path
-                  d="M10 3.5 L5 8 L10 12.5"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.6"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              }
-            </svg>
-          </button>
-          <div
-            class="find-row"
-            data-people-filter-wrap
-            [class.open]="peoplePane.filterOpen() || !peoplePane.collapsed()"
-          >
-            @if (peoplePane.collapsed()) {
-              <button
-                mat-icon-button
-                type="button"
-                class="find-icon"
-                data-people-filter-toggle
-                aria-label="Find person"
-                [attr.aria-expanded]="peoplePane.filterOpen()"
-                (click)="peoplePane.toggleFilter()"
-              >
-                <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
-                  <circle
-                    cx="6.5"
-                    cy="6.5"
-                    r="4"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.6"
-                  />
+          <div class="sidebar-tools-primary">
+            <button
+              mat-icon-button
+              type="button"
+              class="pane-toggle"
+              data-people-pane-toggle
+              [attr.aria-expanded]="!peoplePane.collapsed()"
+              [attr.aria-label]="peoplePane.collapsed() ? 'Expand to names' : 'Collapse to photos'"
+              (click)="peoplePane.toggle()"
+            >
+              <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+                @if (peoplePane.collapsed()) {
                   <path
-                    d="M9.5 9.5 L13 13"
+                    d="M6 3.5 L11 8 L6 12.5"
                     fill="none"
                     stroke="currentColor"
                     stroke-width="1.6"
                     stroke-linecap="round"
+                    stroke-linejoin="round"
                   />
-                </svg>
-              </button>
-            }
-            <mat-form-field class="find" appearance="outline" subscriptSizing="dynamic">
-              <mat-label>Find person</mat-label>
-              <input
-                matInput
-                #findInput
-                data-people-filter
-                [ngModel]="query()"
-                (ngModelChange)="query.set($event)"
-                placeholder="Find person or #tag"
-                autocomplete="off"
-                (focus)="peoplePane.openFilter()"
-              />
-            </mat-form-field>
+                } @else {
+                  <path
+                    d="M10 3.5 L5 8 L10 12.5"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                }
+              </svg>
+            </button>
+            <div
+              class="find-row"
+              data-people-filter-wrap
+              [class.open]="peoplePane.filterOpen() || !peoplePane.collapsed()"
+            >
+              @if (peoplePane.collapsed()) {
+                <button
+                  mat-icon-button
+                  type="button"
+                  class="find-icon"
+                  data-people-filter-toggle
+                  aria-label="Find person"
+                  [attr.aria-expanded]="peoplePane.filterOpen()"
+                  (click)="peoplePane.toggleFilter()"
+                >
+                  <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+                    <circle
+                      cx="6.5"
+                      cy="6.5"
+                      r="4"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.6"
+                    />
+                    <path
+                      d="M9.5 9.5 L13 13"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.6"
+                      stroke-linecap="round"
+                    />
+                  </svg>
+                </button>
+              }
+              <mat-form-field class="find" appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Find</mat-label>
+                <input
+                  matInput
+                  #findInput
+                  data-people-filter
+                  [ngModel]="query()"
+                  (ngModelChange)="query.set($event)"
+                  placeholder="Name or #tag"
+                  autocomplete="off"
+                  (focus)="peoplePane.openFilter()"
+                />
+              </mat-form-field>
+            </div>
           </div>
           <div
             class="sort-row"
@@ -404,7 +406,7 @@
               </button>
             }
             <mat-form-field class="sort" appearance="outline" subscriptSizing="dynamic">
-              <mat-label>Sort people</mat-label>
+              <mat-label>Sort</mat-label>
               <select
                 matNativeControl
                 data-people-sort
@@ -420,28 +422,27 @@
             </mat-form-field>
           </div>
         </div>
-        <div class="kind-filters" data-relation-filters>
-          <button
-            mat-stroked-button
-            type="button"
-            [class.on]="relationKindFilter() === ''"
-            (click)="setRelationKindFilter('')"
-            data-relation-filter="all"
-          >
+        <mat-chip-listbox
+          class="kind-filters"
+          data-relation-filters
+          aria-label="Filter by relation"
+          hideSingleSelectionIndicator
+          [value]="relationKindFilter() || 'all'"
+          (change)="onRelationKindFilterChange($event.value)"
+        >
+          <mat-chip-option value="all" data-relation-filter="all" (click)="setRelationKindFilter('')">
             All
-          </button>
+          </mat-chip-option>
           @for (kind of relationKinds; track kind) {
-            <button
-              mat-stroked-button
-              type="button"
-              [class.on]="relationKindFilter() === kind"
-              (click)="setRelationKindFilter(kind)"
+            <mat-chip-option
+              [value]="kind"
               [attr.data-relation-filter]="kind"
+              (click)="setRelationKindFilter(kind)"
             >
               {{ kindLabelForRelation(kind) }}
-            </button>
+            </mat-chip-option>
           }
-        </div>
+        </mat-chip-listbox>
         <nav class="people-list" aria-label="Everyone">
           @if (query().trim() && filtered().length === 0) {
             <p class="invite-line">
@@ -453,7 +454,6 @@
               type="button"
               class="person-card"
               [class.on]="people.selected()?.slug === person.slug"
-              [class.is-self]="self.isSelf(person.slug)"
               [attr.data-person-row]="person.slug"
               [attr.data-self-card]="self.isSelf(person.slug) ? person.slug : null"
               [attr.data-person-slug]="person.slug"
