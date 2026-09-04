@@ -112,6 +112,11 @@ body {
   outline: none;
 }
 
+/* Desktop chrome is dense. Material's 48px touch targets overlap neighbors and steal clicks. */
+.mat-mdc-button-touch-target {
+  display: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

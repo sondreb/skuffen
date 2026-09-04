@@ -18,6 +18,7 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0 1rem;
+  height: 64px;
   min-height: 64px;
   border-bottom: 1px solid var(--line);
   background: var(--chrome);
@@ -134,7 +135,7 @@ button.on {
   position: absolute;
   left: 0.75rem;
   right: auto;
-  top: 3.6rem;
+  top: calc(64px + 0.35rem);
   z-index: 4;
   width: min(22rem, calc(100% - 1.5rem));
   max-height: min(72vh, 36rem);
