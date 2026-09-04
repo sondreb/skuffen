@@ -16,10 +16,10 @@
   overflow: visible;
   display: flex;
   align-items: center;
-  gap: var(--space-1);
-  padding: 0 var(--space-2);
-  height: var(--chrome-height);
-  min-height: var(--chrome-height);
+  gap: 4px;
+  padding: 0 8px;
+  height: 64px;
+  min-height: 64px;
   border-bottom: 1px solid var(--line);
   background: var(--chrome);
   color: var(--ink);
@@ -28,32 +28,32 @@
 .brand.mat-mdc-button {
   flex-shrink: 0;
   min-width: 0;
-  height: var(--space-12);
-  min-height: var(--space-12);
-  padding: 0 var(--space-3) 0 var(--space-2);
+  height: 48px;
+  min-height: 48px;
+  padding: 0 12px 0 8px;
   text-align: left;
 }
 
 .brand .mdc-button__label {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: 12px;
   line-height: 1;
 }
 
 .brand-copy {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: 8px;
   white-space: nowrap;
   line-height: 1;
 }
 
 .brand img {
   display: block;
-  width: var(--space-8);
-  height: var(--space-8);
-  border-radius: var(--space-2);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
 }
 
 .brand strong {
@@ -88,8 +88,8 @@ small {
 
 .history-nav .mat-mdc-icon-button {
   --mdc-icon-button-state-layer-size: 40px;
-  width: var(--control-height);
-  height: var(--control-height);
+  width: 40px;
+  height: 40px;
   padding: 0;
 }
 
@@ -101,13 +101,13 @@ small {
 .tools {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
-  margin-left: var(--space-2);
+  gap: 4px;
+  margin-left: 8px;
 }
 
 .tools .mat-mdc-button {
-  height: var(--control-height);
-  min-height: var(--control-height);
+  height: 40px;
+  min-height: 40px;
 }
 
 button.on {
@@ -125,7 +125,7 @@ button.on {
 }
 
 .menu-kicker {
-  margin: var(--space-3) var(--space-2) var(--space-1);
+  margin: 12px 8px 4px;
   font-size: 0.72rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -135,14 +135,14 @@ button.on {
 .theme-picker {
   display: flex;
   width: 100%;
-  gap: var(--space-2);
-  padding: 0 var(--space-1);
+  gap: 8px;
+  padding: 0 4px;
 }
 
 .theme-picker button {
   flex: 1;
-  height: var(--control-height);
-  min-height: var(--control-height);
+  height: 40px;
+  min-height: 40px;
 }
 
 .memory-count {
@@ -156,7 +156,7 @@ button.on {
 
 .menu-scrim {
   position: absolute;
-  top: var(--chrome-height);
+  top: 64px;
   left: 0;
   right: 0;
   bottom: 0;
@@ -165,21 +165,21 @@ button.on {
 
 .menu-sheet {
   position: absolute;
-  left: var(--space-2);
+  left: 8px;
   right: auto;
-  top: calc(var(--chrome-height) + var(--space-2));
+  top: calc(64px + 8px);
   z-index: 4;
-  width: min(22rem, calc(100% - var(--space-4)));
+  width: min(22rem, calc(100% - 16px));
   max-height: min(72vh, 36rem);
   overflow: auto;
   overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
   gap: 0;
-  padding: var(--space-2) var(--space-2) var(--space-3);
+  padding: 8px 8px 12px;
   background: var(--mat-sys-surface-container);
   border: 1px solid var(--line);
-  border-radius: var(--space-3);
+  border-radius: 12px;
   box-shadow: var(--shadow);
   animation: menu-in 160ms ease both;
 }
@@ -188,12 +188,12 @@ button.on {
 .menu-sheet header button {
   width: 100%;
   justify-content: flex-start;
-  height: var(--control-height);
-  min-height: var(--control-height);
+  height: 40px;
+  min-height: 40px;
   margin: 0;
-  padding: 0 var(--space-3);
+  padding: 0 12px;
   border: 0;
-  border-radius: var(--space-2);
+  border-radius: 8px;
   background: transparent;
   color: var(--ink);
   text-align: left;
@@ -226,9 +226,9 @@ button.on {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-2);
+  gap: 8px;
   margin: 0;
-  padding: 0 var(--space-1);
+  padding: 0 4px;
 }
 
 .menu-sheet header strong,
@@ -246,8 +246,8 @@ button.on {
 }
 
 .provider-chip {
-  margin: var(--space-1) var(--space-2) var(--space-2);
-  padding: var(--space-1) var(--space-3);
+  margin: 4px 8px 8px;
+  padding: 4px 12px;
   width: fit-content;
   border-radius: 999px;
   border: 1px solid var(--line);
@@ -262,7 +262,7 @@ button.on {
 }
 
 .menu-sheet .whisper {
-  margin: var(--space-1) var(--space-3) 0;
+  margin: 4px 12px 0;
   word-break: break-all;
   font-size: 0.8rem;
 }
@@ -298,20 +298,20 @@ button.on {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-4) var(--space-2);
+  gap: 8px;
+  padding: 12px 16px 8px;
 }
 
 .sidebar-tools-primary {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: 8px;
   min-width: 0;
-  min-height: var(--control-height);
+  min-height: 40px;
 }
 
 .sidebar.collapsed .sidebar-tools {
-  padding: var(--space-2) var(--space-1) var(--space-2);
+  padding: 8px 4px 8px;
 }
 
 .sidebar.collapsed .sidebar-tools-primary {
@@ -326,8 +326,8 @@ button.on {
   display: grid;
   place-items: center;
   --mdc-icon-button-state-layer-size: 40px;
-  width: var(--control-height);
-  height: var(--control-height);
+  width: 40px;
+  height: 40px;
   padding: 0;
   background: transparent;
   border-color: transparent;
@@ -349,30 +349,15 @@ button.on {
   position: relative;
   flex: 1;
   display: flex;
-  gap: var(--space-2);
+  gap: 8px;
   align-items: center;
   min-width: 0;
-  min-height: var(--control-height);
+  min-height: 40px;
 }
 
 .kind-filters {
   display: block;
-  padding: 0 var(--space-4) var(--space-3);
-}
-
-.kind-filters.mat-mdc-chip-set .mdc-evolution-chip-set__chips {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-2);
-  margin: 0;
-  min-width: 0;
-}
-
-.kind-filters.mat-mdc-chip-set .mat-mdc-chip,
-.kind-filters.mat-mdc-chip-set .mdc-evolution-chip {
-  margin: 0;
-  width: 100%;
-  max-width: none;
+  padding: 0 16px 12px;
 }
 
 .sidebar.collapsed .kind-filters {
@@ -397,7 +382,7 @@ button.on {
 .sidebar-tools mat-form-field,
 .gallery-filter {
   margin: 0;
-  height: var(--control-height);
+  height: 40px;
 }
 
 .sidebar-tools .mat-mdc-form-field-subscript-wrapper,
@@ -409,7 +394,7 @@ button.on {
 
 .sidebar-tools .mat-mdc-text-field-wrapper,
 .gallery-filter .mat-mdc-text-field-wrapper {
-  height: var(--control-height);
+  height: 40px;
   margin: 0;
 }
 
@@ -445,7 +430,7 @@ button.on {
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  min-height: var(--control-height);
+  min-height: 40px;
 }
 
 .sort {
@@ -498,9 +483,9 @@ button.on {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: var(--space-3);
+  gap: 12px;
   width: 100%;
-  padding: var(--space-3) var(--space-4);
+  padding: 12px 16px;
   text-align: left;
   border: 0;
   border-radius: 0;
@@ -525,7 +510,7 @@ button.on {
 .person-meta {
   min-width: 0;
   display: grid;
-  gap: var(--space-1);
+  gap: 4px;
 }
 
 .person-card b,
@@ -544,8 +529,8 @@ button.on {
 .person-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1);
-  margin-top: var(--space-1);
+  gap: 4px;
+  margin-top: 4px;
 }
 
 .person-tag {
@@ -564,8 +549,8 @@ button.on {
 }
 
 .node {
-  width: var(--control-height);
-  height: var(--control-height);
+  width: 40px;
+  height: 40px;
   flex-shrink: 0;
   border-radius: 999px;
   display: grid;
@@ -612,7 +597,7 @@ button.on {
   overflow: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  padding: var(--space-4) var(--space-6) var(--space-6);
+  padding: 16px 24px 24px;
   background: var(--well);
 }
 
@@ -637,10 +622,10 @@ button.on {
 
 .ribbon {
   position: relative;
-  margin: 0 0 var(--space-4);
-  padding: var(--space-3) var(--space-4);
+  margin: 0 0 16px;
+  padding: 12px 16px;
   border: 1px solid var(--accent-line);
-  border-radius: var(--space-2);
+  border-radius: 8px;
   background: var(--accent-wash);
   color: var(--ink);
   font-size: 0.9rem;
@@ -658,8 +643,8 @@ button.on {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: var(--space-3);
-  margin-top: var(--space-4);
+  gap: 12px;
+  margin-top: 16px;
 }
 
 .invite-actions button {
@@ -673,25 +658,25 @@ button.on {
 }
 
 .invite h1 {
-  margin: var(--space-4) 0 var(--space-3);
+  margin: 16px 0 12px;
 }
 
 .invite .lede {
-  margin: 0 0 var(--space-2);
+  margin: 0 0 8px;
 }
 
 .invite .whisper {
-  margin: var(--space-3) 0 0;
+  margin: 12px 0 0;
 }
 
 .invite-actions + .demo-quiet,
 .invite .demo-quiet {
-  margin-top: var(--space-4);
+  margin-top: 16px;
 }
 
 .invite-line {
   margin: 0;
-  padding: var(--space-3) var(--space-4);
+  padding: 12px 16px;
   color: var(--mute);
 }
 
@@ -712,20 +697,20 @@ button.on {
 .card-form [data-ai-search] {
   display: block;
   width: fit-content;
-  margin: var(--space-1) 0 var(--space-3);
+  margin: 4px 0 12px;
 }
 
 .card-form .more-toggle {
   display: block;
   width: fit-content;
-  margin: 0 0 var(--space-4);
+  margin: 0 0 16px;
 }
 
 .sheet mat-form-field,
 .card-form mat-form-field,
 .invite mat-form-field,
 .surface mat-form-field {
-  margin: 0 0 var(--space-2);
+  margin: 0 0 8px;
 }
 
 .card-form .create-actions {
@@ -733,7 +718,7 @@ button.on {
 }
 
 .file-nav {
-  margin-bottom: var(--space-3);
+  margin-bottom: 12px;
 }
 
 .card,
@@ -748,8 +733,8 @@ button.on {
 .offers article {
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--space-3);
-  padding: var(--space-4);
+  border-radius: 12px;
+  padding: 16px;
 }
 
 .slips .timeline-row,
@@ -776,13 +761,13 @@ button.on {
 .nameplate {
   display: flex;
   justify-content: space-between;
-  gap: var(--space-4);
+  gap: 16px;
   align-items: flex-start;
 }
 
 .portrait {
   display: grid;
-  gap: var(--space-2);
+  gap: 8px;
   justify-items: center;
   flex-shrink: 0;
 }
@@ -842,10 +827,10 @@ button.on {
 .card-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
-  margin: var(--space-4) 0 var(--space-3);
+  gap: 8px;
+  margin: 16px 0 12px;
   border-bottom: 1px solid var(--line);
-  padding-bottom: var(--space-2);
+  padding-bottom: 8px;
 }
 
 .card-tabs [role="tab"] {
@@ -1019,12 +1004,12 @@ button.on {
 .nameplate-actions {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: 8px;
   align-items: stretch;
 }
 
 .self-line {
-  margin: var(--space-1) 0 0;
+  margin: 4px 0 0;
   color: var(--accent-soft);
   font-size: 0.86rem;
 }
@@ -1035,7 +1020,7 @@ button.on {
 }
 
 .kicker {
-  margin: 0 0 var(--space-1);
+  margin: 0 0 4px;
   font-size: 0.78rem;
   word-break: break-all;
 }
@@ -1052,8 +1037,8 @@ button.on {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2);
-  margin: var(--space-3) 0 0;
+  gap: 8px;
+  margin: 12px 0 0;
 }
 
 .tag-add {
@@ -1114,8 +1099,8 @@ button.on {
 .facts {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: var(--space-2);
-  margin: var(--space-4) 0 var(--space-2);
+  gap: 8px;
+  margin: 16px 0 8px;
 }
 
 .facts button {
@@ -1125,8 +1110,8 @@ button.on {
 .card-go {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
-  margin: 0 0 var(--space-4);
+  gap: 8px;
+  margin: 0 0 16px;
 }
 
 .card-go button {
@@ -1161,8 +1146,8 @@ button.on {
 
 .offers {
   display: grid;
-  gap: var(--space-3);
-  margin-top: var(--space-3);
+  gap: 12px;
+  margin-top: 12px;
 }
 
 .fact-offer {
@@ -1232,20 +1217,20 @@ button.on {
 .threads,
 .prints {
   display: grid;
-  gap: var(--space-3);
-  margin-top: var(--space-4);
+  gap: 12px;
+  margin-top: 16px;
 }
 
 .split,
 .grid {
   display: grid;
-  gap: var(--space-4);
+  gap: 16px;
   grid-template-columns: 1fr 1fr;
 }
 
 .row {
   display: flex;
-  gap: var(--space-2);
+  gap: 8px;
   flex-wrap: wrap;
   align-items: center;
 }
@@ -1275,7 +1260,7 @@ label {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: var(--space-4);
+  gap: 16px;
 }
 
 .sheet-head h1 {
@@ -1313,7 +1298,7 @@ label {
 .map-controls {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-3);
+  gap: 12px;
   align-items: flex-end;
 }
 
@@ -1358,34 +1343,34 @@ label {
 .map-fill .map-chrome {
   position: absolute;
   z-index: 500;
-  top: var(--space-4);
-  left: var(--space-4);
-  right: var(--space-4);
-  padding: var(--space-2) var(--space-3);
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  padding: 8px 12px;
   border: 1px solid var(--line);
-  border-radius: var(--space-3);
+  border-radius: 12px;
   background: color-mix(in srgb, var(--chrome) 90%, transparent);
 }
 
 .map-fill .map-empty ~ .map-chrome,
 .map-fill:has(.map-empty) .map-chrome {
   position: static;
-  margin: var(--space-4) var(--space-4) 0;
+  margin: 16px 16px 0;
 }
 
 .map-empty {
-  margin: var(--space-6) auto;
+  margin: 24px auto;
   max-width: 28rem;
-  padding: var(--space-4);
+  padding: 16px;
   border: 1px solid var(--line);
-  border-radius: var(--space-3);
+  border-radius: 12px;
   background: var(--surface);
 }
 
 .place-list {
   display: grid;
-  gap: var(--space-2);
-  margin: var(--space-4) 0 0;
+  gap: 8px;
+  margin: 16px 0 0;
 }
 
 .place-list .person-card {
@@ -1417,7 +1402,7 @@ label {
 
 .map-fill[data-people-gallery] .map-chrome {
   position: static;
-  margin: var(--space-4) var(--space-4) 0;
+  margin: 16px 16px 0;
   flex-wrap: nowrap;
   align-items: center;
 }
@@ -1427,7 +1412,7 @@ label {
   flex-wrap: nowrap;
   align-items: center;
   justify-content: flex-end;
-  gap: var(--space-2);
+  gap: 8px;
 }
 
 .map-fill[data-people-gallery] .gallery-filter {
@@ -1444,22 +1429,22 @@ label {
 .gallery-modes {
   display: flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: 4px;
 }
 
 .gallery-chrome-tools .mat-mdc-button,
 .gallery-chrome-tools .mat-mdc-outlined-button,
 .gallery-modes button {
   width: auto;
-  height: var(--control-height);
-  min-height: var(--control-height);
+  height: 40px;
+  min-height: 40px;
 }
 
 .sheet-head .mat-mdc-button,
 .sheet-head .mat-mdc-outlined-button,
 .sheet-head .mat-mdc-unelevated-button {
-  height: var(--control-height);
-  min-height: var(--control-height);
+  height: 40px;
+  min-height: 40px;
 }
 
 .gallery-none {
@@ -1708,7 +1693,7 @@ label {
 }
 
 .commitments-sheet h2 {
-  margin: var(--space-5) 0 var(--space-2);
+  margin: 20px 0 8px;
   font-size: 1rem;
 }
 
@@ -1716,11 +1701,11 @@ label {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-3);
-  margin: 0 0 var(--space-3);
-  padding: var(--space-2) var(--space-3);
+  gap: 12px;
+  margin: 0 0 12px;
+  padding: 8px 12px;
   border: 1px solid var(--accent-line);
-  border-radius: var(--space-3);
+  border-radius: 12px;
   background: var(--accent-wash);
   color: var(--mute);
 }
@@ -1755,7 +1740,7 @@ label {
 }
 
 .sidebar .demo-quiet {
-  margin: var(--space-3) var(--space-4) var(--space-4);
+  margin: 12px 16px 16px;
 }
 
 @keyframes rise {
