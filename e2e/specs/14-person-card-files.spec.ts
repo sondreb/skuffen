@@ -13,7 +13,7 @@ test("person card can set a local profile image, add gallery photos, and attach 
 
   await page.getByRole("button", { name: "Drop" }).click();
   await expect(page.getByRole("button", { name: "Add land-plot document" })).toHaveCount(0);
-  await expect(page.getByLabel("Kind")).toHaveCount(0);
+  await expect(page.getByLabel("Kind", { exact: true })).toHaveCount(0);
   await expect(page.getByText("Land plot")).toHaveCount(0);
 
   await page.locator("#skuffen-profile-file").setInputFiles({

@@ -72,6 +72,9 @@ test("Me row is not selected unless the list selection is on that person", async
   await expect(page.locator("[data-people-gallery]")).toBeVisible();
   await expect(ada).not.toHaveClass(/\bon\b/);
   await expect(bea).not.toHaveClass(/\bon\b/);
+  const adaBg = await ada.evaluate((el) => getComputedStyle(el).backgroundColor);
+  const beaBg = await bea.evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(adaBg).toBe(beaBg);
 
   await bea.click();
   await expect(page.getByRole("heading", { name: DEMO.bea.title })).toBeVisible();
