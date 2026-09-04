@@ -11,6 +11,7 @@ import {
   ViewChild,
   inject,
 } from "@angular/core";
+import { MatButtonModule } from "@angular/material/button";
 import { DIORAMA_MENU_LABEL } from "./services/imagine";
 import {
   IDENTITY_TRANSFORM,
@@ -29,6 +30,7 @@ import {
 
 @Component({
   selector: "app-image-preview",
+  imports: [MatButtonModule],
   templateUrl: "./image-preview.component.html",
   styleUrl: "./image-preview.component.css",
 })

@@ -25,7 +25,7 @@ test("inspectable memory lists pending facts; Accept writes; Dismiss drops", asy
   await expect(page.getByRole("heading", { name: "Follow schedules" })).toBeVisible();
 
   await page.locator("[data-demo='memory-dismiss']").click();
-  await expect(page.getByText("Nothing pending. Research or Follow only proposes.")).toBeVisible();
+  await expect(page.getByText("Nothing pending.")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Public park mention (demo)" })).toHaveCount(0);
 
   await page.getByRole("button", { name: "Back" }).click();

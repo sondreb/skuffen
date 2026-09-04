@@ -1,4 +1,5 @@
 .app {
+  position: relative;
   height: 100%;
   min-height: 0;
   min-width: 880px;
@@ -12,12 +13,16 @@
   position: relative;
   z-index: 3;
   flex-shrink: 0;
+  overflow: visible;
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.65rem 1rem;
+  padding: 0 1rem;
+  height: 64px;
+  min-height: 64px;
   border-bottom: 1px solid var(--line);
   background: var(--chrome);
+  color: var(--ink);
 }
 
 .brand {
@@ -25,19 +30,15 @@
   gap: 0.65rem;
   align-items: center;
   min-width: 10rem;
-  margin: 0;
-  padding: 0.15rem 0.35rem 0.15rem 0.1rem;
-  border: 1px solid transparent;
-  background: transparent;
+  height: auto;
+  padding: 0.35rem 0.65rem;
   text-align: left;
-  border-radius: 10px;
 }
 
-button.brand:hover,
-button.brand:focus-visible,
-button.brand.on {
-  border-color: var(--line);
-  background: var(--hover);
+.brand-copy {
+  display: grid;
+  text-align: left;
+  line-height: 1.2;
 }
 
 .brand img {
@@ -46,8 +47,8 @@ button.brand.on {
   border-radius: 8px;
 }
 
-.brand strong,
-.brand span {
+.brand .brand-copy strong,
+.brand .brand-copy span {
   display: block;
 }
 
@@ -77,12 +78,9 @@ small {
   margin-left: 0.15rem;
 }
 
-.history-nav button.tool {
+.history-nav button {
   display: grid;
   place-items: center;
-  width: 2.1rem;
-  height: 2.1rem;
-  padding: 0;
 }
 
 .tools {
@@ -92,60 +90,10 @@ small {
   margin-left: 0.25rem;
 }
 
-button {
-  border: 1px solid var(--line);
-  background: var(--button);
-  color: var(--ink);
-  border-radius: 8px;
-  padding: 0.45rem 0.75rem;
-  cursor: pointer;
-  transition:
-    border-color 140ms ease,
-    background 140ms ease,
-    box-shadow 140ms ease,
-    color 140ms ease;
-}
-
-button.tool {
-  background: transparent;
-  border-color: transparent;
-  color: var(--mute);
-  padding: 0.4rem 0.6rem;
-}
-
-button.tool:hover,
-button.tool:focus-visible {
-  color: var(--paper);
-  border-color: var(--line);
-}
-
-button.brass,
 button.on {
-  background: var(--accent-deep);
-  border-color: var(--accent);
-  color: var(--paper);
-}
-
-button.ghost {
-  background: transparent;
-}
-
-button.danger {
-  border-color: rgba(196, 92, 74, 0.55);
-  color: #f0c4bc;
-  background: rgba(196, 92, 74, 0.12);
-}
-
-button.danger:hover,
-button.danger:focus-visible {
-  border-color: #c45c4a;
-  color: #fff;
-  background: rgba(196, 92, 74, 0.22);
-}
-
-button:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
+  --mdc-text-button-label-text-color: var(--accent);
+  --mdc-outlined-button-label-text-color: var(--accent);
+  --mdc-outlined-button-outline-color: var(--accent);
 }
 
 .menu-btn {
@@ -166,7 +114,8 @@ button:disabled {
 
 .theme-picker {
   display: flex;
-  gap: 0.3rem;
+  width: 100%;
+  gap: 0.25rem;
 }
 
 .theme-picker button {
@@ -182,11 +131,20 @@ button:disabled {
   font-size: 0.78rem;
 }
 
+.menu-scrim {
+  position: absolute;
+  top: 64px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+}
+
 .menu-sheet {
   position: absolute;
   left: 0.75rem;
   right: auto;
-  top: calc(100% - 0.2rem);
+  top: calc(64px + 0.35rem);
   z-index: 4;
   width: min(22rem, calc(100% - 1.5rem));
   max-height: min(72vh, 36rem);
@@ -194,13 +152,48 @@ button:disabled {
   overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  padding: 0.9rem 0.9rem 1rem;
-  background: var(--chrome);
+  gap: 0.2rem;
+  padding: 0.75rem 0.75rem 1rem;
+  background: var(--mat-sys-surface-container);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 12px;
   box-shadow: var(--shadow);
   animation: menu-in 160ms ease both;
+}
+
+.menu-sheet > button,
+.menu-sheet header button {
+  width: 100%;
+  justify-content: flex-start;
+  margin: 0;
+  padding: 0.4rem 0.65rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu-sheet header button {
+  width: auto;
+}
+
+.menu-sheet > button:hover,
+.menu-sheet > button:focus-visible,
+.menu-sheet header button:hover,
+.menu-sheet header button:focus-visible {
+  background: var(--hover);
+}
+
+.menu-sheet > button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.menu-sheet > button.primary {
+  background: var(--accent-deep);
+  color: var(--accent-soft);
 }
 
 .menu-sheet header {
@@ -342,8 +335,27 @@ button:disabled {
   margin: 0;
 }
 
-.find input {
-  background: var(--input);
+.find,
+.sort,
+.gallery-filter,
+.grow,
+.sheet mat-form-field,
+.card-form mat-form-field,
+.surface mat-form-field,
+.invite mat-form-field {
+  width: 100%;
+}
+
+.sidebar-tools mat-form-field {
+  margin: 0;
+}
+
+.sidebar-tools .mat-mdc-form-field-subscript-wrapper {
+  display: none;
+}
+
+.sidebar-tools .mdc-notched-outline__notch {
+  border-right: none;
 }
 
 .sidebar.collapsed .find {
@@ -379,14 +391,9 @@ button:disabled {
   margin: 0;
 }
 
-.sort select {
+.sort {
   width: auto;
-  max-width: 9.5rem;
-  padding: 0.28rem 0.45rem;
-  font-size: 0.75rem;
-  background: var(--input);
-  color: var(--ink);
-  border: 1px solid var(--line);
+  max-width: 10.5rem;
 }
 
 .sidebar.collapsed .sort {
@@ -438,6 +445,9 @@ button:disabled {
   border-radius: 0;
   border-bottom: 1px solid var(--line);
   background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
 }
 
 .person-card:hover,
@@ -774,6 +784,8 @@ button:disabled {
   flex-wrap: wrap;
   gap: 0.35rem;
   margin: 1.05rem 0 0.65rem;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 0.35rem;
 }
 
 .card-tabs [role="tab"] {
@@ -1196,7 +1208,7 @@ button:disabled {
 
 label {
   display: block;
-  margin: 0.65rem 0;
+  margin: 0.35rem 0;
 }
 
 .sheet-head {
@@ -1340,6 +1352,8 @@ label {
 }
 
 .map-fill[data-people-gallery] .map-chrome {
+  position: static;
+  margin: 0.7rem 0.7rem 0;
   flex-wrap: wrap;
   align-items: center;
 }

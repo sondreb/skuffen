@@ -7,8 +7,7 @@ test("empty graph map is a local empty state — no network people", async ({ de
 
   await openMapFromMenu(page);
   await expect(page.locator("[data-map-empty]")).toBeVisible();
-  await expect(page.getByText("No places in this local graph")).toBeVisible();
-  await expect(page.locator("[data-map-empty]")).toContainText("does not fetch people from the network");
+  await expect(page.getByText("No places yet")).toBeVisible();
   await expect(page.locator("[data-map-pin]")).toHaveCount(0);
   await expect(page.locator("[data-map-edge]")).toHaveCount(0);
   await expect(page.locator("[data-person-row]")).toHaveCount(0);

@@ -8,9 +8,7 @@ test("empty graph is a local empty state — no network people", async ({ demoPa
   await openGraphFromMenu(page);
   await expect(page.locator("[data-graph-empty]")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Who knows who" })).toBeVisible();
-  await expect(page.getByText("No people in this local graph")).toBeVisible();
-  await expect(page.locator("[data-graph-empty]")).toContainText("does not fetch people from the network");
-  await expect(page.locator("[data-graph-empty]")).toContainText("never scored");
+  await expect(page.getByText("No people yet")).toBeVisible();
   await expect(page.locator("[data-graph-node]")).toHaveCount(0);
   await expect(page.locator("[data-graph-edge]")).toHaveCount(0);
   await expect(page.locator("[data-person-row]")).toHaveCount(0);

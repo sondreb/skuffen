@@ -24,7 +24,6 @@ test("empty Places is a local empty state — no network places", async ({ demoP
   await openPlacesFromMenu(page);
   await expect(page.locator("[data-places-empty]")).toBeVisible();
   await expect(page.getByText("No places yet")).toBeVisible();
-  await expect(page.locator("[data-places-empty]")).toContainText("does not fetch places from the network");
   await expect(page.locator("[data-place-row]")).toHaveCount(0);
   await expect(page.locator("[data-places]")).not.toContainText(/skuffen\.cloud|land-plot/i);
 });

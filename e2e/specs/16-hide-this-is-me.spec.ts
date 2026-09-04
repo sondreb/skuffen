@@ -17,7 +17,7 @@ test("This is me hides after mark and returns after self is cleared", async ({ d
 
   await expect(page.locator("[data-self-toggle]")).toHaveText("This is me");
   await page.locator("[data-self-toggle]").click();
-  await expect(page.locator("[data-self-badge]")).toHaveText("This is me · this local copy");
+  await expect(page.locator("[data-self-badge]")).toHaveText("This is me");
   await expect(page.locator("[data-self-toggle]")).toHaveCount(0);
   expect(await settingsSelfSlug(page)).toBe("ada-demo");
 

@@ -5,9 +5,10 @@
   (dragleave)="onDragLeave($event)"
   (drop)="onDrop($event)"
 >
-  <header class="chrome">
+  <mat-toolbar class="chrome">
     <button
       #menuBtn
+      mat-button
       class="brand"
       type="button"
       [class.on]="menuOpen"
@@ -18,10 +19,10 @@
       data-open-menu
     >
       <img src="assets/skuffen-icon.png" alt="" />
-      <div>
+      <span class="brand-copy">
         <strong>Skuffen</strong>
         <span>{{ personCount() ? personCount() + (personCount() === 1 ? " person" : " people") : "People" }}</span>
-      </div>
+      </span>
       @if (follow.pendingCount()) {
         <span class="memory-count">{{ follow.pendingCount() }}</span>
       }
@@ -29,8 +30,8 @@
 
     <div class="history-nav" data-nav-history>
       <button
+        mat-icon-button
         type="button"
-        class="tool"
         data-nav-back
         aria-label="Previous view"
         [disabled]="!canNavBack()"
@@ -48,8 +49,8 @@
         </svg>
       </button>
       <button
+        mat-icon-button
         type="button"
-        class="tool"
         data-nav-forward
         aria-label="Next view"
         [disabled]="!canNavForward()"
@@ -70,8 +71,8 @@
 
     <div class="tools">
         <button
+          mat-button
           type="button"
-          class="tool"
           [class.on]="panel === 'create'"
           (click)="startCreate()"
           data-add-person="chrome"
@@ -80,8 +81,8 @@
           Add person
         </button>
         <button
+          mat-button
           type="button"
-          class="tool"
           [class.on]="panel === 'capture'"
           (click)="openCapture()"
           [attr.data-demo]="demoMode ? 'capture' : null"
@@ -89,8 +90,8 @@
           Capture
         </button>
         <button
+          mat-button
           type="button"
-          class="tool"
           [class.on]="panel === 'places' || panel === 'place-create'"
           (click)="openPlaces()"
           data-open-places
@@ -98,8 +99,8 @@
           Places
         </button>
         <button
+          mat-button
           type="button"
-          class="tool"
           [class.on]="panel === 'people'"
           (click)="openPeople()"
           data-open-people="chrome"
@@ -107,15 +108,15 @@
           People
         </button>
         @if (!empty()) {
-          <button type="button" class="tool" [class.on]="panel === 'map'" (click)="openMap()" data-open-map>
+          <button mat-button type="button" [class.on]="panel === 'map'" (click)="openMap()" data-open-map>
             Map
           </button>
-          <button type="button" class="tool" [class.on]="panel === 'graph'" (click)="openGraph()" data-open-graph>
+          <button mat-button type="button" [class.on]="panel === 'graph'" (click)="openGraph()" data-open-graph>
             Graph
           </button>
           <button
+            mat-button
             type="button"
-            class="tool"
             [class.on]="panel === 'shuffle'"
             (click)="openShuffle()"
             [attr.data-demo]="demoMode ? 'shuffle' : null"
@@ -123,8 +124,8 @@
             Shuffle
           </button>
           <button
+            mat-button
             type="button"
-            class="tool"
             [class.on]="panel === 'commitments'"
             (click)="openCommitments()"
             [attr.data-demo]="demoMode ? 'commitments' : null"
@@ -133,8 +134,10 @@
           </button>
         }
       </div>
+    </mat-toolbar>
 
     @if (menuOpen) {
+      <div class="menu-scrim" (pointerdown)="closeMenu()"></div>
       <aside
         #menuSheet
         id="skuffen-menu"
@@ -145,11 +148,8 @@
         tabindex="-1"
       >
         <header>
-          <div>
-            <strong>Menu</strong>
-            <span>Providers & settings</span>
-          </div>
-          <button class="ghost" type="button" (click)="closeMenu(true)">Close</button>
+          <strong>Menu</strong>
+          <button type="button" (click)="closeMenu(true)">Close</button>
         </header>
           <p class="provider-chip" [class.connected]="grokChipConnected()">
             Grok · {{ grokLabel() }}
@@ -198,44 +198,46 @@
           >
             Commitments
           </button>
-          <p class="menu-kicker">App</p>
+          <mat-divider></mat-divider>
           @if (self.owner(); as you) {
             <p class="whisper" data-self-owner>You · {{ you.title }}</p>
           }
           <p class="menu-kicker">Appearance</p>
           <div class="theme-picker" role="radiogroup" aria-label="Theme" data-theme-picker>
             <button
+              mat-stroked-button
               type="button"
               role="radio"
               data-theme-choice="auto"
               [class.on]="theme.preference() === 'auto'"
               [attr.aria-checked]="theme.preference() === 'auto'"
-              (click)="theme.set('auto')"
+              (click)="setTheme('auto')"
             >
               Auto
             </button>
             <button
+              mat-stroked-button
               type="button"
               role="radio"
               data-theme-choice="light"
               [class.on]="theme.preference() === 'light'"
               [attr.aria-checked]="theme.preference() === 'light'"
-              (click)="theme.set('light')"
+              (click)="setTheme('light')"
             >
               Light
             </button>
             <button
+              mat-stroked-button
               type="button"
               role="radio"
               data-theme-choice="dark"
               [class.on]="theme.preference() === 'dark'"
               [attr.aria-checked]="theme.preference() === 'dark'"
-              (click)="theme.set('dark')"
+              (click)="setTheme('dark')"
             >
               Dark
             </button>
           </div>
-          <p class="whisper">Auto follows this computer. The choice lives in app settings, not the people-graph.</p>
           <button type="button" (click)="openProviders()">Providers</button>
           <button type="button" (click)="people.chooseFolder(); menuOpen = false">
             Bundle folder
@@ -257,8 +259,8 @@
             }
             @if (update.kind === "available" && update.asset) {
               <button
-                class="brass"
                 type="button"
+                class="primary"
                 (click)="installUpdate()"
                 [disabled]="updates.installing()"
               >
@@ -284,7 +286,6 @@
           </p>
         </aside>
       }
-    </header>
 
   <div class="workspace">
     <aside
@@ -296,6 +297,7 @@
     >
         <div class="sidebar-tools">
           <button
+            mat-icon-button
             type="button"
             class="pane-toggle"
             data-people-pane-toggle
@@ -332,6 +334,7 @@
           >
             @if (peoplePane.collapsed()) {
               <button
+                mat-icon-button
                 type="button"
                 class="find-icon"
                 data-people-filter-toggle
@@ -358,9 +361,10 @@
                 </svg>
               </button>
             }
-            <label class="find">
-              <span class="sr">Find person</span>
+            <mat-form-field class="find" appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Find person</mat-label>
               <input
+                matInput
                 #findInput
                 data-people-filter
                 [ngModel]="query()"
@@ -369,7 +373,7 @@
                 autocomplete="off"
                 (focus)="peoplePane.openFilter()"
               />
-            </label>
+            </mat-form-field>
           </div>
           <div
             class="sort-row"
@@ -379,6 +383,7 @@
           >
             @if (peoplePane.collapsed()) {
               <button
+                mat-icon-button
                 type="button"
                 class="sort-icon"
                 data-people-sort-toggle
@@ -398,9 +403,10 @@
                 </svg>
               </button>
             }
-            <label class="sort">
-              <span class="sr">Sort people</span>
+            <mat-form-field class="sort" appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Sort people</mat-label>
               <select
+                matNativeControl
                 data-people-sort
                 [ngModel]="peopleSort.method()"
                 (ngModelChange)="setPeopleSort($event)"
@@ -411,11 +417,12 @@
                   <option [value]="method">{{ peopleSortLabel(method) }}</option>
                 }
               </select>
-            </label>
+            </mat-form-field>
           </div>
         </div>
         <div class="kind-filters" data-relation-filters>
           <button
+            mat-stroked-button
             type="button"
             [class.on]="relationKindFilter() === ''"
             (click)="setRelationKindFilter('')"
@@ -425,6 +432,7 @@
           </button>
           @for (kind of relationKinds; track kind) {
             <button
+              mat-stroked-button
               type="button"
               [class.on]="relationKindFilter() === kind"
               (click)="setRelationKindFilter(kind)"
@@ -496,10 +504,7 @@
       [class.people-open]="panel === 'people'"
     >
       @if (!desktop) {
-        <p class="ribbon">
-          Preview people-graph stays in this tab. Tokens stay in this tab — never localStorage.
-          Use <code>npm run tauri dev</code>.
-        </p>
+        <p class="ribbon">Preview people-graph stays in this tab. Tokens stay in this tab — never localStorage.</p>
       }
       @if (people.error()) {
         <p class="ribbon error">{{ people.error() }}</p>
@@ -509,18 +514,8 @@
         <section class="sheet">
           <header class="sheet-head">
             <h1>Providers</h1>
-            <button class="ghost" type="button" (click)="leaveSheet()">Back</button>
+            <button mat-button type="button" (click)="leaveSheet()">Back</button>
           </header>
-          <p class="lede">
-            @if (desktop) {
-              Tokens stay in the OS credential store, never in the OKF bundle.
-            } @else {
-              Keys stay in memory for this tab. They are not written to localStorage,
-              sessionStorage, or the OKF bundle.
-            }
-            Grok talks to <code>https://api.x.ai/v1</code>. Gemini uses
-            <code>@google/genai</code>. Grok is never routed through js-genai.
-          </p>
           @if (notice) {
             <p class="notice">{{ notice }}</p>
           }
@@ -539,7 +534,7 @@
               @if (desktop) {
                 @if (!providers.status().grokOauth) {
                   <button
-                    class="brass"
+                    mat-flat-button
                     type="button"
                     (click)="providers.signInGrok()"
                     [disabled]="providers.signingIn()"
@@ -550,10 +545,13 @@
               } @else {
                 <p class="whisper">OAuth needs the desktop shell. Paste a console.x.ai key below.</p>
               }
-              <label>API key fallback <input [(ngModel)]="grokKey" type="password" placeholder="xai-..." autocomplete="off" /></label>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>API key fallback</mat-label>
+                <input matInput [(ngModel)]="grokKey" type="password" placeholder="xai-..." autocomplete="off" />
+              </mat-form-field>
               <div class="row">
-                <button type="button" (click)="saveGrokKey()">Save Grok key</button>
-                <button type="button" class="ghost" (click)="providers.clearGrok()">
+                <button mat-stroked-button type="button" (click)="saveGrokKey()">Save Grok key</button>
+                <button mat-button type="button" (click)="providers.clearGrok()">
                   {{ providers.status().grokOauth ? "Sign out" : "Forget" }}
                 </button>
               </div>
@@ -561,22 +559,25 @@
             <article class="plate">
               <h2>Gemini</h2>
               <p>{{ providers.status().geminiApiKey ? "API key saved" : "Not connected" }}</p>
-              <label>Google AI Studio key <input [(ngModel)]="geminiKey" type="password" placeholder="AIza..." /></label>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Google AI Studio key</mat-label>
+                <input matInput [(ngModel)]="geminiKey" type="password" placeholder="AIza..." />
+              </mat-form-field>
               <div class="row">
-                <button type="button" (click)="saveGeminiKey()">Save Gemini key</button>
-                <button type="button" class="ghost" (click)="providers.clearGemini()">Forget</button>
+                <button mat-stroked-button type="button" (click)="saveGeminiKey()">Save Gemini key</button>
+                <button mat-button type="button" (click)="providers.clearGemini()">Forget</button>
               </div>
             </article>
           </div>
 
           @if (bothProviders()) {
-            <label>
-              Default
-              <select [ngModel]="providers.status().preferred" (ngModelChange)="chooseProvider($event)">
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Default</mat-label>
+              <select matNativeControl [ngModel]="providers.status().preferred" (ngModelChange)="chooseProvider($event)">
                 <option value="grok">Grok</option>
                 <option value="gemini">Gemini</option>
               </select>
-            </label>
+            </mat-form-field>
           }
           @if (providers.error()) {
             <p class="error">{{ providers.error() }}</p>
@@ -585,21 +586,12 @@
       } @else if (panel === "map") {
         <section class="sheet map-sheet map-fill" data-people-map>
           <header class="sheet-head map-chrome">
-            <div>
-              <p class="kicker">Local people-graph</p>
-              <h1>People map</h1>
-            </div>
-            <button class="ghost" type="button" (click)="leaveSheet()">Back</button>
+            <h1>People map</h1>
+            <button mat-button type="button" (click)="leaveSheet()">Back</button>
           </header>
           @if (mapPins().length === 0) {
             <div class="map-empty" data-map-empty>
-              <p class="kicker">On this machine</p>
-              <p class="lede">No places in this local graph</p>
-              <p class="whisper">
-                This map prefers first-class Places on this machine. People without a Place can still
-                appear from their local location field. Skuffen does not fetch people from the
-                network. Pins stay on disk. There is no Skuffen map backend.
-              </p>
+              <p class="lede">No places yet</p>
             </div>
           } @else {
             <div class="map-stage">
@@ -624,24 +616,22 @@
       } @else if (panel === "people") {
         <section class="sheet map-sheet map-fill" data-people-gallery>
           <header class="sheet-head map-chrome">
-            <div>
-              <p class="kicker">Local people-graph</p>
-              <h1>People</h1>
-            </div>
+            <h1>People</h1>
             <div class="gallery-chrome-tools">
               @if (people.people().length) {
-                <label class="gallery-filter">
-                  <span class="sr">Filter people</span>
+                <mat-form-field class="gallery-filter" appearance="outline" subscriptSizing="dynamic">
                   <input
+                    matInput
                     data-people-gallery-filter
                     [ngModel]="galleryQuery()"
                     (ngModelChange)="galleryQuery.set($event)"
                     placeholder="Name or #tag"
                     autocomplete="off"
                   />
-                </label>
+                </mat-form-field>
                 <div class="gallery-modes" role="group" aria-label="Layout">
                   <button
+                    mat-stroked-button
                     type="button"
                     [class.on]="galleryMode() === 'large'"
                     [attr.aria-pressed]="galleryMode() === 'large'"
@@ -651,6 +641,7 @@
                     Large
                   </button>
                   <button
+                    mat-stroked-button
                     type="button"
                     [class.on]="galleryMode() === 'dense'"
                     [attr.aria-pressed]="galleryMode() === 'dense'"
@@ -661,19 +652,12 @@
                   </button>
                 </div>
               }
-              <button class="ghost" type="button" (click)="leaveSheet()">Back</button>
+              <button mat-button type="button" (click)="leaveSheet()">Back</button>
             </div>
           </header>
           @if (people.people().length === 0) {
             <div class="map-empty" data-people-gallery-empty>
-              <p class="kicker">On this machine</p>
-              <p class="lede">No people in this local graph</p>
-              <p class="whisper">
-                This view only shows people already in the people-graph on this machine. Skuffen
-                does not fetch people from the network. Profile photos stay as local
-                <code>data:</code> or <code>blob:</code> bytes from the OKF bundle. There is no
-                Skuffen people backend, no people-graph upload, and no ranking.
-              </p>
+              <p class="lede">No people yet</p>
             </div>
           } @else {
             <div
@@ -688,7 +672,7 @@
                 (openPerson)="openBySlug($event)"
               />
               @if (galleryQuery().trim() && galleryPeople().length === 0) {
-                <p class="gallery-none" data-people-gallery-none>No one matches in this local graph.</p>
+                <p class="gallery-none" data-people-gallery-none>No matches.</p>
               }
             </div>
           }
@@ -696,23 +680,12 @@
       } @else if (panel === "graph") {
         <section class="sheet map-sheet map-fill" data-people-graph>
           <header class="sheet-head map-chrome">
-            <div>
-              <p class="kicker">Local people-graph</p>
-              <h1>Who knows who</h1>
-            </div>
-            <button class="ghost" type="button" (click)="leaveSheet()">Back</button>
+            <h1>Who knows who</h1>
+            <button mat-button type="button" (click)="leaveSheet()">Back</button>
           </header>
           @if (graphNodes().length === 0) {
             <div class="map-empty" data-graph-empty>
-              <p class="kicker">On this machine</p>
-              <p class="lede">No people in this local graph</p>
-              <p class="whisper">
-                This view only shows people already in the people-graph on this machine. Skuffen
-                does not fetch people from the network. Nodes are local cards. Typed edges stay in
-                <code>relations.md</code> on disk — family, business, other, and knows or
-                introduced-by when those labels exist. File path is identity. Edges are typed,
-                never scored. There is no Skuffen graph backend and no people-graph upload.
-              </p>
+              <p class="lede">No people yet</p>
             </div>
           } @else {
             <div class="map-stage graph-stage">
@@ -735,24 +708,15 @@
       } @else if (panel === "places") {
         <section class="sheet places-sheet" data-places>
           <header class="sheet-head">
-            <div>
-              <p class="kicker">Local OKF</p>
-              <h1>Places</h1>
-            </div>
+            <h1>Places</h1>
             <div class="row">
-              <button class="brass" type="button" data-add-place (click)="startCreatePlace()">Add place</button>
-              <button class="ghost" type="button" (click)="leaveSheet()">Back</button>
+              <button mat-flat-button type="button" data-add-place (click)="startCreatePlace()">Add place</button>
+              <button mat-button type="button" (click)="leaveSheet()">Back</button>
             </div>
           </header>
-          <p class="whisper">
-            Path is identity (<code>places/&lt;slug&gt;/place.md</code>). Records stay on this machine.
-            Geocode and map tiles may use the public network. There is no Skuffen backend.
-          </p>
           @if (people.places().length === 0) {
             <div class="map-empty" data-places-empty>
-              <p class="kicker">{{ placesEmptyCopy.kicker }}</p>
               <p class="lede">{{ placesEmptyCopy.lede }}</p>
-              <p class="whisper">{{ placesEmptyCopy.whisper }}</p>
             </div>
           } @else {
             <nav class="place-list" data-place-list aria-label="Places">
@@ -783,24 +747,27 @@
       } @else if (panel === "place-create") {
         <section class="sheet card-form" data-create-place>
           <h1>Where?</h1>
-          <label>Name <input [(ngModel)]="placeDraft.title" name="place-name" autocomplete="off" data-place-name /></label>
-          <label>Notes <textarea [(ngModel)]="placeDraft.notes" name="place-notes" rows="3" data-place-notes></textarea></label>
-          <p class="whisper">
-            Coordinates are optional. Search an address or drop a pin. Written to
-            <code>places/&lt;slug&gt;/place.md</code> on this machine.
-          </p>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Name</mat-label>
+            <input matInput [(ngModel)]="placeDraft.title" name="place-name" autocomplete="off" data-place-name />
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Notes</mat-label>
+            <textarea matInput [(ngModel)]="placeDraft.notes" name="place-notes" rows="3" data-place-notes></textarea>
+          </mat-form-field>
           <div class="row">
-            <label class="grow">
-              Address
+            <mat-form-field class="grow" appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Address</mat-label>
               <input
+                matInput
                 [(ngModel)]="addressQuery"
                 name="place-address"
                 placeholder="Search an address"
                 data-place-address
                 (keyup.enter)="searchAddress()"
               />
-            </label>
-            <button type="button" (click)="searchAddress()" [disabled]="geocodeBusy || !addressQuery.trim()">
+            </mat-form-field>
+            <button mat-stroked-button type="button" (click)="searchAddress()" [disabled]="geocodeBusy || !addressQuery.trim()">
               {{ geocodeBusy ? "Searching…" : "Search" }}
             </button>
           </div>
@@ -811,7 +778,7 @@
             <ul class="geocode-hits">
               @for (hit of geocodeHits; track hit.label) {
                 <li>
-                  <button type="button" (click)="pickGeocodeHit(hit)">{{ hit.label }}</button>
+                  <button mat-stroked-button type="button" (click)="pickGeocodeHit(hit)">{{ hit.label }}</button>
                 </li>
               }
             </ul>
@@ -831,7 +798,7 @@
           }
           <div class="row create-actions">
             <button
-              class="brass"
+              mat-flat-button
               type="button"
               data-save-place
               (click)="savePlaceDraft()"
@@ -839,27 +806,19 @@
             >
               Add place
             </button>
-            <button class="ghost" type="button" (click)="openPlaces()">Cancel</button>
+            <button mat-button type="button" (click)="openPlaces()">Cancel</button>
           </div>
         </section>
       } @else if (panel === "memory") {
         <section class="sheet memory-sheet" data-demo="memory-panel">
           <header class="sheet-head">
-            <div>
-              <p class="kicker">Inspectable — not a hidden store</p>
-              <h1>Memory</h1>
-            </div>
-            <button class="ghost" type="button" (click)="leaveSheet()">Back</button>
+            <h1>Memory</h1>
+            <button mat-button type="button" (click)="leaveSheet()">Back</button>
           </header>
-          <p class="whisper">
-            What the model was told and what it wanted to write. Pending facts live in local app
-            settings, not the OKF bundle, until you Accept. Public web is hostile until you accept.
-            Nothing is written unattended.
-          </p>
 
           <h2>Pending facts</h2>
           @if (pendingMemoryGroups().length === 0) {
-            <p class="whisper">Nothing pending. Research or Follow only proposes.</p>
+            <p class="whisper">Nothing pending.</p>
           } @else {
             @for (group of pendingMemoryGroups(); track group.proposalId) {
               <article class="memory-group">
@@ -888,13 +847,13 @@
                           <p>{{ fact.wantedSummary }}</p>
                         </span>
                       </label>
-                      <button class="ghost" type="button" (click)="reject(fact.suggestion)">Dismiss</button>
+                      <button mat-button type="button" (click)="reject(fact.suggestion)">Dismiss</button>
                     </article>
                   }
                 </div>
                 <div class="row">
                   <button
-                    class="brass"
+                    mat-flat-button
                     type="button"
                     (click)="acceptMemoryGroup(group)"
                     [disabled]="!group.facts.some((fact) => checkedSuggestionIds.has(fact.id))"
@@ -903,7 +862,7 @@
                     Accept selected
                   </button>
                   <button
-                    class="ghost"
+                    mat-button
                     type="button"
                     (click)="dismissMemoryGroup(group)"
                     [attr.data-demo]="demoMode ? 'memory-dismiss' : null"
@@ -917,7 +876,7 @@
 
           <h2>Follow schedules</h2>
           @if (followMemoryRows().length === 0) {
-            <p class="whisper">No one is followed. Follow only re-proposes; it never auto-writes.</p>
+            <p class="whisper">No one is followed.</p>
           } @else {
             <ul class="memory-follows">
               @for (watched of followMemoryRows(); track watched.id) {
@@ -929,7 +888,7 @@
                       · Next {{ watched.nextRunAt || "pending" }}
                     </small>
                   </div>
-                  <button class="ghost" type="button" (click)="unfollowFromMemory(watched.slug)">
+                  <button mat-button type="button" (click)="unfollowFromMemory(watched.slug)">
                     Unfollow
                   </button>
                 </li>
@@ -939,10 +898,10 @@
 
           <h2>What the model was told</h2>
           @if (toldMemoryRows().length === 0) {
-            <p class="whisper">No prompt log yet. You can delete this log anytime — it is not OKF.</p>
+            <p class="whisper">No prompt log yet.</p>
           } @else {
             <div class="row">
-              <button class="ghost" type="button" (click)="follow.clearTold()">Clear log</button>
+              <button mat-button type="button" (click)="follow.clearTold()">Clear log</button>
             </div>
             @for (turn of toldMemoryRows(); track turn.id) {
               <article class="memory-told">
@@ -954,7 +913,7 @@
                 @if (turn.wantedSummaries.length) {
                   <p class="whisper">Wanted to write: {{ turn.wantedSummaries.join(" · ") }}</p>
                 }
-                <button class="ghost" type="button" (click)="follow.deleteTold(turn.id)">Delete</button>
+                <button mat-button type="button" (click)="follow.deleteTold(turn.id)">Delete</button>
               </article>
             }
           }
@@ -962,21 +921,15 @@
       } @else if (panel === "brief") {
         <section class="sheet brief-sheet" data-demo="brief-panel">
           <header class="sheet-head">
-            <div>
-              <p class="kicker">From this machine — nothing is sent</p>
-              <h1>Pre-meeting brief</h1>
-            </div>
-            <button class="ghost" type="button" (click)="dismissBrief()">Back</button>
+            <h1>Pre-meeting brief</h1>
+            <button mat-button type="button" (click)="dismissBrief()">Back</button>
           </header>
-          <p class="whisper">
-            Assembled from notes, social, place, and pending proposals already on disk.
-            Paste an event if you want. Optional polish never auto-sends.
-            Nothing is written until you Accept.
-          </p>
+          <p class="whisper">Nothing is written until you Accept.</p>
           @if (!people.selected()) {
-            <label>
-              Who
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>Who</mat-label>
               <select
+                matNativeControl
                 [ngModel]="''"
                 (ngModelChange)="openBrief($event)"
                 name="brief-person"
@@ -987,11 +940,12 @@
                   <option [value]="item.slug">{{ item.title }}</option>
                 }
               </select>
-            </label>
+            </mat-form-field>
           }
-          <label>
-            Paste an event (optional)
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Event (optional)</mat-label>
             <textarea
+              matInput
               [ngModel]="briefEventPaste"
               (ngModelChange)="onBriefEventPaste($event)"
               name="brief-event"
@@ -999,7 +953,7 @@
               placeholder="Coffee with Ada Demo&#10;Tuesday 10:00&#10;Golden Gate Park"
               [attr.data-demo]="demoMode ? 'brief-event' : null"
             ></textarea>
-          </label>
+          </mat-form-field>
           @if (notice) {
             <p class="notice">{{ notice }}</p>
           }
@@ -1075,6 +1029,7 @@
             </article>
             <div class="row">
               <button
+                mat-stroked-button
                 type="button"
                 (click)="polishBrief()"
                 [disabled]="providers.busy()"
@@ -1083,7 +1038,7 @@
                 {{ providers.busy() ? "Polishing…" : "Polish with " + providerLabel() }}
               </button>
               <button
-                class="brass"
+                mat-flat-button
                 type="button"
                 (click)="acceptBrief()"
                 [attr.data-demo]="demoMode ? 'brief-accept' : null"
@@ -1091,7 +1046,7 @@
                 Accept — save as note
               </button>
               <button
-                class="ghost"
+                mat-button
                 type="button"
                 (click)="dismissBrief()"
                 [attr.data-demo]="demoMode ? 'brief-dismiss' : null"
@@ -1099,20 +1054,16 @@
                 Dismiss
               </button>
             </div>
-            <p class="whisper">Accept writes a note on this card. Dismiss writes nothing. Never auto-sends.</p>
           } @else if (people.people().length === 0) {
-            <p class="whisper">Add a person first. A brief is assembled from a card already on disk.</p>
+            <p class="whisper">Add a person first.</p>
           }
         </section>
       } @else if (panel === "shuffle") {
         <section class="sheet shuffle-sheet" data-demo="shuffle-panel">
           <header class="sheet-head">
-            <div>
-              <p class="kicker">From this machine — nothing is sent</p>
-              <h1>Reconnect Shuffle</h1>
-            </div>
+            <h1>Reconnect Shuffle</h1>
             <button
-              class="ghost"
+              mat-button
               type="button"
               (click)="dismissShuffle()"
               [attr.data-demo]="demoMode ? 'shuffle-back' : null"
@@ -1120,11 +1071,7 @@
               Back
             </button>
           </header>
-          <p class="whisper">
-            Two local suggestions a day from last notes, last accept, follow, and recency on each card.
-            No cloud scoring of who matters. Pick one for an optional draft. Never auto-sends.
-            Skip and Dismiss write nothing. Accept saves the draft as a note.
-          </p>
+          <p class="whisper">Never auto-sends.</p>
           @if (notice) {
             <p class="notice">{{ notice }}</p>
           }
@@ -1145,19 +1092,21 @@
                   </li>
                 }
               </ul>
-              <label>
-                Optional reconnect draft
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Draft</mat-label>
                 <textarea
+                  matInput
                   [ngModel]="draft.body"
                   (ngModelChange)="onReconnectDraftChange($event)"
                   name="shuffle-draft"
                   rows="8"
                   [attr.data-demo]="demoMode ? 'shuffle-draft-text' : null"
                 ></textarea>
-              </label>
+              </mat-form-field>
             </article>
             <div class="row">
               <button
+                mat-stroked-button
                 type="button"
                 (click)="polishShuffleDraft()"
                 [disabled]="providers.busy()"
@@ -1166,7 +1115,7 @@
                 {{ providers.busy() ? "Polishing…" : "Polish with " + providerLabel() }}
               </button>
               <button
-                class="brass"
+                mat-flat-button
                 type="button"
                 (click)="acceptShuffle()"
                 [disabled]="!draft.body.trim()"
@@ -1175,6 +1124,7 @@
                 Accept — save draft
               </button>
               <button
+                mat-button
                 type="button"
                 (click)="skipShuffle(pickedShuffle.slug)"
                 [attr.data-demo]="demoMode ? 'shuffle-skip' : null"
@@ -1182,7 +1132,7 @@
                 Skip
               </button>
               <button
-                class="ghost"
+                mat-button
                 type="button"
                 (click)="dismissShuffle()"
                 [attr.data-demo]="demoMode ? 'shuffle-dismiss' : null"
@@ -1190,7 +1140,6 @@
                 Dismiss
               </button>
             </div>
-            <p class="whisper">Accept writes a note on this card. Skip and Dismiss write nothing. Never auto-sends.</p>
           } @else if (shuffleSuggestions.length) {
             <div class="offers" data-demo="shuffle-deck">
               @for (item of shuffleSuggestions; track item.id) {
@@ -1206,7 +1155,7 @@
                   </span>
                   <div class="row">
                     <button
-                      class="brass"
+                      mat-flat-button
                       type="button"
                       (click)="pickShuffle(item.slug)"
                       [attr.data-demo]="demoMode ? 'shuffle-pick-' + item.slug : null"
@@ -1214,7 +1163,7 @@
                       Pick
                     </button>
                     <button
-                      class="ghost"
+                      mat-button
                       type="button"
                       (click)="skipShuffle(item.slug)"
                       [attr.data-demo]="demoMode ? 'shuffle-skip-' + item.slug : null"
@@ -1225,9 +1174,8 @@
                 </article>
               }
             </div>
-            <p class="whisper">Pick one person. The people-graph stays on this machine.</p>
           } @else if (people.people().length === 0) {
-            <p class="whisper">Add a person first. Suggestions come from notes already on disk.</p>
+            <p class="whisper">Add a person first.</p>
             @if (demoMode) {
               <button
                 class="demo-quiet"
@@ -1239,7 +1187,7 @@
               </button>
             }
           } @else {
-            <p class="whisper">No more local reconnects in this deck. Skip wrote nothing.</p>
+            <p class="whisper">No more reconnects in this deck.</p>
             @if (demoMode && people.people().length < 2) {
               <button
                 class="demo-quiet"
@@ -1255,12 +1203,9 @@
       } @else if (panel === "commitments") {
         <section class="sheet commitments-sheet" data-demo="commitments-panel">
           <header class="sheet-head">
-            <div>
-              <p class="kicker">From this machine — nothing is sent</p>
-              <h1>Commitments</h1>
-            </div>
+            <h1>Commitments</h1>
             <button
-              class="ghost"
+              mat-button
               type="button"
               (click)="closeCommitments()"
               [attr.data-demo]="demoMode ? 'commitments-back' : null"
@@ -1268,11 +1213,7 @@
               Back
             </button>
           </header>
-          <p class="whisper">
-            What you promised, across people, from notes and captures you already Accepted.
-            Local dates only. Never auto-sends. Never email or SMS. Mark done or drop is explicit.
-            Propose from a note or capture: check or uncheck, Accept writes. Dismiss writes nothing.
-          </p>
+          <p class="whisper">Never auto-sends.</p>
           @if (notice) {
             <p class="notice">{{ notice }}</p>
           }
@@ -1292,11 +1233,10 @@
                         · due {{ row.dueDate }}
                       }
                     </small>
-                    <p>On this machine. Nothing was sent.</p>
                   </span>
                   <div class="row">
                     <button
-                      class="brass"
+                      mat-flat-button
                       type="button"
                       (click)="markCommitmentDone(row)"
                       [attr.data-demo]="demoMode ? 'commitment-done-' + row.slug : null"
@@ -1304,7 +1244,7 @@
                       Mark done
                     </button>
                     <button
-                      class="ghost"
+                      mat-button
                       type="button"
                       (click)="dropCommitment(row)"
                       [attr.data-demo]="demoMode ? 'commitment-drop-' + row.slug : null"
@@ -1328,15 +1268,11 @@
               </button>
             }
           }
-          <h2>Propose from a note or capture</h2>
-          <p class="whisper">
-            Extraction stays on
-            {{ commitmentPerson()?.title || "one person" }}
-            — never the full graph. Accept is the only OKF write.
-          </p>
-          <label>
-            Capture or note
+          <h2>Propose from a note</h2>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Note</mat-label>
             <textarea
+              matInput
               [ngModel]="commitmentSourceNote"
               (ngModelChange)="commitmentSourceNote = $event"
               name="commitment-source"
@@ -1344,9 +1280,10 @@
               placeholder="I promised to send the park slip by 2026-09-06."
               [attr.data-demo]="demoMode ? 'commitment-source' : null"
             ></textarea>
-          </label>
+          </mat-form-field>
           <div class="row">
             <button
+              mat-stroked-button
               type="button"
               (click)="proposeCommitmentsFromSource()"
               [disabled]="!commitmentSourceNote.trim() || !commitmentPerson()"
@@ -1355,6 +1292,7 @@
               Propose from this note
             </button>
             <button
+              mat-stroked-button
               type="button"
               (click)="proposeCommitmentsFromCard()"
               [disabled]="!commitmentPerson()"
@@ -1364,7 +1302,7 @@
             </button>
           </div>
           @if (commitmentProposal) {
-            <p class="whisper">Check promises. Dismiss writes nothing. Never auto-sends.</p>
+            <p class="whisper">Never auto-sends.</p>
             @if (commitmentProposal.items.length) {
               <label class="follow-line">
                 <input
@@ -1398,11 +1336,11 @@
                 }
               </div>
             } @else {
-              <p class="whisper">No promises in that note. Dismiss writes nothing.</p>
+              <p class="whisper">No promises in that note.</p>
             }
             <div class="row">
               <button
-                class="brass"
+                mat-flat-button
                 type="button"
                 (click)="acceptCommitments()"
                 [disabled]="!commitmentHasChecked()"
@@ -1411,7 +1349,7 @@
                 Accept — save commitments
               </button>
               <button
-                class="ghost"
+                mat-button
                 type="button"
                 (click)="dismissCommitmentProposal()"
                 [attr.data-demo]="demoMode ? 'commitment-dismiss' : null"
@@ -1419,26 +1357,19 @@
                 Dismiss
               </button>
             </div>
-            <p class="whisper">Accept writes a commitment note on that card. Dismiss writes nothing. Never auto-sends.</p>
           }
         </section>
       } @else if (panel === "capture") {
         <section class="sheet capture-sheet" data-demo="capture-panel">
           <header class="sheet-head">
-            <div>
-              <p class="kicker">Propose only — nothing is written until you Accept</p>
-              <h1>Capture</h1>
-            </div>
-            <button class="ghost" type="button" (click)="dismissCapture()">Back</button>
+            <h1>Capture</h1>
+            <button mat-button type="button" (click)="dismissCapture()">Back</button>
           </header>
-          <p class="whisper">
-            Paste a voice or text note. Desktop can record through the WebView mic and send
-            transcript text only to the connected Grok or Gemini. Audio is dropped. The prompt
-            is this capture — never the people-graph. Nothing is written until you Accept.
-          </p>
-          <label>
-            Voice or text note
+          <p class="whisper">Nothing is written until you Accept.</p>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Note</mat-label>
             <textarea
+              matInput
               #captureField
               [ngModel]="captureNote"
               (ngModelChange)="captureNote = $event"
@@ -1447,23 +1378,20 @@
               placeholder="Met Ada Demo at Golden Gate Park Tuesday. Follow up about the land-plot."
               [attr.data-demo]="demoMode ? 'capture-note' : null"
             ></textarea>
-          </label>
+          </mat-form-field>
           <div class="row">
             @if (canRecordCapture()) {
               <button
+                mat-stroked-button
                 type="button"
                 [class.on]="captureRecording"
                 (click)="captureRecording ? stopCaptureRecording() : startCaptureRecording()"
               >
                 {{ captureRecording ? "Stop" : "Record" }}
               </button>
-            } @else if (!demoMode) {
-              <p class="whisper">
-                {{ desktop ? "Mic needs a WebView that can transcribe locally." : "Preview: paste a note. Real mic is desktop-only." }}
-              </p>
             }
             <button
-              class="brass"
+              mat-flat-button
               type="button"
               (click)="proposeCapture()"
               [disabled]="!captureNote.trim() || providers.busy()"
@@ -1479,14 +1407,14 @@
             <p class="error">{{ providers.error() }}</p>
           }
           @if (providers.busy() && !captureProposal) {
-            <p class="whisper">Structuring this capture… Nothing is written yet.</p>
+            <p class="whisper">Structuring…</p>
           } @else if (showCaptureEmpty()) {
             <div class="research-empty" data-capture-empty>
               <p class="whisper">{{ captureNeedsProvider }}</p>
               <p class="whisper">Nothing is written until you accept.</p>
             </div>
           } @else if (captureProposal) {
-            <p class="whisper">Check people, dates, and follow-ups. Dismiss writes nothing.</p>
+            <p class="whisper">Nothing is written until you accept.</p>
             <label class="follow-line">
               <input
                 type="checkbox"
@@ -1515,16 +1443,16 @@
                       <p>{{ captureItemLabel(entry.id) }}</p>
                     </span>
                   </label>
-                  <button class="ghost" type="button" (click)="deleteCaptureChoice(entry.id)">Delete</button>
+                  <button mat-button type="button" (click)="deleteCaptureChoice(entry.id)">Delete</button>
                 </article>
               }
             </div>
             @if (captureProposal.items.length === 0) {
-              <p class="whisper">Every proposed item was deleted. Dismiss writes nothing.</p>
+              <p class="whisper">Every proposed item was deleted.</p>
             }
             <div class="row">
               <button
-                class="brass"
+                mat-flat-button
                 type="button"
                 (click)="acceptCapture()"
                 [disabled]="!captureHasChecked() || providers.busy()"
@@ -1533,7 +1461,7 @@
                 Accept selected
               </button>
               <button
-                class="ghost"
+                mat-button
                 type="button"
                 (click)="dismissCapture()"
                 [attr.data-demo]="demoMode ? 'capture-dismiss' : null"
@@ -1541,15 +1469,18 @@
                 Dismiss
               </button>
             </div>
-            <p class="whisper">Accept writes checked people, dates, and follow-ups. Dismiss writes nothing. Never auto-sends.</p>
           }
         </section>
       } @else if (panel === "create" || panel === "edit") {
         <section class="sheet card-form" data-create-form>
           <h1>{{ panel === "create" ? "Who?" : "Edit card" }}</h1>
-          <label>Name <input #nameField [(ngModel)]="draft.title" name="person-name" autocomplete="off" /></label>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Name</mat-label>
+            <input matInput #nameField [(ngModel)]="draft.title" name="person-name" autocomplete="off" />
+          </mat-form-field>
           @if (panel === "create") {
             <button
+              mat-stroked-button
               type="button"
               data-ai-search
               (click)="researchDraftName()"
@@ -1564,19 +1495,37 @@
           }
           @if (showMore || panel === "edit") {
             <div class="grid">
-              <label>How you know them <input [(ngModel)]="draft.description" /></label>
-              <label>Given name <input [(ngModel)]="draft.givenName" /></label>
-              <label>Family name <input [(ngModel)]="draft.familyName" /></label>
-              <label>Email <input [(ngModel)]="draft.email" /></label>
-              <label>Phone <input [(ngModel)]="draft.phone" /></label>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>How you know them</mat-label>
+                <input matInput [(ngModel)]="draft.description" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Given name</mat-label>
+                <input matInput [(ngModel)]="draft.givenName" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Family name</mat-label>
+                <input matInput [(ngModel)]="draft.familyName" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Email</mat-label>
+                <input matInput [(ngModel)]="draft.email" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Phone</mat-label>
+                <input matInput [(ngModel)]="draft.phone" />
+              </mat-form-field>
             </div>
-            <label>About <textarea [(ngModel)]="draft.body" rows="5"></textarea></label>
+            <mat-form-field appearance="outline" subscriptSizing="dynamic">
+              <mat-label>About</mat-label>
+              <textarea matInput [(ngModel)]="draft.body" rows="5"></textarea>
+            </mat-form-field>
           } @else {
-            <button class="ghost more-toggle" type="button" data-create-more (click)="showMore = true">More</button>
+            <button mat-button class="more-toggle" type="button" data-create-more (click)="showMore = true">More</button>
           }
           <div class="row create-actions">
             <button
-              class="brass"
+              mat-flat-button
               type="button"
               (click)="saveDraft()"
               [disabled]="!draft.title.trim()"
@@ -1584,7 +1533,7 @@
             >
               {{ panel === "create" ? "Add person" : "Save" }}
             </button>
-            <button class="ghost" type="button" (click)="leaveSheet()">Cancel</button>
+            <button mat-button type="button" (click)="leaveSheet()">Cancel</button>
           </div>
         </section>
       } @else if (panel === "propose") {
@@ -1594,12 +1543,8 @@
               <p class="kicker">Proposed card — not saved yet</p>
               <h1>{{ nameProposal?.query || draft.title }}</h1>
             </div>
-            <button class="ghost" type="button" (click)="dismissProposal()">Dismiss</button>
+            <button mat-button type="button" (click)="dismissProposal()">Dismiss</button>
           </header>
-          <p class="whisper">
-            Public facts only. Check what belongs, delete what is wrong, then Accept selected.
-            Nothing is written until you accept.
-          </p>
           @if (actionError) {
             <p class="error">{{ actionError }}</p>
           }
@@ -1656,40 +1601,35 @@
                       }
                     </span>
                   </label>
-                  <button class="ghost" type="button" (click)="deleteProposalFact(fact.id)">Delete</button>
+                  <button mat-button type="button" (click)="deleteProposalFact(fact.id)">Delete</button>
                 </article>
               }
             </div>
             @if (nameProposal.facts.length === 0) {
-              <p class="whisper">Every proposed fact was deleted. Dismiss writes nothing.</p>
+              <p class="whisper">Every proposed fact was deleted.</p>
             }
             <div class="row">
-              <button
-                class="brass"
+              <button mat-flat-button
                 type="button"
                 (click)="acceptNameProposal()"
                 [disabled]="!proposalHasChecked() || providers.busy()"
               >
                 Accept selected
               </button>
-              <button class="ghost" type="button" (click)="dismissProposal()">Reject</button>
+              <button mat-button type="button" (click)="dismissProposal()">Reject</button>
             </div>
           }
         </section>
       } @else if (panel === "delete" && pendingDelete; as doomed) {
         <section class="sheet" data-delete-confirm>
           <header class="sheet-head">
-            <div>
-              <p class="kicker">Delete from this local graph</p>
-              <h1>Delete {{ doomed.title }}?</h1>
-            </div>
-            <button class="ghost" type="button" (click)="cancelDelete()" data-delete-cancel>Cancel</button>
+            <h1>Delete {{ doomed.title }}?</h1>
+            <button mat-button type="button" (click)="cancelDelete()" data-delete-cancel>Cancel</button>
           </header>
           <p class="lede">
             Removes
             <code>{{ doomed.path }}</code>
-            and their folder from this OKF bundle. Follow and memory for this card go away.
-            Nothing is uploaded.
+            from this machine. Nothing is uploaded.
           </p>
           @if (self.isSelf(doomed.slug)) {
             <p class="whisper">This card is marked This is me. Deleting it clears that mark.</p>
@@ -1698,8 +1638,7 @@
             <p class="error">{{ actionError }}</p>
           }
           <div class="row">
-            <button
-              class="danger"
+            <button mat-flat-button color="warn"
               type="button"
               (click)="confirmDelete()"
               data-delete-confirm-write
@@ -1707,7 +1646,7 @@
             >
               Delete
             </button>
-            <button class="ghost" type="button" (click)="cancelDelete()">Keep</button>
+            <button mat-button type="button" (click)="cancelDelete()">Keep</button>
           </div>
         </section>
       } @else if (panel === "merge" && mergeProposal) {
@@ -1717,12 +1656,10 @@
               <p class="kicker">Proposed merge — nothing happens until you Accept</p>
               <h1>{{ mergeProposal.keeperTitle }} ← {{ mergeProposal.incomingTitle }}</h1>
             </div>
-            <button class="ghost" type="button" (click)="closeMergeSheet()">Back</button>
+            <button mat-button type="button" (click)="closeMergeSheet()">Back</button>
           </header>
           <p class="whisper">
-            These cards look like the same human ({{ mergeOverlapLabel() }}).
-            Name alone is never enough. Check fields to keep from the other card, then Accept.
-            Dismiss or Keep both leaves both cards. Nothing merges until you accept.
+            {{ mergeOverlapLabel() }}. Nothing merges until you accept.
           </p>
           @if (notice) {
             <p class="notice">{{ notice }}</p>
@@ -1751,7 +1688,7 @@
                       <p>{{ field.value }}</p>
                     </span>
                   </label>
-                  <button class="ghost" type="button" (click)="deleteMergeChoice(field.id)">Drop</button>
+                  <button mat-button type="button" (click)="deleteMergeChoice(field.id)">Drop</button>
                 </article>
               }
             </div>
@@ -1759,23 +1696,21 @@
             <p class="whisper">No extra fields to copy. Accept still folds the other card into this one.</p>
           }
           <div class="row">
-            <button
-              class="brass"
+            <button mat-flat-button
               type="button"
               (click)="acceptMerge()"
               [attr.data-demo]="demoMode ? 'merge-accept' : null"
             >
               Accept merge
             </button>
-            <button
+            <button mat-stroked-button
               type="button"
               (click)="keepBothPeople()"
               [attr.data-demo]="demoMode ? 'merge-keep-both' : null"
             >
               Keep both
             </button>
-            <button
-              class="ghost"
+            <button mat-button
               type="button"
               (click)="dismissMerge()"
               [attr.data-demo]="demoMode ? 'merge-dismiss' : null"
@@ -1787,7 +1722,7 @@
       } @else if (people.selectedPlace(); as place) {
         <section class="file" data-place-card>
           <nav class="file-nav">
-            <button class="ghost back" type="button" (click)="closePlaceCard()">Places</button>
+            <button mat-button class=" back" type="button" (click)="closePlaceCard()">Places</button>
           </nav>
           <article class="card">
             <header class="nameplate">
@@ -1814,11 +1749,11 @@
             <section class="slips">
               <h2>People</h2>
               @if (!place.people.length) {
-                <p class="whisper">No one linked yet. Open a person card to add lives / works / met-at.</p>
+                <p class="whisper">No one linked yet.</p>
               }
               @for (link of place.people; track link.slug + link.role) {
                 <article [attr.data-place-person]="link.slug">
-                  <button type="button" class="ghost" (click)="openBySlug(link.slug)">
+                  <button mat-button type="button" (click)="openBySlug(link.slug)">
                     <strong>{{ link.title }}</strong>
                     <small>{{ roleLabelForPlace(link.role) }}</small>
                   </button>
@@ -1828,7 +1763,7 @@
             <section class="slips">
               <h2>Files</h2>
               @if (!place.files.length && !place.documents.length) {
-                <p class="whisper">No files on this Place. Documents can link here.</p>
+                <p class="whisper">No files yet.</p>
               }
               @for (file of place.files; track file.id) {
                 <article>
@@ -1841,25 +1776,17 @@
                 </article>
               }
             </section>
-            <p class="whisper">
-              Written to <code>{{ place.path }}</code>. Never uploaded. No land-plot kind.
-            </p>
           </article>
         </section>
       } @else if (empty()) {
         <section class="invite">
           <img src="assets/skuffen-icon.png" alt="Skuffen" />
           <h1>No people yet</h1>
-          <p class="lede">
-            Add a person to start the local graph. Filter finds people already here.
-          </p>
           @if (notice) {
             <p class="notice">{{ notice }}</p>
           }
-          <p class="whisper">Need Grok or Gemini? Menu holds Providers. Ctrl+, opens Menu. / finds someone.</p>
           <div class="invite-actions">
-            <button
-              class="brass"
+            <button mat-flat-button
               type="button"
               (click)="startCreate()"
               data-add-person="empty"
@@ -1867,7 +1794,7 @@
             >
               Add person
             </button>
-            <button type="button" (click)="openCapture()" [attr.data-demo]="demoMode ? 'capture-empty' : null">
+            <button mat-stroked-button type="button" (click)="openCapture()" [attr.data-demo]="demoMode ? 'capture-empty' : null">
               Capture a note
             </button>
           </div>
@@ -1885,7 +1812,7 @@
       } @else if (people.selected(); as person) {
         <section class="file">
           <nav class="file-nav">
-            <button class="ghost back" type="button" data-leave-person (click)="closeFile()">People</button>
+            <button mat-button class=" back" type="button" data-leave-person (click)="closeFile()">People</button>
           </nav>
 
           <article class="card">
@@ -1895,8 +1822,7 @@
                 {{ pair.keeper.slug === person.slug ? pair.incoming.title : pair.keeper.title }}
                 ({{ overlapLabels(pair.overlaps) }}).
                 Nothing merges until you Accept.
-                <button
-                  class="brass"
+                <button mat-flat-button
                   type="button"
                   (click)="openMergeReview(pair.keeper.slug, pair.incoming.slug)"
                   [attr.data-demo]="demoMode ? 'merge-review' : null"
@@ -1926,7 +1852,7 @@
                     {{ initials(person.title) }}
                   }
                 </span>
-                <button
+                <button mat-stroked-button
                   type="button"
                   (click)="pickProfileImage()"
                   [attr.data-demo]="demoMode ? 'set-profile-image' : null"
@@ -1934,7 +1860,7 @@
                   {{ person.image ? "Change profile image" : "Set profile image" }}
                 </button>
                 @if (canOfferDiorama(person)) {
-                  <button
+                  <button mat-stroked-button
                     type="button"
                     data-diorama-action
                     (click)="makeDiorama(person.slug)"
@@ -1948,7 +1874,7 @@
                 <p class="kicker">{{ person.path }}</p>
                 <h1>{{ person.title }}</h1>
                 @if (self.isSelf(person.slug)) {
-                  <p class="self-line" data-self-badge>This is me · this local copy</p>
+                  <p class="self-line" data-self-badge>This is me</p>
                 }
                 @if (person.description) {
                   <p class="lede">{{ person.description }}</p>
@@ -1986,9 +1912,10 @@
                       </button>
                     </span>
                   }
-                  <label class="tag-add">
-                    <span class="sr">Add tag</span>
+                  <mat-form-field class="tag-add" appearance="outline" subscriptSizing="dynamic">
+                    <mat-label>Add tag</mat-label>
                     <input
+                      matInput
                       data-person-tag-input
                       name="person-tag"
                       [ngModel]="tagDraft"
@@ -1997,12 +1924,12 @@
                       placeholder="Add tag"
                       autocomplete="off"
                     />
-                  </label>
+                  </mat-form-field>
                   @if (tagSuggestionsFor(person).length) {
                     <ul class="tag-suggest" data-person-tag-suggest-list>
                       @for (item of tagSuggestionsFor(person); track item) {
                         <li>
-                          <button
+                          <button mat-stroked-button
                             type="button"
                             [attr.data-person-tag-suggest]="item"
                             (click)="addPersonTag(item)"
@@ -2016,9 +1943,9 @@
                 </div>
               </div>
               <div class="nameplate-actions">
-                <button type="button" (click)="startEdit()">Edit</button>
+                <button mat-stroked-button type="button" (click)="startEdit()">Edit</button>
                 @if (!self.selfSlug()) {
-                  <button
+                  <button mat-stroked-button
                     type="button"
                     class="self-toggle"
                     aria-pressed="false"
@@ -2028,9 +1955,8 @@
                     This is me
                   </button>
                 }
-                <button
+                <button mat-flat-button color="warn"
                   type="button"
-                  class="danger"
                   (click)="askDelete(person)"
                   data-delete-person
                 >
@@ -2040,12 +1966,12 @@
             </header>
 
             <div class="facts" role="tablist">
-              <button type="button" [class.on]="fact === 'drop'" (click)="setFact('drop')">Drop</button>
-              <button type="button" [class.on]="fact === 'pin'" (click)="setFact('pin')" [attr.data-demo]="demoMode ? 'pin' : null">
+              <button mat-stroked-button type="button" [class.on]="fact === 'drop'" (click)="setFact('drop')">Drop</button>
+              <button mat-stroked-button type="button" [class.on]="fact === 'pin'" (click)="setFact('pin')" [attr.data-demo]="demoMode ? 'pin' : null">
                 Pin
               </button>
-              <button type="button" [class.on]="fact === 'note'" (click)="setFact('note')">Note</button>
-              <button
+              <button mat-stroked-button type="button" [class.on]="fact === 'note'" (click)="setFact('note')">Note</button>
+              <button mat-stroked-button
                 type="button"
                 [class.on]="fact === 'suggest'"
                 (click)="setFact('suggest')"
@@ -2053,7 +1979,7 @@
               >
                 Suggest
               </button>
-              <button
+              <button mat-stroked-button
                 type="button"
                 [class.on]="fact === 'timeline'"
                 (click)="openTimeline()"
@@ -2063,7 +1989,7 @@
               </button>
             </div>
             <div class="card-go">
-              <button
+              <button mat-stroked-button
                 type="button"
                 [class.on]="fact === 'commitments'"
                 (click)="openCardCommitments()"
@@ -2071,21 +1997,21 @@
               >
                 Commitments
               </button>
-              <button
+              <button mat-stroked-button
                 type="button"
                 (click)="openBrief(person.slug)"
                 [attr.data-demo]="demoMode ? 'brief' : null"
               >
                 Brief
               </button>
-              <button
+              <button mat-stroked-button
                 type="button"
                 (click)="openCapture(person.slug)"
                 [attr.data-demo]="demoMode ? 'capture-card' : null"
               >
                 Capture
               </button>
-              <button
+              <button mat-stroked-button
                 type="button"
                 (click)="openShuffle(person.slug)"
                 [attr.data-demo]="demoMode ? 'shuffle-card' : null"
@@ -2103,25 +2029,26 @@
 
             @if (fact === "drop") {
               <div class="surface drop" [class.hot]="dragging">
-                <p>Drop a photo or a file on this card. Files stay in the local OKF bundle.</p>
+                <p>Drop a photo or file.</p>
                 <div class="row">
-                  <button class="brass" type="button" (click)="addPhoto()" [attr.data-demo]="demoMode ? 'drop-add-photo' : null">
+                  <button mat-flat-button type="button" (click)="addPhoto()" [attr.data-demo]="demoMode ? 'drop-add-photo' : null">
                     Pick a photo
                   </button>
-                  <button type="button" (click)="pickAndAddDocument()" [attr.data-demo]="demoMode ? 'drop-add-file' : null">
+                  <button mat-stroked-button type="button" (click)="pickAndAddDocument()" [attr.data-demo]="demoMode ? 'drop-add-file' : null">
                     Add file
                   </button>
                 </div>
-                <label>Title <input [(ngModel)]="docTitle" name="doc-title" placeholder="File title" /></label>
-                <label>Note (optional) <textarea [(ngModel)]="docNote" name="doc-note" rows="2"></textarea></label>
+                <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                  <mat-label>Title</mat-label>
+                  <input matInput [(ngModel)]="docTitle" name="doc-title" placeholder="File title" />
+                </mat-form-field>
+                <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                  <mat-label>Note</mat-label>
+                  <textarea matInput [(ngModel)]="docNote" name="doc-note" rows="2"></textarea>
+                </mat-form-field>
               </div>
             } @else if (fact === "pin") {
               <div class="surface pin-scrap">
-                <p class="whisper">
-                  Search an address or drop a pin. Written to
-                  <code>people/{{ person.slug }}/place.md</code>
-                  on this machine. Tiles and geocode may use the network.
-                </p>
                 @if (person.location; as location) {
                   <p class="lede" [attr.data-okf-path]="location.path">
                     {{ location.address || location.title }}
@@ -2131,16 +2058,17 @@
                   <p class="whisper">No pin yet.</p>
                 }
                 <div class="row">
-                  <label class="grow">
-                    Address
+                  <mat-form-field class="grow" appearance="outline" subscriptSizing="dynamic">
+                    <mat-label>Address</mat-label>
                     <input
+                      matInput
                       [(ngModel)]="addressQuery"
                       name="person-address"
                       placeholder="Search an address"
                       (keyup.enter)="searchAddress()"
                     />
-                  </label>
-                  <button type="button" (click)="searchAddress()" [disabled]="geocodeBusy || !addressQuery.trim()">
+                  </mat-form-field>
+                  <button mat-stroked-button type="button" (click)="searchAddress()" [disabled]="geocodeBusy || !addressQuery.trim()">
                     {{ geocodeBusy ? "Searching…" : "Search" }}
                   </button>
                 </div>
@@ -2151,7 +2079,7 @@
                   <ul class="geocode-hits">
                     @for (hit of geocodeHits; track hit.label) {
                       <li>
-                        <button type="button" (click)="pickGeocodeHit(hit)">{{ hit.label }}</button>
+                        <button mat-stroked-button type="button" (click)="pickGeocodeHit(hit)">{{ hit.label }}</button>
                       </li>
                     }
                   </ul>
@@ -2166,8 +2094,7 @@
                   />
                 </div>
                 <div class="row">
-                  <button
-                    class="brass"
+                  <button mat-flat-button
                     type="button"
                     (click)="savePendingLocation(person.slug)"
                     [disabled]="!pendingPin"
@@ -2175,28 +2102,35 @@
                   >
                     Save pin
                   </button>
-                  <button type="button" class="ghost" (click)="clearPersonLocation()" [disabled]="!person.location">
+                  <button mat-button type="button" (click)="clearPersonLocation()" [disabled]="!person.location">
                     Clear pin
                   </button>
                 </div>
               </div>
             } @else if (fact === "note") {
               <form class="surface quick-note" (submit)="$event.preventDefault(); addNote()">
-                <textarea
-                  [(ngModel)]="noteBody"
-                  name="quick-note"
-                  rows="3"
-                  placeholder="A line about them"
-                ></textarea>
+                <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                  <mat-label>Note</mat-label>
+                  <textarea
+                    matInput
+                    [(ngModel)]="noteBody"
+                    name="quick-note"
+                    rows="3"
+                    placeholder="A line about them"
+                  ></textarea>
+                </mat-form-field>
                 <div class="row">
-                  <input [(ngModel)]="noteTitle" name="quick-note-title" placeholder="Title (optional)" />
-                  <button class="brass" type="submit" [disabled]="!noteBody.trim()">Pin note</button>
+                  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                    <mat-label>Title</mat-label>
+                    <input matInput [(ngModel)]="noteTitle" name="quick-note-title" placeholder="Title (optional)" />
+                  </mat-form-field>
+                  <button mat-flat-button type="submit" [disabled]="!noteBody.trim()">Pin note</button>
                 </div>
               </form>
             } @else if (fact === "suggest") {
               <div class="surface suggest">
                 <div class="row">
-                  <button
+                  <button mat-stroked-button
                     type="button"
                     (click)="ask()"
                     [disabled]="providers.busy()"
@@ -2204,8 +2138,7 @@
                   >
                     {{ providers.busy() ? "Listening…" : "Suggest facts" }}
                   </button>
-                  <button
-                    class="brass"
+                  <button mat-flat-button
                     type="button"
                     (click)="research()"
                     [disabled]="providers.busy()"
@@ -2215,10 +2148,10 @@
                   </button>
                   @if (bothProviders()) {
                     <div class="provider-switch">
-                      <button type="button" [class.on]="activeProvider() === 'grok'" (click)="chooseProvider('grok')">
+                      <button mat-stroked-button type="button" [class.on]="activeProvider() === 'grok'" (click)="chooseProvider('grok')">
                         Grok
                       </button>
-                      <button type="button" [class.on]="activeProvider() === 'gemini'" (click)="chooseProvider('gemini')">
+                      <button mat-stroked-button type="button" [class.on]="activeProvider() === 'gemini'" (click)="chooseProvider('gemini')">
                         Gemini
                       </button>
                     </div>
@@ -2226,11 +2159,6 @@
                     <span class="whisper">via {{ providerLabel() }}</span>
                   }
                 </div>
-                <p class="whisper">
-                  Research searches public web info. Follow re-runs that search on a local schedule.
-                  Propose only — never auto-write, never auto-send, never upload the graph.
-                  Menu → Memory lists every pending fact and what the model was told.
-                </p>
                 <label class="follow-line">
                   <input
                     type="checkbox"
@@ -2240,14 +2168,14 @@
                   Follow this person
                 </label>
                 @if (selectedFollow(); as watched) {
-                  <label>
-                    Interval
-                    <select [ngModel]="watched.interval" (ngModelChange)="setFollowInterval($event)">
+                  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                    <mat-label>Interval</mat-label>
+                    <select matNativeControl [ngModel]="watched.interval" (ngModelChange)="setFollowInterval($event)">
                       <option value="daily">Daily</option>
                       <option value="weekly">Weekly</option>
                       <option value="monthly">Monthly</option>
                     </select>
-                  </label>
+                  </mat-form-field>
                   <p class="whisper">
                     Last check: {{ watched.lastRunAt || "not yet" }}
                     · Next: {{ watched.nextRunAt || "pending" }}
@@ -2304,13 +2232,12 @@
                             }
                           </span>
                         </label>
-                        <button class="ghost" type="button" (click)="reject(item)">Delete</button>
+                        <button mat-button type="button" (click)="reject(item)">Delete</button>
                       </article>
                     }
                   </div>
                   <div class="row">
-                    <button
-                      class="brass"
+                    <button mat-flat-button
                       type="button"
                       (click)="acceptCheckedSuggestions()"
                       [disabled]="!hasCheckedSuggestions()"
@@ -2330,19 +2257,12 @@
               </div>
             } @else if (fact === "timeline") {
               <div class="surface" data-timeline-surface>
-                <p class="whisper">
-                  A view of this card on disk. File path stays identity. Nothing is written by
-                  opening Timeline.
-                </p>
+                <p class="whisper">Nothing is written by opening Timeline.</p>
               </div>
             } @else if (fact === "commitments") {
               <div class="surface" data-commitments-surface>
-                <p class="whisper">
-                  Promises on this card. File path stays identity. Opening this list writes nothing.
-                  Mark done writes a note. Drop stores a local skip. Nothing is sent.
-                </p>
                 <div class="row">
-                  <button
+                  <button mat-stroked-button
                     type="button"
                     (click)="openCommitments(person.slug)"
                     [attr.data-demo]="demoMode ? 'card-open-commitments' : null"
@@ -2360,7 +2280,7 @@
               aria-label="Person card sections"
             >
               @for (section of cardSections; track section) {
-                <button
+                <button mat-stroked-button
                   type="button"
                   role="tab"
                   [id]="cardTabId(section)"
@@ -2410,7 +2330,7 @@
                     @if (item.url) {
                       <a [href]="item.url" target="_blank" rel="noreferrer">{{ item.url }}</a>
                     }
-                    <button class="ghost" type="button" (click)="removeSocial(item.path)">Delete</button>
+                    <button mat-button type="button" (click)="removeSocial(item.path)">Delete</button>
                   </article>
                 }
                 @if (!person.social.length && !addingSocial) {
@@ -2418,16 +2338,25 @@
                 }
                 @if (addingSocial) {
                   <div class="grid">
-                    <label>Network <input [(ngModel)]="socialNetwork" placeholder="linkedin" /></label>
-                    <label>Handle <input [(ngModel)]="socialHandle" /></label>
-                    <label>URL <input [(ngModel)]="socialUrl" /></label>
+                    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                      <mat-label>Network</mat-label>
+                      <input matInput [(ngModel)]="socialNetwork" placeholder="linkedin" />
+                    </mat-form-field>
+                    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                      <mat-label>Handle</mat-label>
+                      <input matInput [(ngModel)]="socialHandle" />
+                    </mat-form-field>
+                    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                      <mat-label>URL</mat-label>
+                      <input matInput [(ngModel)]="socialUrl" />
+                    </mat-form-field>
                   </div>
                   <div class="row">
-                    <button type="button" (click)="addSocial()">Save thread</button>
-                    <button class="ghost" type="button" (click)="addingSocial = false">Cancel</button>
+                    <button mat-stroked-button type="button" (click)="addSocial()">Save thread</button>
+                    <button mat-button type="button" (click)="addingSocial = false">Cancel</button>
                   </div>
                 } @else {
-                  <button class="ghost" type="button" (click)="addingSocial = true">Add a thread</button>
+                  <button mat-button type="button" (click)="addingSocial = true">Add a thread</button>
                 }
               </section>
             </div>
@@ -2444,7 +2373,7 @@
               <section class="prints photo-gallery" data-photos>
                 <h2>Photos</h2>
                 <div class="row">
-                  <button
+                  <button mat-stroked-button
                     type="button"
                     (click)="addPhoto()"
                     [attr.data-demo]="demoMode ? 'add-photo' : null"
@@ -2483,9 +2412,9 @@
                           <h3>{{ photo.title }}</h3>
                           <div class="row">
                             @if (!isProfilePhoto(person, photo)) {
-                              <button type="button" (click)="usePhotoAsProfile(photo)">Use as profile</button>
+                              <button mat-stroked-button type="button" (click)="usePhotoAsProfile(photo)">Use as profile</button>
                             }
-                            <button class="ghost" type="button" (click)="removePhoto(photo)">Remove</button>
+                            <button mat-button type="button" (click)="removePhoto(photo)">Remove</button>
                           </div>
                         </div>
                       </article>
@@ -2509,7 +2438,7 @@
               <section class="prints file-gallery" data-files>
                 <h2>Files</h2>
                 <div class="row">
-                  <button
+                  <button mat-stroked-button
                     type="button"
                     (click)="pickAndAddDocument()"
                     [attr.data-demo]="demoMode ? 'add-file' : null"
@@ -2541,7 +2470,7 @@
                               <p>{{ doc.note }}</p>
                             }
                           </div>
-                          <button
+                          <button mat-stroked-button
                             type="button"
                             data-file-open
                             (click)="openDocument(doc)"
@@ -2570,7 +2499,7 @@
               <section class="slips" id="person-timeline" data-timeline>
                 <h2>Timeline</h2>
                 @for (row of selectedTimeline(); track row.id) {
-                  <button
+                  <button mat-stroked-button
                     type="button"
                     class="timeline-row"
                     (click)="openTimelineEvent(row)"
@@ -2607,8 +2536,8 @@
                     <strong>{{ row.what }}</strong>
                     <small>{{ row.dueDate || "no due date" }}</small>
                     <div class="row">
-                      <button class="brass" type="button" (click)="markCommitmentDone(row)">Mark done</button>
-                      <button class="ghost" type="button" (click)="dropCommitment(row)">Drop</button>
+                      <button mat-flat-button type="button" (click)="markCommitmentDone(row)">Mark done</button>
+                      <button mat-button type="button" (click)="dropCommitment(row)">Drop</button>
                     </div>
                   </article>
                 }
@@ -2629,23 +2558,17 @@
             >
               <section class="slips" data-relations>
                 <h2>Relations</h2>
-                <p class="whisper">
-                  Typed links to other people in this local graph. Written to
-                  <code>people/{{ person.slug }}/relations.md</code>.
-                  Both cards show the edge. Never uploaded.
-                </p>
                 @for (edge of person.relations; track edge.slug + edge.kind + edge.role) {
                   <article
                     [attr.data-relation-row]="edge.slug"
                     [attr.data-relation-kind]="edge.kind"
                     [attr.data-relation-role]="edge.role"
                   >
-                    <button type="button" class="ghost relation-open" (click)="openBySlug(edge.slug)">
+                    <button mat-button type="button" class="relation-open" (click)="openBySlug(edge.slug)">
                       <strong>{{ edge.title }}</strong>
                       <small>{{ kindLabelForRelation(edge.kind) }} · {{ roleLabelForRelation(edge.role) }}</small>
                     </button>
-                    <button
-                      class="ghost"
+                    <button mat-button
                       type="button"
                       data-remove-relation
                       (click)="removeRelation(edge)"
@@ -2659,18 +2582,19 @@
                 }
                 @if (addingRelation) {
                   <div class="grid" data-add-relation>
-                    <label>
-                      Person
-                      <select [(ngModel)]="relationTarget" name="relation-target" data-relation-target>
+                    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                      <mat-label>Person</mat-label>
+                      <select matNativeControl [(ngModel)]="relationTarget" name="relation-target" data-relation-target>
                         <option value="">Choose a person</option>
                         @for (other of relationOthers(person.slug); track other.slug) {
                           <option [value]="other.slug">{{ other.title }}</option>
                         }
                       </select>
-                    </label>
-                    <label>
-                      Kind
+                    </mat-form-field>
+                    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                      <mat-label>Kind</mat-label>
                       <select
+                        matNativeControl
                         [ngModel]="relationKind"
                         (ngModelChange)="onRelationKindChange($event)"
                         name="relation-kind"
@@ -2680,31 +2604,31 @@
                           <option [value]="kind">{{ kindLabelForRelation(kind) }}</option>
                         }
                       </select>
-                    </label>
-                    <label>
-                      Role
-                      <select [(ngModel)]="relationRole" name="relation-role" data-relation-role>
+                    </mat-form-field>
+                    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                      <mat-label>Role</mat-label>
+                      <select matNativeControl [(ngModel)]="relationRole" name="relation-role" data-relation-role>
                         @for (role of relationRoleChoices(); track role) {
                           <option [value]="role">{{ roleLabelForRelation(role) }}</option>
                         }
                         <option value="custom">Other (free text)</option>
                       </select>
-                    </label>
+                    </mat-form-field>
                     @if (relationRole === "custom") {
-                      <label>
-                        Family / business / other role
+                      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                        <mat-label>Role</mat-label>
                         <input
+                          matInput
                           [(ngModel)]="relationCustomRole"
                           name="relation-custom"
                           data-relation-custom
                           placeholder="cousin, landlord, …"
                         />
-                      </label>
+                      </mat-form-field>
                     }
                   </div>
                   <div class="row">
-                    <button
-                      class="brass"
+                    <button mat-flat-button
                       type="button"
                       data-relation-save
                       (click)="addRelation()"
@@ -2712,11 +2636,10 @@
                     >
                       Save relation
                     </button>
-                    <button class="ghost" type="button" (click)="addingRelation = false">Cancel</button>
+                    <button mat-button type="button" (click)="addingRelation = false">Cancel</button>
                   </div>
                 } @else {
-                  <button
-                    class="ghost"
+                  <button mat-button
                     type="button"
                     data-add-relation-open
                     (click)="addingRelation = true"
@@ -2737,22 +2660,16 @@
             >
               <section class="slips" data-person-places>
                 <h2>Places</h2>
-                <p class="whisper">
-                  Lives, works, or met-at a first-class Place. Written to
-                  <code>people/{{ person.slug }}/place-links.md</code>.
-                  Never uploaded. No land-plot kind.
-                </p>
                 @for (link of person.places; track link.slug + link.role) {
                   <article
                     [attr.data-place-link]="link.slug"
                     [attr.data-place-role]="link.role"
                   >
-                    <button type="button" class="ghost relation-open" (click)="openPlaceBySlug(link.slug)">
+                    <button mat-button type="button" class="relation-open" (click)="openPlaceBySlug(link.slug)">
                       <strong>{{ link.title }}</strong>
                       <small>{{ roleLabelForPlace(link.role) }}</small>
                     </button>
-                    <button
-                      class="ghost"
+                    <button mat-button
                       type="button"
                       data-remove-place-link
                       (click)="removePlaceLink(link)"
@@ -2766,27 +2683,26 @@
                 }
                 @if (addingPlaceLink) {
                   <div class="grid" data-add-place-link>
-                    <label>
-                      Place
-                      <select [(ngModel)]="placeLinkTarget" name="place-link-target" data-place-link-target>
+                    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                      <mat-label>Place</mat-label>
+                      <select matNativeControl [(ngModel)]="placeLinkTarget" name="place-link-target" data-place-link-target>
                         <option value="">Choose a place</option>
                         @for (place of placesForLink(); track place.slug) {
                           <option [value]="place.slug">{{ place.title }}</option>
                         }
                       </select>
-                    </label>
-                    <label>
-                      Role
-                      <select [(ngModel)]="placeLinkRole" name="place-link-role" data-place-link-role>
+                    </mat-form-field>
+                    <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                      <mat-label>Role</mat-label>
+                      <select matNativeControl [(ngModel)]="placeLinkRole" name="place-link-role" data-place-link-role>
                         @for (role of placeLinkRoles; track role) {
                           <option [value]="role">{{ roleLabelForPlace(role) }}</option>
                         }
                       </select>
-                    </label>
+                    </mat-form-field>
                   </div>
                   <div class="row">
-                    <button
-                      class="brass"
+                    <button mat-flat-button
                       type="button"
                       data-place-link-save
                       (click)="addPlaceLink()"
@@ -2794,11 +2710,10 @@
                     >
                       Save place link
                     </button>
-                    <button class="ghost" type="button" (click)="addingPlaceLink = false">Cancel</button>
+                    <button mat-button type="button" (click)="addingPlaceLink = false">Cancel</button>
                   </div>
                 } @else {
-                  <button
-                    class="ghost"
+                  <button mat-button
                     type="button"
                     data-add-place-link-open
                     (click)="addingPlaceLink = true"
@@ -2842,8 +2757,7 @@
             <p class="notice invite-line merge-banner">
               {{ mergeCandidates().length === 1 ? "Two cards" : "Some cards" }}
               may be the same person. Review the merge proposal — nothing merges until you Accept.
-              <button
-                class="brass"
+              <button mat-flat-button
                 type="button"
                 (click)="openMergeReview()"
                 [attr.data-demo]="demoMode ? 'merge-review' : null"
@@ -2854,9 +2768,7 @@
           }
           @if (people.people().length) {
             <p class="hint-line" data-demo="shuffle-banner">
-              Daily reconnects from notes on this machine. Nothing is sent.
-              <button
-                class="ghost"
+              <button mat-button
                 type="button"
                 (click)="openShuffle()"
                 [attr.data-demo]="demoMode ? 'shuffle-banner' : null"
@@ -2879,10 +2791,9 @@
       [style.left.px]="menu.x"
       [style.top.px]="menu.y"
     >
-      <button
+      <button mat-flat-button color="warn"
         type="button"
         role="menuitem"
-        class="danger"
         data-delete-person-menu
         (click)="askDeleteFromList(menu.slug)"
       >
