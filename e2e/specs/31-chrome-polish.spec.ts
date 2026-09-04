@@ -15,7 +15,7 @@ test("toolbar brand is a single-line Material treatment", async ({ demoPage: pag
   expect(box!.height).toBeLessThanOrEqual(56);
 });
 
-test("left-rail Find and Sort are full-width; relation chips stay on one row", async ({
+test("left-rail Find and Sort are full-width; relation chips sit in an even grid", async ({
   demoPage: page,
 }) => {
   await openDemo(page);
@@ -39,16 +39,16 @@ test("left-rail Find and Sort are full-width; relation chips stay on one row", a
   expect(sortBox!.width).toBeGreaterThan(180);
   expect(sortBox!.y).toBeGreaterThan(findBox!.y + findBox!.height - 8);
 
-  const filters = ["all", "family", "business", "other"] as const;
-  const tops: number[] = [];
-  for (const kind of filters) {
-    const chip = sidebar.locator(`[data-relation-filter='${kind}']`);
-    await expect(chip).toBeVisible();
-    const chipBox = await chip.boundingBox();
-    expect(chipBox, `${kind} filter should be laid out`).toBeTruthy();
-    tops.push(chipBox!.y);
-  }
-  expect(Math.max(...tops) - Math.min(...tops)).toBeLessThan(8);
+  const allBox = await sidebar.locator("[data-relation-filter='all']").boundingBox();
+  const familyBox = await sidebar.locator("[data-relation-filter='family']").boundingBox();
+  const businessBox = await sidebar.locator("[data-relation-filter='business']").boundingBox();
+  const otherBox = await sidebar.locator("[data-relation-filter='other']").boundingBox();
+  expect(allBox && familyBox && businessBox && otherBox, "relation chips should be laid out").toBeTruthy();
+  expect(Math.abs(allBox!.y - familyBox!.y)).toBeLessThan(8);
+  expect(Math.abs(businessBox!.y - otherBox!.y)).toBeLessThan(8);
+  expect(businessBox!.y).toBeGreaterThan(allBox!.y + 8);
+  expect(familyBox!.x).toBeGreaterThan(allBox!.x + 8);
+  expect(otherBox!.x).toBeGreaterThan(businessBox!.x + 8);
 
   await sidebar.locator("[data-relation-filter='family']").click();
   await expect(sidebar.locator("[data-person-row]")).toHaveCount(0);

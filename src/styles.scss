@@ -134,6 +134,27 @@ body {
   );
 }
 
+.kind-filters .mdc-evolution-chip-set__chips {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.3rem;
+  margin: 0;
+  min-width: 0;
+}
+
+.kind-filters .mat-mdc-chip,
+.kind-filters .mdc-evolution-chip {
+  margin: 0;
+  width: 100%;
+  max-width: none;
+}
+
+.kind-filters .mdc-evolution-chip__action--primary,
+.kind-filters .mdc-evolution-chip__cell {
+  width: 100%;
+  justify-content: center;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

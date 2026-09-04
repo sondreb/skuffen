@@ -330,17 +330,23 @@ button.on {
 }
 
 .kind-filters {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 0.3rem;
+  display: block;
   padding: 0 0.75rem 0.55rem;
-  overflow-x: auto;
-  scrollbar-width: thin;
 }
 
 .kind-filters .mdc-evolution-chip-set__chips {
-  flex-wrap: nowrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.3rem;
+  margin: 0;
+  min-width: 0;
+}
+
+.kind-filters .mat-mdc-chip,
+.kind-filters .mdc-evolution-chip {
+  margin: 0;
+  width: 100%;
+  max-width: none;
 }
 
 .sidebar.collapsed .kind-filters {

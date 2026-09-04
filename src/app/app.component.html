@@ -430,9 +430,15 @@
           [value]="relationKindFilter() || 'all'"
           (change)="onRelationKindFilterChange($event.value)"
         >
-          <mat-chip-option value="all" data-relation-filter="all">All</mat-chip-option>
+          <mat-chip-option value="all" data-relation-filter="all" (click)="setRelationKindFilter('')">
+            All
+          </mat-chip-option>
           @for (kind of relationKinds; track kind) {
-            <mat-chip-option [value]="kind" [attr.data-relation-filter]="kind">
+            <mat-chip-option
+              [value]="kind"
+              [attr.data-relation-filter]="kind"
+              (click)="setRelationKindFilter(kind)"
+            >
               {{ kindLabelForRelation(kind) }}
             </mat-chip-option>
           }
