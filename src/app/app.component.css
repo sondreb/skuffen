@@ -152,8 +152,39 @@ button.on {
   animation: menu-in 160ms ease both;
 }
 
-.menu-sheet > button {
+.menu-sheet > button,
+.menu-sheet header button {
+  width: 100%;
   justify-content: flex-start;
+  margin: 0;
+  padding: 0.4rem 0.65rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu-sheet header button {
+  width: auto;
+}
+
+.menu-sheet > button:hover,
+.menu-sheet > button:focus-visible,
+.menu-sheet header button:hover,
+.menu-sheet header button:focus-visible {
+  background: var(--hover);
+}
+
+.menu-sheet > button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.menu-sheet > button.primary {
+  background: var(--accent-deep);
+  color: var(--accent-soft);
 }
 
 .menu-sheet header {
