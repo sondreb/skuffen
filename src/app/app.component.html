@@ -1592,6 +1592,9 @@
                         @if (fact.suggestion.field) {
                           · {{ fact.suggestion.field }}
                         }
+                        @if (sourceLabel(fact.suggestion); as cited) {
+                          · {{ cited }}
+                        }
                       </small>
                       @if (photoPreviewUrl(fact.suggestion); as preview) {
                         <img
@@ -1884,6 +1887,9 @@
                 }
                 @if (person.description) {
                   <p class="lede">{{ person.description }}</p>
+                }
+                @if (provenanceLine(person.provenance); as line) {
+                  <p class="whisper provenance" data-person-provenance>{{ line }}</p>
                 }
                 <p class="chips">
                   @if (person.email) {
@@ -2223,6 +2229,9 @@
                               @if (item.field) {
                                 · {{ item.field }}
                               }
+                              @if (sourceLabel(item); as cited) {
+                                · {{ cited }}
+                              }
                             </small>
                             @if (photoPreviewUrl(item); as preview) {
                               <img
@@ -2321,6 +2330,9 @@
                   <article [attr.data-okf-path]="note.path">
                     <h3>{{ note.title }}</h3>
                     <p>{{ note.body }}</p>
+                    @if (provenanceLine(note.provenance); as line) {
+                      <p class="whisper provenance" data-provenance>{{ line }}</p>
+                    }
                   </article>
                 }
                 @if (!person.notes.length) {
@@ -2335,6 +2347,9 @@
                     <p>{{ item.network }} {{ item.handle }}</p>
                     @if (item.url) {
                       <a [href]="item.url" target="_blank" rel="noreferrer">{{ item.url }}</a>
+                    }
+                    @if (provenanceLine(item.provenance); as line) {
+                      <p class="whisper provenance" data-provenance>{{ line }}</p>
                     }
                     <button mat-button type="button" (click)="removeSocial(item.path)">Delete</button>
                   </article>

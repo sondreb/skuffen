@@ -33,7 +33,7 @@ const tools = [
   },
   {
     name: "get_person",
-    description: "Get one person and related notes/social/photos/documents. Emails and phones are redacted unless include_sensitive is true.",
+    description: "Get one person and related notes/social/photos/documents, including optional OKF v0.2 provenance (sources, generated, verified, stale_after) when present. Emails and phones are redacted unless include_sensitive is true.",
     inputSchema: {
       type: "object",
       properties: {

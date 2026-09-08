@@ -33,6 +33,9 @@ test("Grok research proposes, user Accepts", async ({ demoPage: page }) => {
 
   await expect(page.getByRole("heading", { name: "Public park mention (demo)" })).toBeVisible();
   await expect(page.getByText(/Synthetic Grok proposal for Ada Demo/)).toBeVisible();
+  await expect(page.locator("[data-provenance]")).toContainText("Grok");
+  await expect(page.locator("[data-provenance]")).toContainText("verified");
+  await expect(page.locator("[data-provenance]")).toContainText("Public page (demo)");
   await expect(page.getByText("+1 555 0100")).toBeVisible();
   await openPersonTab(page, "Photos");
   await expect(page.getByRole("heading", { name: "Public portrait (demo)" })).toBeVisible();

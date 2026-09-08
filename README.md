@@ -161,6 +161,8 @@ A person may still keep a leftover pin at `people/<slug>/place.md`. The map pref
 
 Typed relations live in `people/<slug>/relations.md` next to the person — file path is identity. Adding “Ada is Bea’s sibling” writes both cards. Deleting a person wipes that slug’s edges. Suggested facts from Grok or Gemini are written only after you accept them. On desktop, those files are plaintext markdown+YAML (photos and documents stay as their own files).
 
+Person and Note frontmatter may include optional OKF v0.2 trust fields: `sources`, `generated {by,at}`, `verified [{by,at}]`, `status`, and `stale_after`. Files without those keys still load. A model proposal is written as `generated` only; Accept adds a human `verified` stamp. The people-graph is never uploaded.
+
 ## People tags
 
 Each person can have local tags on `people/<slug>/person.md` — file path is identity. Type a tag on the card, Enter or comma to add a chip, click × to remove. Existing tags are suggested as you type. The left-pane filter treats `#family` (or `# family`) as a tag token; leftover text still matches names. `#tag` tokens can mix with name text. Tags stay readable on the expanded people list. The collapsed photo-strip does not show them.
@@ -258,7 +260,7 @@ From a person, **Research with Grok** (or Gemini if you chose it) searches publi
 
 **Follow** is a local scheduler in the desktop app. Pick a per-person interval (daily, weekly, monthly). While Skuffen is open it re-runs that person’s public search and proposes new facts. It never auto-writes, never auto-sends messages, and never uploads the people-graph. The prompt includes only that person.
 
-Follow schedules and pending proposals live in local app settings, not in the OKF bundle. Menu → **Memory** lists that inspectable store: research suggestions, follow schedules, pending facts, and a deletable log of what the model was told. Public web is treated as hostile until you Accept. Nothing durable is written to the OKF bundle without Accept. Tokens stay in the OS credential store — never `localStorage`, never OKF.
+Follow schedules and pending proposals live in local app settings, not in the OKF bundle. Menu → **Memory** lists that inspectable store: research suggestions, follow schedules, pending facts, and a deletable log of what the model was told. Public web is treated as hostile until you Accept. Accepted facts keep a quiet receipt on the card (`generated` from Grok or Gemini, `verified` from you, optional `sources` and `stale_after`). Nothing durable is written to the OKF bundle without Accept. Tokens stay in the OS credential store — never `localStorage`, never OKF.
 
 ```bash
 npm run test:research

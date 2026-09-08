@@ -47,3 +47,24 @@ test("list/search view omits relations and tags; get_person can keep this card's
   assert.deepEqual(one.relations, person.relations);
   assert.deepEqual(one.tags, ["family"]);
 });
+
+test("MCP public view keeps optional provenance on notes", () => {
+  const view = publicPersonView({
+    id: "people/ada/person",
+    slug: "ada",
+    title: "Ada",
+    generated: { by: "grok/grok-4-latest", at: "2026-09-08T06:00:00Z" },
+    verified: [{ by: "human:user", at: "2026-09-08T06:01:00Z" }],
+    notes: [
+      {
+        title: "Talk",
+        body: "Spoke in 1843.",
+        generated: { by: "grok/grok-4-latest", at: "2026-09-08T06:00:00Z" },
+        sources: [{ resource: "https://example.invalid/ada", title: "Public page (demo)" }],
+      },
+    ],
+  });
+  assert.equal((view.generated as { by: string }).by, "grok/grok-4-latest");
+  const notes = view.notes as Array<{ sources?: Array<{ resource: string }> }>;
+  assert.equal(notes[0].sources?.[0]?.resource, "https://example.invalid/ada");
+});

@@ -26,6 +26,8 @@ import {
   normalizeTagList,
   parseDocument,
   personImageResource,
+  provenanceFromFrontmatter,
+  hasVisibleProvenance,
   personPath,
   placeLinksFromDocument,
   placeLinksPath,
@@ -46,6 +48,7 @@ import {
   slugify,
   subjectPaths,
   type OkfDocument,
+  type OkfFrontmatter,
   type PlaceLocation,
   type PlaceSource,
 } from "../../packages/okf/src/index.ts";
@@ -63,8 +66,30 @@ export interface PersonView {
   email?: string;
   phone?: string;
   body: string;
-  notes: Array<{ id: string; path: string; title: string; body: string }>;
-  social: Array<{ id: string; path: string; title: string; network?: string; handle?: string; url?: string }>;
+  notes: Array<{
+    id: string;
+    path: string;
+    title: string;
+    body: string;
+    generated?: { by: string; at: string };
+    verified?: Array<{ by: string; at: string }>;
+    sources?: Array<{ resource: string; title?: string }>;
+    status?: string;
+    stale_after?: string;
+  }>;
+  social: Array<{
+    id: string;
+    path: string;
+    title: string;
+    network?: string;
+    handle?: string;
+    url?: string;
+    generated?: { by: string; at: string };
+    verified?: Array<{ by: string; at: string }>;
+    sources?: Array<{ resource: string; title?: string }>;
+    status?: string;
+    stale_after?: string;
+  }>;
   /** Local bundle path for the profile image. Never http(s). */
   image?: string;
   photos: Array<{ id: string; path: string; title: string; resource?: string }>;
@@ -93,6 +118,11 @@ export interface PersonView {
     title: string;
   }>;
   tags: string[];
+  generated?: { by: string; at: string };
+  verified?: Array<{ by: string; at: string }>;
+  sources?: Array<{ resource: string; title?: string }>;
+  status?: string;
+  stale_after?: string;
 }
 
 export interface PlaceView {
@@ -178,6 +208,7 @@ export class OkfBundle {
       path: note.path,
       title: String(note.frontmatter.title ?? note.id),
       body: note.body,
+      ...toolProvenance(note.frontmatter),
     }));
     const social = this.readDocs(`people/${slug}/social`).map((item) => ({
       id: item.id,
@@ -186,6 +217,7 @@ export class OkfBundle {
       network: optionalString(item.frontmatter.network),
       handle: optionalString(item.frontmatter.handle),
       url: optionalString(item.frontmatter.resource),
+      ...toolProvenance(item.frontmatter),
     }));
     const photos = this.readDocs(`people/${slug}/photos`).map((item) => ({
       id: item.id,
@@ -215,6 +247,7 @@ export class OkfBundle {
       relations: this.relationsFor(slug),
       places: this.placeLinksFor(slug),
       tags: normalizeTagList(doc.frontmatter.tags),
+      ...toolProvenance(doc.frontmatter),
     };
   }
 
@@ -591,6 +624,24 @@ function exists(path: string): boolean {
 
 function optionalString(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+function toolProvenance(frontmatter: OkfFrontmatter): {
+  generated?: { by: string; at: string };
+  verified?: Array<{ by: string; at: string }>;
+  sources?: Array<{ resource: string; title?: string }>;
+  status?: string;
+  stale_after?: string;
+} {
+  const view = provenanceFromFrontmatter(frontmatter);
+  if (!hasVisibleProvenance(view) && !view.generated && view.verified.length === 0) return {};
+  return {
+    generated: view.generated,
+    verified: view.verified.length ? view.verified : undefined,
+    sources: view.sources.length ? view.sources : undefined,
+    status: view.status,
+    stale_after: view.staleAfter,
+  };
 }
 
 function documentNote(body: string): string | undefined {

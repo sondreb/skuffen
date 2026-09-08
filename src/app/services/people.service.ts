@@ -6,6 +6,9 @@ import {
   PLACE_TYPE,
   addDocumentSubject,
   appendLog,
+  applyAcceptProvenance,
+  provenanceFromFrontmatter,
+  hasVisibleProvenance,
   removeDocumentSubject,
   createDocumentDocument,
   createEntityPlaceDocument,
@@ -61,12 +64,20 @@ import {
   type OkfDocument,
   type OkfFrontmatter,
   type OkfPlaceLink,
+  type OkfSource,
   type OkfRelation,
   type PlaceLinkRole,
   type PlaceSource,
   type RelationKind,
 } from "../../../packages/okf/src/index";
-import type { PersonLocation, PersonPlaceLink, PersonRelation, PersonView, PlaceView } from "../models";
+import type {
+  FactProvenanceView,
+  PersonLocation,
+  PersonPlaceLink,
+  PersonRelation,
+  PersonView,
+  PlaceView,
+} from "../models";
 import type { PlaceWrite } from "./places";
 import { localPhotoBundlePath, localPhotoDataUrl, personListPhotoUrl } from "../list-photo";
 import type { MergePlan } from "./merge";
@@ -215,10 +226,13 @@ export class PeopleService {
     phone?: string;
     body?: string;
     generatedBy?: string;
+    sources?: OkfSource[];
+    staleAfter?: string;
   }): Promise<PersonView> {
     const slug = await this.uniqueSlug(slugify(input.title));
-    const { generatedBy, ...fields } = input;
-    const doc = createPersonDocument({ slug, ...fields, generatedBy });
+    const { generatedBy, sources, staleAfter, ...fields } = input;
+    const doc = createPersonDocument({ slug, ...fields, generatedBy, sources, staleAfter });
+    if (generatedBy) applyAcceptProvenance(doc.frontmatter, { generatedBy, sources, staleAfter });
     await this.writeDoc(doc);
     await this.log("Creation", `Added [${doc.frontmatter.title}](/${doc.path}).`);
     await this.reload();
@@ -269,6 +283,7 @@ export class PeopleService {
       phone: string;
       body: string;
     }>,
+    provenance?: { generatedBy?: string; sources?: OkfSource[]; staleAfter?: string },
   ): Promise<void> {
     const path = personPath(slug);
     const raw = await this.io.readText(this.bundleRoot(), path);
@@ -281,6 +296,12 @@ export class PeopleService {
     if (patch.email !== undefined) doc.frontmatter.email = patch.email || undefined;
     if (patch.phone !== undefined) doc.frontmatter.phone = patch.phone || undefined;
     if (patch.body !== undefined) doc.body = patch.body;
+    if (provenance?.generatedBy) {
+      applyAcceptProvenance(doc.frontmatter, {
+        generatedBy: provenance.generatedBy,
+        sources: provenance.sources,
+      });
+    }
     await this.writeDoc(doc);
     await this.log("Update", `Updated [${doc.frontmatter.title}](/${doc.path}).`);
     await this.reload();
@@ -288,17 +309,28 @@ export class PeopleService {
     await this.select(slug);
   }
 
-  async addNote(slug: string, title: string, body: string, generatedBy?: string): Promise<void> {
+  async addNote(
+    slug: string,
+    title: string,
+    body: string,
+    generatedBy?: string,
+    provenance?: { sources?: OkfSource[]; staleAfter?: string },
+  ): Promise<void> {
     const doc = createNoteDocument({
       slug,
       noteSlug: slugify(title) + "-" + Date.now().toString(36),
       title,
       body,
       generatedBy,
-      verifiedBy: generatedBy ? undefined : undefined,
+      sources: provenance?.sources,
+      staleAfter: provenance?.staleAfter,
     });
     if (generatedBy) {
-      doc.frontmatter.verified = { by: "human:user", at: new Date().toISOString().replace(/\.\d{3}Z$/, "Z") };
+      applyAcceptProvenance(doc.frontmatter, {
+        generatedBy,
+        sources: provenance?.sources,
+        staleAfter: provenance?.staleAfter,
+      });
     }
     await this.writeDoc(doc);
     await this.log("Creation", `Added note [${title}](/${doc.path}).`);
@@ -306,10 +338,29 @@ export class PeopleService {
     await this.select(slug);
   }
 
-  async addSocial(slug: string, network: string, url: string, handle?: string, generatedBy?: string): Promise<void> {
-    const doc = createSocialDocument({ slug, network, url, handle, generatedBy });
+  async addSocial(
+    slug: string,
+    network: string,
+    url: string,
+    handle?: string,
+    generatedBy?: string,
+    provenance?: { sources?: OkfSource[]; staleAfter?: string },
+  ): Promise<void> {
+    const doc = createSocialDocument({
+      slug,
+      network,
+      url,
+      handle,
+      generatedBy,
+      sources: provenance?.sources,
+      staleAfter: provenance?.staleAfter,
+    });
     if (generatedBy) {
-      doc.frontmatter.verified = { by: "human:user", at: new Date().toISOString().replace(/\.\d{3}Z$/, "Z") };
+      applyAcceptProvenance(doc.frontmatter, {
+        generatedBy,
+        sources: provenance?.sources,
+        staleAfter: provenance?.staleAfter,
+      });
     }
     await this.writeDoc(doc);
     await this.log("Creation", `Added social profile [${doc.frontmatter.title}](/${doc.path}).`);
@@ -583,12 +634,7 @@ export class PeopleService {
         title: input.title,
         generatedBy: input.generatedBy,
       });
-      if (input.generatedBy) {
-        doc.frontmatter.verified = {
-          by: "human:user",
-          at: new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
-        };
-      }
+      if (input.generatedBy) applyAcceptProvenance(doc.frontmatter, { generatedBy: input.generatedBy });
       await this.writeDoc(doc);
       resource = `/${dest}`;
       await this.log("Creation", `Added photo [${safe}](/${doc.path}).`);
@@ -616,14 +662,25 @@ export class PeopleService {
     bytes: Uint8Array,
     title?: string,
     generatedBy?: string,
-    options?: { asProfileIfEmpty?: boolean },
+    options?: { asProfileIfEmpty?: boolean; sources?: OkfSource[]; staleAfter?: string },
   ): Promise<void> {
     const safe = await this.uniquePhotoFileName(slug, sanitizeFileName(fileName));
     const dest = photoFilePath(slug, safe);
     await this.io.writeBytes(this.bundleRoot(), dest, bytes);
-    const doc = createPhotoDocument({ slug, fileName: safe, title, generatedBy });
+    const doc = createPhotoDocument({
+      slug,
+      fileName: safe,
+      title,
+      generatedBy,
+      sources: options?.sources,
+      staleAfter: options?.staleAfter,
+    });
     if (generatedBy) {
-      doc.frontmatter.verified = { by: "human:user", at: new Date().toISOString().replace(/\.\d{3}Z$/, "Z") };
+      applyAcceptProvenance(doc.frontmatter, {
+        generatedBy,
+        sources: options?.sources,
+        staleAfter: options?.staleAfter,
+      });
     }
     await this.writeDoc(doc);
     const resource = `/${dest}`;
@@ -1000,6 +1057,7 @@ export class PeopleService {
           title: String(item.frontmatter.title ?? item.id),
           body: item.body,
           at: documentDatedAt(item.frontmatter),
+          provenance: viewProvenance(item.frontmatter),
         });
       } else if (item.frontmatter.type === "SocialProfile") {
         social.push({
@@ -1009,6 +1067,7 @@ export class PeopleService {
           network: optionalString(item.frontmatter.network),
           handle: optionalString(item.frontmatter.handle),
           url: optionalString(item.frontmatter.resource),
+          provenance: viewProvenance(item.frontmatter),
         });
       } else if (item.frontmatter.type === "Photo") {
         const resource = optionalString(item.frontmatter.resource);
@@ -1056,6 +1115,7 @@ export class PeopleService {
       tags: normalizeTagList(doc.frontmatter.tags),
       addedAt,
       updatedAt,
+      provenance: viewProvenance(doc.frontmatter),
     };
   }
 
@@ -1457,6 +1517,11 @@ function parseOptionalCoord(value: unknown): number | undefined {
 
 function optionalString(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+function viewProvenance(frontmatter: OkfFrontmatter): FactProvenanceView | undefined {
+  const view = provenanceFromFrontmatter(frontmatter);
+  return hasVisibleProvenance(view) ? view : undefined;
 }
 
 function documentDatedAt(frontmatter: OkfFrontmatter): string | undefined {
