@@ -7,15 +7,23 @@ import {
   DOCUMENT_KIND,
   DOCUMENT_TYPE,
   OKF_VERSION,
+  acceptHumanVerification,
+  actorAgent,
+  actorHuman,
   addDocumentSubject,
   removeDocumentSubject,
   appendLog,
+  applyAcceptProvenance,
   createDocumentDocument,
   createNoteDocument,
   createPersonDocument,
   createPhotoDocument,
+  defaultStaleAfter,
+  hasVisibleProvenance,
+  normalizeSources,
   normalizeTag,
   normalizeTagList,
+  provenanceFromFrontmatter,
   createSocialDocument,
   documentConceptPath,
   documentFilePath,
@@ -29,6 +37,7 @@ import {
   serializeBundleIndex,
   serializeDocument,
   slugify,
+  verifiedList,
 } from "./index.ts";
 
 test("file path is the concept identity", () => {
@@ -180,6 +189,101 @@ test("Person profile image is a local bundle path — never http(s)", () => {
     image: "https://cdn.example/ada.jpg",
   });
   assert.equal(remote.frontmatter.image, undefined);
+});
+
+test("Person and Note without trust fields still load and do not invent them", () => {
+  const personRaw = `---
+type: Person
+title: Ada Lovelace
+---
+
+# About
+`;
+  const noteRaw = `---
+type: Note
+title: Engine
+---
+
+Wrote notes on the Analytical Engine.
+`;
+  const person = parseDocument("people/ada-lovelace/person.md", personRaw);
+  const note = parseDocument("people/ada-lovelace/notes/engine.md", noteRaw);
+  assert.equal(person.frontmatter.generated, undefined);
+  assert.equal(person.frontmatter.verified, undefined);
+  assert.equal(person.frontmatter.sources, undefined);
+  assert.equal(person.frontmatter.status, undefined);
+  assert.equal(person.frontmatter.stale_after, undefined);
+  assert.equal(note.frontmatter.generated, undefined);
+  const personAgain = serializeDocument(person);
+  const noteAgain = serializeDocument(note);
+  assert.doesNotMatch(personAgain, /generated:|verified:|sources:|stale_after:|status:/);
+  assert.doesNotMatch(noteAgain, /generated:|verified:|sources:|stale_after:/);
+  assert.equal(parseDocument(person.path, personAgain).frontmatter.title, "Ada Lovelace");
+});
+
+test("OKF v0.2 trust fields round-trip on Person and Note", () => {
+  const note = createNoteDocument({
+    slug: "ada-lovelace",
+    noteSlug: "engine",
+    title: "Analytical Engine",
+    body: "Wrote the first algorithm intended for a machine.",
+    generatedBy: actorAgent("grok", "grok-4-latest"),
+    sources: [{ resource: "https://example.invalid/ada", title: "Public page (demo)" }],
+    staleAfter: "2027-03-07",
+  });
+  assert.equal(note.frontmatter.generated?.by, "grok/grok-4-latest");
+  assert.equal(note.frontmatter.verified, undefined);
+  applyAcceptProvenance(note.frontmatter, {
+    generatedBy: actorAgent("grok", "grok-4-latest"),
+    sources: [{ resource: "https://example.invalid/ada", title: "Public page (demo)" }],
+    staleAfter: "2027-03-07",
+  });
+  assert.equal(verifiedList(note.frontmatter.verified)[0]?.by, actorHuman());
+  assert.equal(note.frontmatter.status, "stable");
+  const raw = serializeDocument(note);
+  assert.match(raw, /generated:/);
+  assert.match(raw, /verified:/);
+  assert.match(raw, /sources:/);
+  assert.match(raw, /stale_after:/);
+  assert.doesNotMatch(raw, /encrypt|skuffen\.cloud|dataplex|knowledge catalog/i);
+  const parsed = parseDocument(note.path, raw);
+  assert.equal(parsed.frontmatter.generated?.by, "grok/grok-4-latest");
+  assert.deepEqual(parsed.frontmatter.sources, [
+    { resource: "https://example.invalid/ada", title: "Public page (demo)" },
+  ]);
+  assert.equal(parsed.frontmatter.stale_after, "2027-03-07");
+  assert.equal(parsed.frontmatter.status, "stable");
+  const view = provenanceFromFrontmatter(parsed.frontmatter);
+  assert.equal(hasVisibleProvenance(view), true);
+  assert.equal(view.verified[0]?.by, "human:user");
+});
+
+test("model create is generated-only; human Accept adds verified", () => {
+  const person = createPersonDocument({
+    slug: "ada-lovelace",
+    title: "Ada Lovelace",
+    generatedBy: actorAgent("gemini", "gemini-2.5-flash"),
+  });
+  assert.equal(person.frontmatter.generated?.by, "gemini/gemini-2.5-flash");
+  assert.equal(person.frontmatter.verified, undefined);
+  acceptHumanVerification(person.frontmatter);
+  assert.equal(verifiedList(person.frontmatter.verified)[0]?.by, "human:user");
+  assert.equal(person.frontmatter.status, "stable");
+  assert.equal(person.frontmatter.generated?.by, "gemini/gemini-2.5-flash");
+});
+
+test("human creates still stamp generated and verified", () => {
+  const doc = createPersonDocument({ slug: "ada-lovelace", title: "Ada Lovelace" });
+  assert.equal(doc.frontmatter.generated?.by, actorHuman());
+  assert.equal(verifiedList(doc.frontmatter.verified)[0]?.by, actorHuman());
+});
+
+test("normalizeSources accepts strings and objects; defaultStaleAfter is a date", () => {
+  assert.deepEqual(normalizeSources("https://example.invalid/a"), [{ resource: "https://example.invalid/a" }]);
+  assert.deepEqual(normalizeSources([{ resource: "https://example.invalid/a", title: "A" }, { resource: "https://example.invalid/a" }]), [
+    { resource: "https://example.invalid/a", title: "A" },
+  ]);
+  assert.match(defaultStaleAfter("2026-09-08T00:00:00Z", 180), /^\d{4}-\d{2}-\d{2}$/);
 });
 
 test("removeDocumentSubject unlinks a person and leaves the document", () => {

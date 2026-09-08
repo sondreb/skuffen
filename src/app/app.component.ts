@@ -32,6 +32,7 @@ import {
   type PeopleGalleryMode,
 } from "./gallery/people-gallery";
 import type {
+  FactProvenanceView,
   FactSuggestion,
   FollowInterval,
   MergeProposal,
@@ -110,6 +111,7 @@ import {
   photoPreviewUrl,
   planAcceptedNameProposal,
   proposeNameResearch,
+  provenanceForAcceptedSuggestion,
   readPublicPhotoBytes,
   RESEARCH_NEEDS_PROVIDER,
   setAllFactsChecked,
@@ -118,6 +120,7 @@ import {
   skippedPhotosNotice,
   writesForAcceptedSuggestion,
 } from "./services/research";
+import { suggestionSourceLabel, visibleProvenanceLine } from "./services/provenance";
 import {
   applyPolishedTalkingPoints,
   buildLocalBrief,
@@ -2000,6 +2003,7 @@ export class AppComponent implements OnInit, OnDestroy {
     let skippedPhotos = 0;
     for (const extra of extras) {
       const write = writesForAcceptedSuggestion(slug, extra);
+      const provenance = provenanceForAcceptedSuggestion(extra, generatedBy);
       if (write.type === "photo") {
         const stored = keepFetchedPhoto(
           write,
@@ -2015,12 +2019,27 @@ export class AppComponent implements OnInit, OnDestroy {
           stored.bytes,
           write.title,
           generatedBy,
-          { asProfileIfEmpty: true },
+          {
+            asProfileIfEmpty: true,
+            sources: provenance.sources,
+            staleAfter: provenance.staleAfter,
+          },
         );
       } else if (write.type === "social") {
-        await this.people.addSocial(write.slug, write.network, write.url, write.handle, generatedBy);
+        await this.people.addSocial(
+          write.slug,
+          write.network,
+          write.url,
+          write.handle,
+          generatedBy,
+          { sources: provenance.sources, staleAfter: provenance.staleAfter },
+        );
       } else if (write.type === "field") {
-        await this.people.updatePerson(write.slug, { [write.field]: write.value });
+        await this.people.updatePerson(
+          write.slug,
+          { [write.field]: write.value },
+          { generatedBy, sources: provenance.sources },
+        );
       } else if (write.type === "relation") {
         if (!this.people.people().some((item) => item.slug === write.relatedSlug)) continue;
         await this.people.addRelation(write.slug, {
@@ -2033,10 +2052,21 @@ export class AppComponent implements OnInit, OnDestroy {
       } else if (write.type === "tag") {
         await this.people.addPersonTag(write.slug, write.tag);
       } else {
-        await this.people.addNote(write.slug, write.title, write.body, generatedBy);
+        await this.people.addNote(write.slug, write.title, write.body, generatedBy, {
+          sources: provenance.sources,
+          staleAfter: provenance.staleAfter,
+        });
       }
     }
     return skippedPhotos;
+  }
+
+  provenanceLine(value?: FactProvenanceView | null): string {
+    return visibleProvenanceLine(value);
+  }
+
+  sourceLabel(suggestion: FactSuggestion): string {
+    return suggestionSourceLabel(suggestion);
   }
 
   openProviders(): void {

@@ -68,6 +68,8 @@ export interface OkfSource {
   author?: string;
 }
 
+export type OkfStatus = "draft" | "stable" | "deprecated";
+
 export interface OkfFrontmatter {
   type: string;
   title?: string;
@@ -76,8 +78,10 @@ export interface OkfFrontmatter {
   tags?: string[];
   generated?: OkfActorStamp;
   verified?: OkfActorStamp | OkfActorStamp[];
-  status?: "draft" | "stable" | "deprecated";
+  status?: OkfStatus;
   sources?: OkfSource[];
+  /** ISO date (YYYY-MM-DD) or datetime when this fact should be reconsidered. */
+  stale_after?: string;
   given_name?: string;
   family_name?: string;
   email?: string;
@@ -126,6 +130,16 @@ export interface PlaceFields {
   source?: string;
 }
 
+/** Optional stamps written with a new OKF concept. */
+export interface OkfCreateProvenance {
+  generatedBy?: string;
+  /** Omit or pass false for generated-only (model write before human Accept). */
+  verifiedBy?: string | false;
+  sources?: OkfSource[];
+  status?: OkfStatus;
+  staleAfter?: string;
+}
+
 export interface PlaceLocation {
   path: string;
   title: string;
@@ -149,6 +163,141 @@ export function actorHuman(name = "user"): string {
 
 export function actorAgent(provider: "grok" | "gemini", model: string): string {
   return `${provider}/${model}`;
+}
+
+export function isAgentActor(by: string): boolean {
+  return /^(grok|gemini)\//.test(by.trim());
+}
+
+export function actorStamp(by: string, at = nowUtc()): OkfActorStamp {
+  return { by: by.trim(), at };
+}
+
+const OKF_STATUSES = new Set<OkfStatus>(["draft", "stable", "deprecated"]);
+
+export function normalizeActorStamp(value: unknown): OkfActorStamp | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const raw = value as Record<string, unknown>;
+  const by = typeof raw["by"] === "string" ? raw["by"].trim() : "";
+  let at = "";
+  if (typeof raw["at"] === "string") at = raw["at"].trim();
+  else if (raw["at"] instanceof Date && !Number.isNaN(raw["at"].getTime())) {
+    at = raw["at"].toISOString().replace(/\.\d{3}Z$/, "Z");
+  }
+  if (!by || !at) return undefined;
+  return { by, at };
+}
+
+export function normalizeSources(value: unknown): OkfSource[] {
+  if (typeof value === "string" && value.trim()) {
+    return [{ resource: value.trim() }];
+  }
+  if (!Array.isArray(value)) return [];
+  const out: OkfSource[] = [];
+  const seen = new Set<string>();
+  for (const item of value) {
+    if (typeof item === "string" && item.trim()) {
+      const resource = item.trim();
+      const key = resource.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ resource });
+      continue;
+    }
+    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+    const raw = item as Record<string, unknown>;
+    const resource = typeof raw["resource"] === "string" ? raw["resource"].trim() : "";
+    if (!resource) continue;
+    const key = resource.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const source: OkfSource = { resource };
+    if (typeof raw["id"] === "string" && raw["id"].trim()) source.id = raw["id"].trim();
+    if (typeof raw["title"] === "string" && raw["title"].trim()) source.title = raw["title"].trim();
+    if (typeof raw["author"] === "string" && raw["author"].trim()) source.author = raw["author"].trim();
+    out.push(source);
+  }
+  return out;
+}
+
+export function mergeSources(existing: unknown, extra?: unknown): OkfSource[] {
+  return normalizeSources([...(Array.isArray(existing) ? existing : existing ? [existing] : []), ...(Array.isArray(extra) ? extra : extra ? [extra] : [])]);
+}
+
+export function normalizeStatus(value: unknown): OkfStatus | undefined {
+  return typeof value === "string" && OKF_STATUSES.has(value as OkfStatus) ? (value as OkfStatus) : undefined;
+}
+
+export function normalizeStaleAfter(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+  const parsed = Date.parse(trimmed);
+  if (!Number.isFinite(parsed)) return undefined;
+  return new Date(parsed).toISOString().replace(/\.\d{3}Z$/, "Z");
+}
+
+/** Default reconsider-by date for hostile-web research facts. Local human writes omit this. */
+export function defaultStaleAfter(from = nowUtc(), days = 180): string {
+  const ms = Date.parse(from);
+  const start = Number.isFinite(ms) ? ms : Date.now();
+  return new Date(start + days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+export function provenanceFields(input: OkfCreateProvenance = {}): Pick<
+  OkfFrontmatter,
+  "generated" | "verified" | "sources" | "status" | "stale_after"
+> {
+  const at = nowUtc();
+  const generatedBy = input.generatedBy?.trim() || actorHuman();
+  const fields: Pick<OkfFrontmatter, "generated" | "verified" | "sources" | "status" | "stale_after"> = {
+    generated: actorStamp(generatedBy, at),
+  };
+  if (input.verifiedBy !== false) {
+    if (typeof input.verifiedBy === "string" && input.verifiedBy.trim()) {
+      fields.verified = actorStamp(input.verifiedBy, at);
+    } else if (!isAgentActor(generatedBy)) {
+      fields.verified = actorStamp(actorHuman(), at);
+    }
+  }
+  const sources = normalizeSources(input.sources);
+  if (sources.length) fields.sources = sources;
+  if (input.status) fields.status = input.status;
+  const stale = normalizeStaleAfter(input.staleAfter);
+  if (stale) fields.stale_after = stale;
+  return fields;
+}
+
+export function appendVerified(frontmatter: OkfFrontmatter, by: string, at = nowUtc()): OkfFrontmatter {
+  const next = actorStamp(by, at);
+  const list = verifiedList(frontmatter.verified);
+  const already = list.some((item) => item.by === next.by && item.at === next.at);
+  if (!already) list.push(next);
+  frontmatter.verified = list.length === 1 ? list[0] : list;
+  return frontmatter;
+}
+
+/** Human Accept: keep model `generated`, add `verified`, mark stable. */
+export function acceptHumanVerification(frontmatter: OkfFrontmatter, at = nowUtc()): OkfFrontmatter {
+  appendVerified(frontmatter, actorHuman(), at);
+  frontmatter.status = "stable";
+  return frontmatter;
+}
+
+export function applyAcceptProvenance(
+  frontmatter: OkfFrontmatter,
+  input: { generatedBy?: string; sources?: OkfSource[]; staleAfter?: string },
+): OkfFrontmatter {
+  if (input.generatedBy && isAgentActor(input.generatedBy) && !frontmatter.generated) {
+    frontmatter.generated = actorStamp(input.generatedBy);
+  }
+  acceptHumanVerification(frontmatter);
+  const sources = mergeSources(frontmatter.sources, input.sources);
+  if (sources.length) frontmatter.sources = sources;
+  const stale = normalizeStaleAfter(input.staleAfter);
+  if (stale) frontmatter.stale_after = stale;
+  return frontmatter;
 }
 
 export function conceptId(path: string): string {
@@ -176,7 +325,7 @@ export function parseDocument(path: string, raw: string): OkfDocument {
   if (typeof parsed !== "object" || Array.isArray(parsed) || parsed === null) {
     throw new Error(`OKF document ${path} has non-object frontmatter`);
   }
-  const frontmatter = parsed as OkfFrontmatter;
+  const frontmatter = normalizeFrontmatterProvenance(parsed as OkfFrontmatter);
   if (typeof frontmatter.type !== "string" || !frontmatter.type.trim()) {
     throw new Error(`OKF document ${path} is missing required frontmatter key: type`);
   }
@@ -194,6 +343,28 @@ export function parseDocument(path: string, raw: string): OkfDocument {
     frontmatter,
     body: match[2].replace(/^\r?\n/, ""),
   };
+}
+
+function normalizeFrontmatterProvenance(frontmatter: OkfFrontmatter): OkfFrontmatter {
+  const generated = normalizeActorStamp(frontmatter.generated);
+  if (generated) frontmatter.generated = generated;
+  else delete frontmatter.generated;
+  const verified = verifiedList(frontmatter.verified)
+    .map((item) => normalizeActorStamp(item))
+    .filter((item): item is OkfActorStamp => Boolean(item));
+  if (verified.length === 1) frontmatter.verified = verified[0];
+  else if (verified.length > 1) frontmatter.verified = verified;
+  else delete frontmatter.verified;
+  const sources = normalizeSources(frontmatter.sources);
+  if (sources.length) frontmatter.sources = sources;
+  else delete frontmatter.sources;
+  const status = normalizeStatus(frontmatter.status);
+  if (status) frontmatter.status = status;
+  else delete frontmatter.status;
+  const stale = normalizeStaleAfter(frontmatter.stale_after);
+  if (stale) frontmatter.stale_after = stale;
+  else delete frontmatter.stale_after;
+  return frontmatter;
 }
 
 export function serializeDocument(doc: Pick<OkfDocument, "frontmatter" | "body">): string {
@@ -473,7 +644,31 @@ export function documentLinkedToPerson(frontmatter: OkfFrontmatter, slug: string
 
 export function verifiedList(value: OkfFrontmatter["verified"]): OkfActorStamp[] {
   if (!value) return [];
-  return Array.isArray(value) ? value : [value];
+  const raw = Array.isArray(value) ? value : [value];
+  return raw.map((item) => normalizeActorStamp(item)).filter((item): item is OkfActorStamp => Boolean(item));
+}
+
+export interface OkfProvenanceView {
+  generated?: OkfActorStamp;
+  verified: OkfActorStamp[];
+  sources: OkfSource[];
+  status?: OkfStatus;
+  staleAfter?: string;
+}
+
+export function provenanceFromFrontmatter(frontmatter: OkfFrontmatter): OkfProvenanceView {
+  return {
+    generated: normalizeActorStamp(frontmatter.generated),
+    verified: verifiedList(frontmatter.verified),
+    sources: normalizeSources(frontmatter.sources),
+    status: normalizeStatus(frontmatter.status),
+    staleAfter: normalizeStaleAfter(frontmatter.stale_after),
+  };
+}
+
+export function hasVisibleProvenance(value: OkfProvenanceView): boolean {
+  if (value.sources.length > 0 || value.staleAfter) return true;
+  return Boolean(value.generated && isAgentActor(value.generated.by));
 }
 
 const EMAIL_RE = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
@@ -512,10 +707,7 @@ export function createPersonDocument(input: {
   image?: string;
   tags?: string[];
   body?: string;
-  generatedBy?: string;
-  verifiedBy?: string;
-}): OkfDocument {
-  const at = nowUtc();
+} & OkfCreateProvenance): OkfDocument {
   const tags = normalizeTagList(input.tags);
   const frontmatter: OkfFrontmatter & PersonFields = {
     type: PERSON_TYPE,
@@ -527,8 +719,7 @@ export function createPersonDocument(input: {
     phone: input.phone || undefined,
     image: personImageResource(input.image),
     tags: tags.length ? tags : undefined,
-    generated: { by: input.generatedBy ?? actorHuman(), at },
-    verified: { by: input.verifiedBy ?? actorHuman(), at },
+    ...provenanceFields(input),
   };
   return {
     id: conceptId(personPath(input.slug)),
@@ -545,18 +736,14 @@ export function createNoteDocument(input: {
   noteSlug: string;
   title: string;
   body: string;
-  generatedBy?: string;
-  verifiedBy?: string;
-}): OkfDocument {
-  const at = nowUtc();
+} & OkfCreateProvenance): OkfDocument {
   return {
     id: conceptId(notePath(input.slug, input.noteSlug)),
     path: notePath(input.slug, input.noteSlug),
     frontmatter: {
       type: NOTE_TYPE,
       title: input.title,
-      generated: { by: input.generatedBy ?? actorHuman(), at },
-      verified: { by: input.verifiedBy ?? actorHuman(), at },
+      ...provenanceFields(input),
     },
     body: `${input.body.trim()}\n\nSee [${input.slug}](/${personPath(input.slug)}).\n`,
   };
@@ -567,10 +754,7 @@ export function createSocialDocument(input: {
   network: string;
   handle?: string;
   url: string;
-  generatedBy?: string;
-  verifiedBy?: string;
-}): OkfDocument {
-  const at = nowUtc();
+} & OkfCreateProvenance): OkfDocument {
   const networkSlug = slugify(input.network);
   const title = input.handle
     ? `${input.handle} on ${input.network}`
@@ -581,8 +765,7 @@ export function createSocialDocument(input: {
     resource: input.url,
     network: input.network,
     handle: input.handle,
-    generated: { by: input.generatedBy ?? actorHuman(), at },
-    verified: { by: input.verifiedBy ?? actorHuman(), at },
+    ...provenanceFields(input),
   };
   return {
     id: conceptId(socialPath(input.slug, networkSlug)),
@@ -596,10 +779,7 @@ export function createPhotoDocument(input: {
   slug: string;
   fileName: string;
   title?: string;
-  generatedBy?: string;
-  verifiedBy?: string;
-}): OkfDocument {
-  const at = nowUtc();
+} & OkfCreateProvenance): OkfDocument {
   const fileStem = input.fileName.replace(/\.[^.]+$/, "");
   const resource = `/${photoFilePath(input.slug, input.fileName)}`;
   return {
@@ -609,8 +789,7 @@ export function createPhotoDocument(input: {
       type: PHOTO_TYPE,
       title: input.title ?? input.fileName,
       resource,
-      generated: { by: input.generatedBy ?? actorHuman(), at },
-      verified: { by: input.verifiedBy ?? actorHuman(), at },
+      ...provenanceFields(input),
     },
     body: `Photo file stored beside this concept at \`${resource}\`. Not inlined as a markdown blob.\n\nSubject: [${input.slug}](/${personPath(input.slug)}).\n`,
   };
@@ -623,13 +802,10 @@ export function createPlaceDocument(input: {
   latitude: number;
   longitude: number;
   source?: PlaceSource | string;
-  generatedBy?: string;
-  verifiedBy?: string;
-}): OkfDocument {
+} & OkfCreateProvenance): OkfDocument {
   if (!isValidLatitude(input.latitude) || !isValidLongitude(input.longitude)) {
     throw new Error("Place requires a finite latitude [-90, 90] and longitude [-180, 180]");
   }
-  const at = nowUtc();
   const address = input.address?.trim() || undefined;
   const title = input.title?.trim() || address || `${input.latitude.toFixed(5)}, ${input.longitude.toFixed(5)}`;
   const frontmatter: OkfFrontmatter & PlaceFields = {
@@ -639,8 +815,7 @@ export function createPlaceDocument(input: {
     latitude: input.latitude,
     longitude: input.longitude,
     source: input.source,
-    generated: { by: input.generatedBy ?? actorHuman(), at },
-    verified: { by: input.verifiedBy ?? actorHuman(), at },
+    ...provenanceFields(input),
   };
   return {
     id: conceptId(placePath(input.slug)),
@@ -662,9 +837,7 @@ export function createEntityPlaceDocument(input: {
   latitude?: number;
   longitude?: number;
   source?: PlaceSource | string;
-  generatedBy?: string;
-  verifiedBy?: string;
-}): OkfDocument {
+} & OkfCreateProvenance): OkfDocument {
   const title = input.title.trim();
   if (!title) throw new Error("Place requires a name");
   const hasLat = input.latitude !== undefined && input.latitude !== null;
@@ -675,15 +848,13 @@ export function createEntityPlaceDocument(input: {
   if (hasLat && (!isValidLatitude(input.latitude!) || !isValidLongitude(input.longitude!))) {
     throw new Error("Place requires a finite latitude [-90, 90] and longitude [-180, 180]");
   }
-  const at = nowUtc();
   const address = input.address?.trim() || undefined;
   const notes = input.notes?.trim();
   const frontmatter: OkfFrontmatter = {
     type: PLACE_TYPE,
     title,
     address,
-    generated: { by: input.generatedBy ?? actorHuman(), at },
-    verified: { by: input.verifiedBy ?? actorHuman(), at },
+    ...provenanceFields(input),
   };
   if (hasLat) {
     frontmatter.latitude = input.latitude;
@@ -705,18 +876,14 @@ export function createPlaceNoteDocument(input: {
   noteSlug: string;
   title: string;
   body: string;
-  generatedBy?: string;
-  verifiedBy?: string;
-}): OkfDocument {
-  const at = nowUtc();
+} & OkfCreateProvenance): OkfDocument {
   return {
     id: conceptId(placeNotePath(input.slug, input.noteSlug)),
     path: placeNotePath(input.slug, input.noteSlug),
     frontmatter: {
       type: NOTE_TYPE,
       title: input.title,
-      generated: { by: input.generatedBy ?? actorHuman(), at },
-      verified: { by: input.verifiedBy ?? actorHuman(), at },
+      ...provenanceFields(input),
     },
     body: `${input.body.trim()}\n\nSee [${input.slug}](/${entityPlacePath(input.slug)}).\n`,
   };
@@ -726,10 +893,7 @@ export function createPlaceFileDocument(input: {
   slug: string;
   fileName: string;
   title?: string;
-  generatedBy?: string;
-  verifiedBy?: string;
-}): OkfDocument {
-  const at = nowUtc();
+} & OkfCreateProvenance): OkfDocument {
   const fileName = sanitizeFileName(input.fileName);
   const fileStem = fileName.replace(/\.[^.]+$/, "");
   const resource = `/${placeFilePath(input.slug, fileName)}`;
@@ -740,8 +904,7 @@ export function createPlaceFileDocument(input: {
       type: PLACE_FILE_TYPE,
       title: input.title ?? fileName,
       resource,
-      generated: { by: input.generatedBy ?? actorHuman(), at },
-      verified: { by: input.verifiedBy ?? actorHuman(), at },
+      ...provenanceFields(input),
     },
     body: `File stored beside this Place at \`${resource}\`. Not inlined as a markdown blob.\n\nPlace: [${input.slug}](/${entityPlacePath(input.slug)}).\n`,
   };
@@ -750,10 +913,7 @@ export function createPlaceFileDocument(input: {
 export function createPlaceLinksDocument(input: {
   slug: string;
   links?: OkfPlaceLink[];
-  generatedBy?: string;
-  verifiedBy?: string;
-}): OkfDocument {
-  const at = nowUtc();
+} & OkfCreateProvenance): OkfDocument {
   const links = normalizePlaceLinkList(input.links);
   return {
     id: conceptId(placeLinksPath(input.slug)),
@@ -762,8 +922,7 @@ export function createPlaceLinksDocument(input: {
       type: PLACE_LINKS_TYPE,
       title: "Places",
       links,
-      generated: { by: input.generatedBy ?? actorHuman(), at },
-      verified: { by: input.verifiedBy ?? actorHuman(), at },
+      ...provenanceFields(input),
     },
     body: `Typed links from [${input.slug}](/${personPath(input.slug)}) to local Places (lives, works, met-at). File path is identity. Never uploaded.\n`,
   };
@@ -777,9 +936,7 @@ export function createDocumentDocument(input: {
   note?: string;
   subjectSlugs: string[];
   placeSlugs?: string[];
-  generatedBy?: string;
-  verifiedBy?: string;
-}): OkfDocument {
+} & OkfCreateProvenance): OkfDocument {
   const title = input.title.trim();
   if (!title) {
     throw new Error("Document requires title");
@@ -797,7 +954,6 @@ export function createDocumentDocument(input: {
   if (subjects.length === 0) {
     throw new Error("Document must link to at least one person or place");
   }
-  const at = nowUtc();
   const resource = `/${documentFilePath(input.docSlug, fileName)}`;
   const kind = input.kind?.trim() || DOCUMENT_KIND;
   const note = input.note?.trim();
@@ -823,8 +979,7 @@ export function createDocumentDocument(input: {
       resource,
       kind,
       subjects,
-      generated: { by: input.generatedBy ?? actorHuman(), at },
-      verified: { by: input.verifiedBy ?? actorHuman(), at },
+      ...provenanceFields(input),
     },
     body: `${parts.join("\n\n")}\n`,
   };
@@ -833,10 +988,7 @@ export function createDocumentDocument(input: {
 export function createRelationsDocument(input: {
   slug: string;
   relations?: OkfRelation[];
-  generatedBy?: string;
-  verifiedBy?: string;
-}): OkfDocument {
-  const at = nowUtc();
+} & OkfCreateProvenance): OkfDocument {
   const relations = normalizeRelationList(input.relations);
   return {
     id: conceptId(relationsPath(input.slug)),
@@ -845,8 +997,7 @@ export function createRelationsDocument(input: {
       type: RELATIONS_TYPE,
       title: "Relations",
       relations,
-      generated: { by: input.generatedBy ?? actorHuman(), at },
-      verified: { by: input.verifiedBy ?? actorHuman(), at },
+      ...provenanceFields(input),
     },
     body: `Typed links from [${input.slug}](/${personPath(input.slug)}) to other local people. File path is identity. Never uploaded.\n`,
   };

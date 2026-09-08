@@ -1,4 +1,10 @@
-import { normalizeTag } from "../../../packages/okf/src/index";
+import {
+  defaultStaleAfter,
+  normalizeSources,
+  normalizeStaleAfter,
+  type OkfSource,
+  normalizeTag,
+} from "../../../packages/okf/src/index";
 import type {
   FactSuggestion,
   FollowInterval,
@@ -77,7 +83,7 @@ const PERSON_FIELDS = new Set<PersonField>([
 ]);
 
 const SUGGESTION_SCHEMA =
-  '{"suggestions":[{"kind":"note"|"social"|"field"|"photo"|"tag","title":"","body":"","network":"","url":"","handle":"","field":"title"|"description"|"body"|"email"|"phone"|"givenName"|"familyName","value":"","tag":""}]}';
+  '{"suggestions":[{"kind":"note"|"social"|"field"|"photo"|"tag","title":"","body":"","network":"","url":"","handle":"","field":"title"|"description"|"body"|"email"|"phone"|"givenName"|"familyName","value":"","tag":"","sources":[{"resource":"","title":""}],"stale_after":""}]}';
 
 export function normalizeInterval(value: unknown): FollowInterval {
   return value === "daily" || value === "monthly" ? value : "weekly";
@@ -123,6 +129,7 @@ export function buildResearchPrompt(person: PersonPromptInput): string {
     WEBSITE_CONTACT_INSTRUCTION,
     WEBSITE_PHOTO_INSTRUCTION,
     "Suggest at most 8 structured facts: email, phone, social URLs, about/bio, public profile photo URLs when a real page image is known, and at most one short local tag (kind tag, field tag) when a public page clearly indicates a label such as family or work.",
+    "When a public page supports a fact, include sources[{resource,title}] for that page. Do not invent sources.",
     "Results are suggestions only.",
     "Do not invent people. Do not create a new person. Do not ask for or assume the rest of the people-graph.",
     "Do not draft outreach. Do not send messages. Do not upload or request the full graph.",
@@ -149,6 +156,7 @@ export function buildNameResearchPrompt(name: string): string {
     WEBSITE_CONTACT_INSTRUCTION,
     WEBSITE_PHOTO_INSTRUCTION,
     "Suggest structured facts: name, email, phone, social URLs, about/bio, public profile photo URLs, other contact facts.",
+    "When a public page supports a fact, include sources[{resource,title}] for that page. Do not invent sources.",
     "Use kind photo with a public http(s) image URL of a real page image. Do not scrape behind logins. Do not invent a face.",
     "Do not invent people. Do not invent additional people. Do not ask for or assume the rest of the people-graph.",
     "Do not invent contact details that are not published on a public page.",
@@ -197,7 +205,47 @@ export function parseSuggestions(text: string, source: FactSuggestion["source"] 
     longitude: item.longitude,
     placeRole: item.placeRole,
     tag: item.tag,
+    sources: sourcesFromSuggestion(item),
+    staleAfter: staleAfterFromSuggestion(item),
   }));
+}
+
+function sourcesFromSuggestion(item: Partial<FactSuggestion> & { sources?: unknown }): OkfSource[] | undefined {
+  const sources = normalizeSources(item.sources);
+  return sources.length ? sources : undefined;
+}
+
+function staleAfterFromSuggestion(item: Partial<FactSuggestion> & { stale_after?: unknown }): string | undefined {
+  return normalizeStaleAfter(item.staleAfter) ?? normalizeStaleAfter(item.stale_after);
+}
+
+export function sourcesForSuggestion(suggestion: FactSuggestion): OkfSource[] {
+  const listed = normalizeSources(suggestion.sources);
+  if (listed.length) return listed;
+  if (suggestion.url && isPublicHttpUrl(suggestion.url)) {
+    return [{ resource: suggestion.url, title: suggestion.title || undefined }];
+  }
+  return [];
+}
+
+export function staleAfterForSuggestion(suggestion: FactSuggestion): string | undefined {
+  const explicit = normalizeStaleAfter(suggestion.staleAfter);
+  if (explicit) return explicit;
+  if (suggestion.source === "research" || suggestion.source === "follow") {
+    return defaultStaleAfter();
+  }
+  return undefined;
+}
+
+export function provenanceForAcceptedSuggestion(
+  suggestion: FactSuggestion,
+  generatedBy: string,
+): { generatedBy: string; sources: OkfSource[]; staleAfter?: string } {
+  return {
+    generatedBy,
+    sources: sourcesForSuggestion(suggestion),
+    staleAfter: staleAfterForSuggestion(suggestion),
+  };
 }
 
 export function extractModelText(payload: unknown): string {

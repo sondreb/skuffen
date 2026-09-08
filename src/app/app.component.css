@@ -1092,6 +1092,15 @@ button.on {
   color: var(--mute);
 }
 
+.slips article .provenance,
+.threads article .provenance,
+.nameplate-copy .provenance {
+  margin: 0.45rem 0 0;
+  color: var(--mute);
+  font-size: 0.82rem;
+  white-space: normal;
+}
+
 .prose {
   margin: 0.8rem 0 0;
 }

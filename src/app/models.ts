@@ -1,3 +1,5 @@
+import type { OkfActorStamp, OkfSource, OkfStatus } from "../../packages/okf/src/index";
+
 export type ProviderId = "grok" | "gemini";
 export type FollowInterval = "daily" | "weekly" | "monthly";
 export type SuggestionSource = "ask" | "research" | "follow" | "capture";
@@ -80,6 +82,14 @@ export interface VaultStatus {
   message?: string;
 }
 
+export interface FactProvenanceView {
+  generated?: OkfActorStamp;
+  verified: OkfActorStamp[];
+  sources: OkfSource[];
+  status?: OkfStatus;
+  staleAfter?: string;
+}
+
 export interface PersonView {
   id: string;
   slug: string;
@@ -91,7 +101,14 @@ export interface PersonView {
   email?: string;
   phone?: string;
   body: string;
-  notes: Array<{ id: string; path: string; title: string; body: string; at?: string }>;
+  notes: Array<{
+    id: string;
+    path: string;
+    title: string;
+    body: string;
+    at?: string;
+    provenance?: FactProvenanceView;
+  }>;
   social: Array<{
     id: string;
     path: string;
@@ -99,6 +116,7 @@ export interface PersonView {
     network?: string;
     handle?: string;
     url?: string;
+    provenance?: FactProvenanceView;
   }>;
   /** Local bundle path for the list avatar. Never http(s). */
   image?: string;
@@ -135,6 +153,8 @@ export interface PersonView {
   addedAt?: string;
   /** Latest local document stamp on this card. Recency only — not a score. */
   updatedAt?: string;
+  /** Optional OKF v0.2 trust fields from person.md. */
+  provenance?: FactProvenanceView;
 }
 
 export type RelationKind = "family" | "business" | "other";
@@ -222,6 +242,10 @@ export interface FactSuggestion {
   placeRole?: PlaceLinkRole;
   /** Proposed local person tag. Written only on Accept. */
   tag?: string;
+  /** Optional OKF v0.2 sources the model cited. Written only on Accept. */
+  sources?: OkfSource[];
+  /** Optional reconsider-by date (YYYY-MM-DD). Written only on Accept. */
+  staleAfter?: string;
 }
 
 export interface ProposedFact {

@@ -58,6 +58,7 @@ export function demoResearchSuggestions(
       kind: "note",
       title: "Public park mention (demo)",
       body: "Synthetic Grok proposal for Ada Demo. Not a real contact. Accept to save — nothing is written before this.",
+      sources: [{ resource: "https://example.invalid/ada-demo", title: "Public page (demo)" }],
     },
     {
       id: `demo-${source}-ada-email`,

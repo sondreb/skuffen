@@ -22,6 +22,7 @@ import {
   nextRunAt,
   parseSuggestions,
   photoFileNameFromUrl,
+  provenanceForAcceptedSuggestion,
   photoPreviewUrl,
   planAcceptedNameProposal,
   proposalsForSlug,
@@ -657,6 +658,40 @@ test("research empty copy tells the visitor to connect a provider in Menu", () =
   assert.match(RESEARCH_NEEDS_PROVIDER, /no Skuffen cloud account/);
   assert.doesNotMatch(RESEARCH_NEEDS_PROVIDER, /No proposals yet/);
   assert.doesNotMatch(RESEARCH_NEEDS_PROVIDER, /voice|shuffle|brief/i);
+});
+
+test("parseSuggestions keeps optional sources and Accept provenance is generated-then-verified", () => {
+  const parsed = parseSuggestions(
+    JSON.stringify({
+      suggestions: [
+        {
+          kind: "note",
+          title: "Public talk",
+          body: "Spoke in 1843.",
+          sources: [{ resource: "https://example.invalid/ada", title: "Public page (demo)" }],
+          stale_after: "2027-03-07",
+        },
+      ],
+    }),
+    "research",
+  );
+  assert.deepEqual(parsed[0]?.sources, [{ resource: "https://example.invalid/ada", title: "Public page (demo)" }]);
+  assert.equal(parsed[0]?.staleAfter, "2027-03-07");
+  assert.deepEqual(proposeOnly(parsed), []);
+  const accept = provenanceForAcceptedSuggestion(parsed[0]!, "grok/grok-4-latest");
+  assert.equal(accept.generatedBy, "grok/grok-4-latest");
+  assert.deepEqual(accept.sources, [{ resource: "https://example.invalid/ada", title: "Public page (demo)" }]);
+  assert.equal(accept.staleAfter, "2027-03-07");
+  const follow = provenanceForAcceptedSuggestion(
+    { id: "f1", source: "follow", kind: "note", title: "Ping" },
+    "gemini/gemini-2.5-flash",
+  );
+  assert.match(follow.staleAfter ?? "", /^\d{4}-\d{2}-\d{2}$/);
+  const local = provenanceForAcceptedSuggestion(
+    { id: "a1", source: "ask", kind: "note", title: "Local ask" },
+    "grok/grok-4-latest",
+  );
+  assert.equal(local.staleAfter, undefined);
 });
 
 test("extractModelText reads Responses API and chat completions", () => {

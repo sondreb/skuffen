@@ -18,6 +18,11 @@ export function publicPersonView(
     location: person.location,
     documents: person.documents,
     places: person.places,
+    generated: person.generated,
+    verified: person.verified,
+    sources: person.sources,
+    status: person.status,
+    stale_after: person.stale_after,
   };
   if (options?.includeRelations) view.relations = person.relations;
   if (options?.includeTags) view.tags = person.tags;

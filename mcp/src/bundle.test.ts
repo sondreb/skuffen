@@ -3,9 +3,58 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
-import { parseIndex } from "../../packages/okf/src/index.ts";
+import { actorAgent, parseIndex, parseDocument } from "../../packages/okf/src/index.ts";
 import { EncryptedBundleError, encryptBytes, generateKey, isEncrypted } from "../../packages/okf/src/vault.ts";
 import { OkfBundle } from "./bundle.ts";
+
+test("MCP get_person returns optional provenance when present and still loads files without it", () => {
+  const root = mkdtempSync(join(tmpdir(), "skuffen-mcp-prov-"));
+  const bundle = new OkfBundle(root);
+  bundle.ensure();
+  const created = bundle.createPerson({ title: "Ada Lovelace" });
+  const bareNote = `---
+type: Note
+title: Engine
+---
+
+Wrote notes on the Analytical Engine.
+`;
+  mkdirSync(join(root, "people/ada-lovelace/notes"), { recursive: true });
+  writeFileSync(join(root, "people/ada-lovelace/notes/engine.md"), bareNote, "utf8");
+  const accepted = `---
+type: Note
+title: Public talk
+generated:
+  by: grok/grok-4-latest
+  at: 2026-09-08T06:00:00Z
+verified:
+  by: human:user
+  at: 2026-09-08T06:01:00Z
+status: stable
+sources:
+  - resource: https://example.invalid/ada
+    title: Public page (demo)
+stale_after: 2027-03-07
+---
+
+Spoke in 1843.
+`;
+  writeFileSync(join(root, "people/ada-lovelace/notes/talk.md"), accepted, "utf8");
+
+  const person = new OkfBundle(root).getPerson(created.slug);
+  assert.ok(person);
+  const engine = person.notes.find((item) => item.title === "Engine");
+  const talk = person.notes.find((item) => item.title === "Public talk");
+  assert.ok(engine);
+  assert.equal(engine.generated, undefined);
+  assert.ok(talk);
+  assert.equal(talk.generated?.by, actorAgent("grok", "grok-4-latest"));
+  assert.equal(talk.verified?.[0]?.by, "human:user");
+  assert.equal(talk.sources?.[0]?.resource, "https://example.invalid/ada");
+  assert.equal(talk.stale_after, "2027-03-07");
+  assert.equal(parseDocument("people/ada-lovelace/notes/engine.md", bareNote).frontmatter.sources, undefined);
+  assert.doesNotMatch(readFileSync(join(root, "people/ada-lovelace/notes/engine.md"), "utf8"), /generated:/);
+});
 
 test("MCP writes person, note, social and reloads from disk", () => {
   const root = mkdtempSync(join(tmpdir(), "skuffen-mcp-"));
